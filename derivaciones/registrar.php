@@ -67,10 +67,13 @@ if (!$rsEstudiantes) {
     die('Error al consultar estudiantes: ' . $conexion->error);
 }
 
-// Profesionales (psicólogos, id_rol = 2)
+// Psicólogas activas disponibles para la atención.
 $rsProfesionales = $conexion->query(
-    "SELECT id_usuario, nombre FROM usuarios WHERE id_rol = 1 ORDER BY nombre ASC"
+    "SELECT id_usuario, nombre, apellido, usuario, correo FROM usuarios
+     WHERE id_rol = 2 AND estado = 'Activo' ORDER BY apellido ASC, nombre ASC"
 );
+$profesionales = $rsProfesionales->fetch_all(MYSQLI_ASSOC);
+$rsProfesionales->free();
 
 // Valores anteriores
 $idEstudianteAnt   = (int) ($d['id_estudiante'] ?? 0);
@@ -82,6 +85,16 @@ $prioridadAnt      = $d['prioridad'] ?? 'Media';
 $categoriasAnt     = is_array($d['categorias'] ?? null) ? $d['categorias'] : [];
 $solicitarCitaAnt  = !array_key_exists('solicitar_cita', $d) || (int) $d['solicitar_cita'] === 1;
 $idProfesionalAnt  = (int) ($d['id_profesional'] ?? 0);
+// Preseleccionar la cuenta indicada sin reemplazar una elección anterior.
+if (!array_key_exists('id_profesional', $d)) {
+    $coincidenciasMaria = array_filter($profesionales, static function (array $profesional): bool {
+        return strtolower(trim((string) $profesional['usuario'])) === 'psicologa'
+            && strtolower(trim((string) $profesional['correo'])) === 'psicologia@canadapailita.edu.bo';
+    });
+    if (count($coincidenciasMaria) === 1) {
+        $idProfesionalAnt = (int) reset($coincidenciasMaria)['id_usuario'];
+    }
+}
 
 $categorias = [
     ['Rendimiento Académico', 'Baja de notas o falta de atención.'],
@@ -283,17 +296,20 @@ $materias = [
                         <div class="row g-3">
                             <div class="col-md-8">
                                 <label for="id_profesional" class="form-label">
-                                    Asignar a profesional <span class="text-muted">(opcional)</span>
+                                    Psicóloga encargada <span class="text-muted">(opcional)</span>
                                 </label>
                                 <select name="id_profesional" id="id_profesional" class="form-select">
                                     <option value="">Sin asignar</option>
-                                    <?php if ($rsProfesionales): while ($p = $rsProfesionales->fetch_assoc()): ?>
+                                    <?php foreach ($profesionales as $p): ?>
                                         <option value="<?= (int) $p['id_usuario'] ?>"
                                             <?= $idProfesionalAnt === (int) $p['id_usuario'] ? 'selected' : '' ?>>
-                                            <?= escapar($p['nombre']) ?>
+                                            <?= escapar(trim($p['nombre'] . ' ' . ($p['apellido'] ?? ''))) ?>
                                         </option>
-                                    <?php endwhile; endif; ?>
+                                    <?php endforeach; ?>
                                 </select>
+                                <?php if (!$profesionales): ?>
+                                    <div class="form-text text-danger">No hay psicólogas activas disponibles. Solicite al administrador revisar las cuentas.</div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -339,9 +355,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function actualizarProfesional() {
         profesional.disabled = !solicitarCita.checked;
-        if (!solicitarCita.checked) {
-            profesional.value = '';
-        }
     }
 
     ['motivo', 'observaciones'].forEach(function (campoId) {

@@ -8,6 +8,9 @@ $password = '';
 $bd = 'psicologia_db';
 $puerto = 3306;
 
+if (!defined('BASE_URL')) {
+    define('BASE_URL', '/proyecto_vercionII');
+}
 try {
     $conexion = new mysqli($host, $usuario, $password, '', $puerto);
     $conexion->set_charset('utf8mb4');
@@ -148,10 +151,22 @@ function asegurar_esquema(mysqli $conexion): void
         INDEX idx_citas_estudiante (id_estudiante)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-    $conexion->query(
-        "ALTER TABLE citas
-         MODIFY COLUMN id_usuario INT NULL DEFAULT NULL"
-    );
+    // Permitir citas sin usuario conservando el tipo de la clave externa.
+    $resultadoUsuarioCita = $conexion->query("SHOW FULL COLUMNS FROM `citas` WHERE Field = 'id_usuario'");
+    $columnaUsuarioCita = $resultadoUsuarioCita->fetch_assoc();
+    $resultadoUsuarioCita->free();
+    if (!$columnaUsuarioCita) {
+        throw new RuntimeException('Falta la columna citas.id_usuario. Revise la estructura de citas.');
+    }
+    if ($columnaUsuarioCita['Null'] === 'NO') {
+        $tipoUsuarioCita = $columnaUsuarioCita['Type'];
+        if (!preg_match('/^(tinyint|smallint|mediumint|int|bigint)(\([0-9]+\))?( unsigned)?( zerofill)?$/i', $tipoUsuarioCita)
+            || $columnaUsuarioCita['Extra'] !== '' || $columnaUsuarioCita['Key'] === 'PRI') {
+            throw new RuntimeException('La estructura de citas.id_usuario requiere una migracion manual.');
+        }
+        $comentarioUsuarioCita = $conexion->real_escape_string($columnaUsuarioCita['Comment']);
+        $conexion->query("ALTER TABLE `citas` MODIFY COLUMN `id_usuario` $tipoUsuarioCita NULL DEFAULT NULL COMMENT '$comentarioUsuarioCita'");
+    }
 
     asegurar_columna($conexion, 'citas', 'id_derivacion', 'INT NULL DEFAULT NULL');
 

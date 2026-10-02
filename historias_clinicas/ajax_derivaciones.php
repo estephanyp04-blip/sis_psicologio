@@ -1,16 +1,4 @@
 <?php
-/**
- * guardar.php
- * Registra una nueva historia clínica psicológica.
- *
- * Correcciones aplicadas:
- *  - Guarda `id_derivacion` (vínculo con la derivación origen).
- *  - Valida que la derivación exista y corresponda al estudiante.
- *  - bind_param con el tipo correcto para los 3 campos INT.
- *  - Transacción completa: historia + opciones + familiares.
- *  - Rollback automático ante cualquier error.
- */
-
 require_once '../config/conexion.php';
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -22,9 +10,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-/* =========================================================
-   PERMISOS
-   ========================================================= */
 $modo = !isset($_SESSION['id_rol']);
 $rol  = (int)($_SESSION['id_rol'] ?? 0);
 
@@ -33,9 +18,6 @@ if (!$modo && !in_array($rol, [1, 2], true)) {
     exit;
 }
 
-/* =========================================================
-   HELPERS
-   ========================================================= */
 function textoPost(string $campo): string
 {
     return trim((string)($_POST[$campo] ?? ''));
@@ -47,49 +29,41 @@ function arregloPost(string $campo): array
     return is_array($valor) ? $valor : [];
 }
 
-/* =========================================================
-   LECTURA DE POST
-   ========================================================= */
-$idEstudiante  = (int)($_POST['id_estudiante'] ?? 0);
-$idUsuario     = (int)($_SESSION['id_usuario'] ?? 0);
-$idDerivacion  = (int)($_POST['id_derivacion'] ?? 0);
+/* ---------- Lectura de POST ---------- */
+$idEstudiante = (int)($_POST['id_estudiante'] ?? 0);
+$idUsuario    = (int)($_SESSION['id_usuario'] ?? 0);
+$idDerivacion = (int)($_POST['id_derivacion'] ?? 0);  // ✅ NUEVO
 
-/* Datos generales */
-$fechaApertura        = textoPost('fecha_apertura');
-$lugarNacimiento      = textoPost('lugar_nacimiento');
-$celularEstudiante    = textoPost('celular_estudiante');
-$padreMadre           = textoPost('padre_madre');
-$derivadoPor          = textoPost('derivado_por');
-$fechaDerivacion      = textoPost('fecha_derivacion');
-$tutorCurso           = textoPost('tutor_curso');
-$talla                = textoPost('talla');
-$peso                 = textoPost('peso');
-$valoracion           = textoPost('valoracion');
-$enfermedadesActuales = textoPost('enfermedades_actuales');
+$fechaApertura         = textoPost('fecha_apertura');
+$lugarNacimiento       = textoPost('lugar_nacimiento');
+$celularEstudiante     = textoPost('celular_estudiante');
+$padreMadre            = textoPost('padre_madre');
+$derivadoPor           = textoPost('derivado_por');
+$fechaDerivacion       = textoPost('fecha_derivacion');
+$tutorCurso            = textoPost('tutor_curso');
+$talla                 = textoPost('talla');
+$peso                  = textoPost('peso');
+$valoracion            = textoPost('valoracion');
+$enfermedadesActuales  = textoPost('enfermedades_actuales');
 
-/* Motivo */
-$motivoConsulta       = textoPost('motivo_consulta');
+$motivoConsulta        = textoPost('motivo_consulta');
 
-/* Situación escolar */
-$situacionEscolar     = textoPost('situacion_escolar');
-$cursosRepetidos      = textoPost('cursos_repetidos');
-$dificultadEscolar    = textoPost('dificultad_escolar');
-$materiaAgrada        = textoPost('materia_agrada');
-$materiaDesagrada     = textoPost('materia_desagrada');
-$relacionEscolar      = textoPost('relacion_escolar');
+$situacionEscolar      = textoPost('situacion_escolar');
+$cursosRepetidos       = textoPost('cursos_repetidos');
+$dificultadEscolar     = textoPost('dificultad_escolar');
+$materiaAgrada         = textoPost('materia_agrada');
+$materiaDesagrada      = textoPost('materia_desagrada');
+$relacionEscolar       = textoPost('relacion_escolar');
 
-/* Contexto familiar */
-$antecedentes         = textoPost('antecedentes');
-$valoracionFamiliar   = textoPost('valoracion_familiar');
-$contextoFamiliar     = textoPost('contexto_familiar');
+$antecedentes          = textoPost('antecedentes');
+$valoracionFamiliar    = textoPost('valoracion_familiar');
+$contextoFamiliar      = textoPost('contexto_familiar');
 
-/* Cierre */
-$impresionDiagnostica = textoPost('impresion_diagnostica');
-$planIntervencion     = textoPost('plan_intervencion');
-$observaciones        = textoPost('observaciones');
-$estado               = textoPost('estado');
+$impresionDiagnostica  = textoPost('impresion_diagnostica');
+$planIntervencion      = textoPost('plan_intervencion');
+$observaciones         = textoPost('observaciones');
+$estado                = textoPost('estado');
 
-/* Arrays */
 $conductasRiesgo              = arregloPost('conductas_riesgo');
 $atencionDistraccion          = arregloPost('atencion_distraccion');
 $actividadMotora              = arregloPost('actividad_motora');
@@ -98,9 +72,7 @@ $dificultadesSocioemocionales = arregloPost('dificultades_socioemocionales');
 $estrategiasPrevias           = arregloPost('estrategias_previas');
 $familiares                   = arregloPost('familiares');
 
-/* =========================================================
-   VALIDACIONES
-   ========================================================= */
+/* ---------- Validaciones ---------- */
 $errores = [];
 
 if ($idEstudiante <= 0) {
@@ -139,7 +111,6 @@ if (
     $errores[] = 'La valoración familiar seleccionada no es válida.';
 }
 
-/* Longitudes máximas */
 $camposTexto = [
     $lugarNacimiento, $celularEstudiante, $padreMadre, $derivadoPor,
     $tutorCurso, $talla, $peso, $valoracion, $enfermedadesActuales,
@@ -150,12 +121,12 @@ $camposTexto = [
 
 foreach ($camposTexto as $texto) {
     if (mb_strlen($texto) > 5000) {
-        $errores[] = 'Uno o más campos superan el límite permitido (5000 caracteres).';
+        $errores[] = 'Uno o más campos superan el límite permitido.';
         break;
     }
 }
 
-/* Validación de la derivación asociada (si viene) */
+/* ✅ Validación de derivación (opcional pero recomendada) */
 if ($idDerivacion > 0 && !$errores) {
     $stmt = $conexion->prepare("
         SELECT id_estudiante
@@ -163,22 +134,19 @@ if ($idDerivacion > 0 && !$errores) {
         WHERE id_derivacion = ?
         LIMIT 1
     ");
+    $stmt->bind_param('i', $idDerivacion);
+    $stmt->execute();
+    $deriv = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
 
-    if ($stmt) {
-        $stmt->bind_param('i', $idDerivacion);
-        $stmt->execute();
-        $deriv = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-
-        if (!$deriv) {
-            $errores[] = 'La derivación asociada no existe.';
-        } elseif ((int)$deriv['id_estudiante'] !== $idEstudiante) {
-            $errores[] = 'La derivación no corresponde al estudiante seleccionado.';
-        }
+    if (!$deriv) {
+        $errores[] = 'La derivación asociada no existe.';
+    } elseif ((int)$deriv['id_estudiante'] !== $idEstudiante) {
+        $errores[] = 'La derivación no corresponde al estudiante seleccionado.';
     }
 }
 
-/* Verificar estudiante y que no tenga historia ya */
+/* ---------- Verificación del estudiante ---------- */
 if (!$errores) {
     $stmt = $conexion->prepare("
         SELECT e.id_estudiante, h.id_historia
@@ -190,37 +158,33 @@ if (!$errores) {
         LIMIT 1
     ");
 
-    if ($stmt) {
-        $stmt->bind_param('i', $idEstudiante);
-        $stmt->execute();
-        $fila = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
+    $stmt->bind_param('i', $idEstudiante);
+    $stmt->execute();
 
-        if (!$fila) {
-            $errores[] = 'El estudiante no existe o no está activo.';
-        } elseif (!empty($fila['id_historia'])) {
-            $errores[] = 'El estudiante ya tiene una historia clínica registrada.';
-        }
+    $fila = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$fila) {
+        $errores[] = 'El estudiante no existe o no está activo.';
+    } elseif (!empty($fila['id_historia'])) {
+        $errores[] = 'El estudiante ya tiene una historia clínica.';
     }
 }
 
-/* Si hay errores → volver al formulario con datos y mensaje */
 if ($errores) {
-    $_SESSION['datos_historia'] = $_POST;
-    $_SESSION['mensaje']        = implode("\n", array_unique($errores));
-    $_SESSION['tipo_mensaje']   = 'danger';
+    $_SESSION['datos_historia']  = $_POST;
+    $_SESSION['mensaje']         = implode("\n", array_unique($errores));
+    $_SESSION['tipo_mensaje']    = 'danger';
 
     header('Location: registrar.php');
     exit;
 }
 
-/* =========================================================
-   GUARDADO (transacción)
-   ========================================================= */
+/* ---------- Guardado ---------- */
 try {
     $conexion->begin_transaction();
 
-    /* ---------- 1. Historia principal ---------- */
+    // ✅ El INSERT ahora incluye id_derivacion
     $sql = "
         INSERT INTO historias_clinicas (
             id_estudiante,
@@ -287,44 +251,10 @@ try {
     $stmt = $conexion->prepare($sql);
 
     if (!$stmt) {
-        throw new Exception('Error al preparar INSERT historia: ' . $conexion->error);
+        throw new Exception($conexion->error);
     }
 
-    /**
-     * Tipos del bind_param:
-     *   i = integer
-     *   s = string
-     *
-     * Orden (28 parámetros):
-     *   i  id_estudiante
-     *   i  id_usuario
-     *   i  id_derivacion
-     *   s  fecha_apertura
-     *   s  lugar_nacimiento
-     *   s  celular_estudiante
-     *   s  padre_madre
-     *   s  derivado_por
-     *   s  fecha_derivacion
-     *   s  tutor_curso
-     *   s  talla
-     *   s  peso
-     *   s  valoracion
-     *   s  enfermedades_actuales
-     *   s  motivo_consulta
-     *   s  situacion_escolar
-     *   s  cursos_repetidos
-     *   s  dificultad_escolar
-     *   s  materia_agrada
-     *   s  materia_desagrada
-     *   s  relacion_escolar
-     *   s  antecedentes
-     *   s  valoracion_familiar
-     *   s  contexto_familiar
-     *   s  impresion_diagnostica
-     *   s  plan_intervencion
-     *   s  observaciones
-     *   s  estado
-     */
+    // ✅ bind_param actualizado con el nuevo parámetro
     $stmt->bind_param(
         'iiisssssssssssssssssssssssss',
         $idEstudiante,
@@ -358,13 +288,13 @@ try {
     );
 
     if (!$stmt->execute()) {
-        throw new Exception('Error al guardar historia: ' . $stmt->error);
+        throw new Exception($stmt->error);
     }
 
-    $idHistoria = (int)$stmt->insert_id;
+    $idHistoria = $stmt->insert_id;
     $stmt->close();
 
-    /* ---------- 2. Opciones marcadas ---------- */
+    /* ---------- Opciones ---------- */
     $gruposOpciones = [
         'conductas_riesgo'              => $conductasRiesgo,
         'atencion_distraccion'          => $atencionDistraccion,
@@ -379,17 +309,10 @@ try {
         VALUES (?, ?, ?)
     ");
 
-    if (!$stmtOpcion) {
-        throw new Exception('Error al preparar INSERT opciones: ' . $conexion->error);
-    }
-
     foreach ($gruposOpciones as $grupo => $opciones) {
-        foreach ((array)$opciones as $valor) {
+        foreach ($opciones as $valor) {
             $valor = trim((string)$valor);
-
-            if ($valor === '') {
-                continue;
-            }
+            if ($valor === '') continue;
 
             if (mb_strlen($valor) > 255) {
                 throw new Exception('Una opción supera los 255 caracteres.');
@@ -398,54 +321,38 @@ try {
             $stmtOpcion->bind_param('iss', $idHistoria, $grupo, $valor);
 
             if (!$stmtOpcion->execute()) {
-                throw new Exception('Error al guardar opción: ' . $stmtOpcion->error);
+                throw new Exception($stmtOpcion->error);
             }
         }
     }
     $stmtOpcion->close();
 
-    /* ---------- 3. Familiares ---------- */
+    /* ---------- Familiares ---------- */
     $stmtFamiliar = $conexion->prepare("
         INSERT INTO historia_familiares (
-            id_historia,
-            nombre,
-            edad,
-            relacion,
-            profesion,
-            ocupacion,
-            observaciones
+            id_historia, nombre, edad, relacion,
+            profesion, ocupacion, observaciones
         )
         VALUES (?, ?, NULLIF(?, 0), ?, ?, ?, ?)
     ");
 
-    if (!$stmtFamiliar) {
-        throw new Exception('Error al preparar INSERT familiares: ' . $conexion->error);
-    }
-
     foreach ($familiares as $familiar) {
-        if (!is_array($familiar)) {
-            continue;
-        }
+        if (!is_array($familiar)) continue;
 
-        $nombre      = trim((string)($familiar['nombre']        ?? ''));
-        $edad        = (int)($familiar['edad']                  ?? 0);
-        $relacion    = trim((string)($familiar['relacion']      ?? ''));
-        $profesion   = trim((string)($familiar['profesion']     ?? ''));
-        $ocupacion   = trim((string)($familiar['ocupacion']     ?? ''));
-        $obsFamiliar = trim((string)($familiar['observaciones'] ?? ''));
+        $nombre         = trim((string)($familiar['nombre']        ?? ''));
+        $edad           = (int)($familiar['edad']                  ?? 0);
+        $relacion       = trim((string)($familiar['relacion']      ?? ''));
+        $profesion      = trim((string)($familiar['profesion']     ?? ''));
+        $ocupacion      = trim((string)($familiar['ocupacion']     ?? ''));
+        $obsFamiliar    = trim((string)($familiar['observaciones'] ?? ''));
 
-        /* Ignorar filas completamente vacías */
-        if (
-            $nombre === '' && $edad === 0 && $relacion === '' &&
-            $profesion === '' && $ocupacion === '' && $obsFamiliar === ''
-        ) {
+        if ($nombre === '' && $edad === 0 && $relacion === ''
+            && $profesion === '' && $ocupacion === '' && $obsFamiliar === '') {
             continue;
         }
 
         if ($nombre === '') {
-            throw new Exception(
-                'Cada integrante familiar registrado debe tener un nombre.'
-            );
+            throw new Exception('Cada integrante familiar registrado debe tener un nombre.');
         }
 
         $stmtFamiliar->bind_param(
@@ -460,12 +367,11 @@ try {
         );
 
         if (!$stmtFamiliar->execute()) {
-            throw new Exception('Error al guardar familiar: ' . $stmtFamiliar->error);
+            throw new Exception($stmtFamiliar->error);
         }
     }
     $stmtFamiliar->close();
 
-    /* ---------- 4. Confirmar ---------- */
     $conexion->commit();
 
     unset($_SESSION['datos_historia']);
@@ -477,7 +383,6 @@ try {
     exit;
 
 } catch (Throwable $e) {
-    /* Revertir todo si algo falla */
     $conexion->rollback();
 
     $_SESSION['datos_historia'] = $_POST;

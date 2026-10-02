@@ -1,0 +1,15 @@
+VALIDACIÓN LOCAL
+
+- Siete archivos PHP analizados con php-parser, versión de sintaxis PHP 8.0: correctos.
+- assets/js/login.js validado con node --check: correcto.
+- Archivos PHP sin BOM y con apertura PHP al inicio: correcto.
+- IDs de roles ajustados a la captura: 1 Administrador, 2 Psicóloga, 3 Docente, 4 Director.
+- Inspección del código: consultas preparadas; estados activos de usuario y rol; vínculo del docente; regeneración de sesión; CSRF en login y logout; límites por cuenta fuera de la sesión.
+
+LIMITACIONES
+
+- No se ejecutó PHP ni se hicieron pruebas contra MySQL: este entorno no tiene PHP disponible y no está conectado a XAMPP.
+- La revisión de sintaxis no sustituye pruebas de autenticación en ejecución.
+- No se completó la vista previa en navegador: no hay un ejecutable Chromium instalado.
+- Los módulos existentes necesitan los controles del LEEME; no se dispone de sus versiones completas actuales.
+- La lista de comprobaciones de integración está en LEEME.md, sección 6.

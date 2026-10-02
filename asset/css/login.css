@@ -1,0 +1,27 @@
+.login-page{margin:0;min-height:100vh;display:grid;place-items:center;padding:32px 18px;background:#f8f3f1;color:#302b2d;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.login-page *{box-sizing:border-box}
+.login-card{display:grid;grid-template-columns:1fr 1fr;width:min(940px,100%);overflow:hidden;border-radius:22px;background:#fff;box-shadow:0 18px 70px #533c3712;border:1px solid #ece1dd}
+.login-identidad{padding:52px 42px;background:#8d4546;color:#fff;display:flex;flex-direction:column;align-items:flex-start}
+.login-simbolo{font-family:Georgia,serif;display:grid;place-items:center;font-size:45px;width:76px;height:76px;background:#ffffff16;border:1px solid #ffffff4a;border-radius:20px;margin-bottom:38px}
+.login-etiqueta{font-size:11px;font-weight:700;letter-spacing:1.6px;margin:0 0 14px}
+.login-identidad h1{font-size:37px;line-height:1.16;font-weight:650;margin:0 0 22px}
+.login-identidad p:not(.login-etiqueta){font-size:15px;line-height:1.7;max-width:310px;color:#ffeded}
+.login-nota{border-top:1px solid #ffffff38;margin-top:auto;padding-top:26px;font-size:13px;line-height:1.6;color:#ffeded}
+.login-formulario{padding:66px 42px 44px;min-width:0}
+.login-formulario>.login-etiqueta{color:#8d4546}
+.login-formulario h2{font-size:29px;margin:0 0 12px;font-weight:650}
+.login-ayuda{color:#6d6467;font-size:14px;margin-bottom:30px}
+.login-page .form-label{display:block;font-size:14px;font-weight:600;margin-bottom:9px}
+.login-page .mb-4{margin-bottom:24px}
+.login-page .form-control{width:100%;height:48px;border:1px solid #d5cacb;border-radius:8px;padding:10px 12px;font:inherit;background:#fffcfb;color:#302b2d}
+.login-page .form-control:focus{outline:2px solid #8d4546;outline-offset:2px;box-shadow:none}
+.login-password{position:relative}
+.login-password input{padding-right:83px!important}
+.login-password button{position:absolute;right:9px;top:9px;min-height:30px;background:transparent;color:#793638;border:0;font-size:12px;font-weight:600;cursor:pointer}
+.login-page .login-boton{display:block;width:100%;min-height:48px;border:1px solid #8d4546;background:#8d4546;color:#fff;border-radius:8px;font:inherit;font-weight:600;cursor:pointer}
+.login-page .login-boton:hover{background:#75393a;color:#fff}
+.login-page button:focus-visible{outline:3px solid #302b2d;outline-offset:3px}
+.login-soporte{font-size:12px;line-height:1.6;color:#6d6467;margin:25px 0 0}
+.login-error{padding:13px;border-radius:8px;background:#fff0f0;color:#802727;border:1px solid #ecc8c8;font-size:13px;line-height:1.5;margin-bottom:22px}
+.login-aviso{font-size:13px;color:#256239}
+@media(max-width:700px){.login-page{padding:18px 12px}.login-card{grid-template-columns:1fr;max-width:450px}.login-identidad{padding:28px}.login-simbolo{width:48px;height:48px;font-size:30px;margin-bottom:18px}.login-identidad h1{font-size:27px;margin-bottom:12px}.login-identidad h1 br{display:none}.login-identidad p:not(.login-etiqueta){margin-bottom:0;font-size:13px}.login-nota{display:none}.login-formulario{padding:30px 28px}.login-formulario h2{font-size:26px}}

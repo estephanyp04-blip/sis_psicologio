@@ -3,6 +3,13 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+/* =========================================================
+   Calcula la URL base del proyecto automáticamente
+   ========================================================= */
+$scriptPath = str_replace('\\', '/', $_SERVER['SCRIPT_NAME']);   // /proyecto_vercionII/historias/listar.php
+$basePath   = preg_replace('#/(historias|derivaciones|citas|estudiantes|docentes|usuarios|informes|estadisticas|includes)/.*$#i', '', $scriptPath);
+$basePath   = rtrim($basePath, '/');                              // /proyecto_vercionII
+
 $tituloPagina = $tituloPagina ?? 'Sistema Psicológico - U.E. Cañada Pailita "B"';
 ?>
 <!DOCTYPE html>
@@ -13,16 +20,11 @@ $tituloPagina = $tituloPagina ?? 'Sistema Psicológico - U.E. Cañada Pailita "B
 
     <title><?= htmlspecialchars($tituloPagina, ENT_QUOTES, 'UTF-8') ?></title>
 
-    <!-- Bootstrap 5 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-
-    <!-- DataTables con Bootstrap -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
 
-    <!-- CSS general del sistema -->
-    <link rel="stylesheet" href="/proyecto_vercionII/asset/css/estilos.css?v=3">
+    <!-- CSS propio con ruta dinámica -->
+    <link rel="stylesheet" href="/proyecto_vercionII/asset/css/estilos.css?v=6">
 </head>
 <body>
