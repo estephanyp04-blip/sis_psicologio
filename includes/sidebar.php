@@ -1,167 +1,67 @@
 <?php
+if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
+    http_response_code(404);
+    exit;
+}
 
-/* Ruta principal del proyecto */
-$baseUrl = '/proyecto_vercionII';
-
-/* Detectar la página actual */
-$rutaActual = parse_url(
-    $_SERVER['REQUEST_URI'] ?? '',
-    PHP_URL_PATH
-);
-
-$rutaActual = is_string($rutaActual)
-    ? $rutaActual
-    : '';
-
-/* Marcar el enlace seleccionado */
-$claseActiva = static function (string $seccion) use ($rutaActual): string {
-    return str_contains($rutaActual, '/' . $seccion . '/')
-        ? ' active'
-        : '';
-};
-
-$inicioActivo = in_array(
-    rtrim($rutaActual, '/'),
-    [
-        $baseUrl,
-        $baseUrl . '/index.php'
+$baseUrl = login_config()['base_url'];
+$rutaActual = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '';
+$gruposMenu = [
+    'Principal' => [
+        ['index.php', 'Panel principal', 'bi-grid-1x2-fill'],
     ],
-    true
-) ? ' active' : '';
-
+    'Gestión psicológica' => [
+        ['estudiantes/listar.php', 'Estudiantes', 'bi-people-fill'],
+        ['derivaciones/listar.php', 'Derivaciones', 'bi-send-fill'],
+        ['citas/listar.php', 'Citas', 'bi-calendar2-week-fill'],
+        ['historias_clinicas/listar.php', 'Historias clínicas', 'bi-file-earmark-medical-fill'],
+    ],
+    'Administración' => [
+        ['docentes/listar.php', 'Docentes', 'bi-person-badge-fill'],
+        ['usuarios/listar.php', 'Usuarios', 'bi-person-gear'],
+    ],
+    'Resultados' => [
+        ['informes/listar.php', 'Informes', 'bi-file-earmark-bar-graph-fill'],
+    ],
+];
 ?>
 
 <aside class="sidebar">
-
-    <!-- Logo -->
-    <a href="<?= $baseUrl; ?>/index.php" class="logo">
+    <a href="<?= login_html(login_inicio_url()) ?>" class="logo">
         <i class="bi bi-heart-pulse"></i>
-
         <h5>Sistema Psicológico</h5>
     </a>
 
-    <!-- Menú lateral -->
     <nav class="sidebar-menu" aria-label="Menú principal">
-
-        <span class="sidebar-section-title">
-            Principal
-        </span>
-
-        <ul class="nav flex-column">
-
-            <li class="nav-item">
-                <a
-                    href="<?= $baseUrl; ?>/index.php"
-                    class="nav-link<?= $inicioActivo; ?>">
-
-                    <i class="bi bi-grid-1x2-fill"></i>
-                    <span>Panel principal</span>
-                </a>
-            </li>
-
-        </ul>
-
-        <span class="sidebar-section-title">
-            Gestión psicológica
-        </span>
-
-        <ul class="nav flex-column">
-
-            <li class="nav-item">
-                <a
-                    href="<?= $baseUrl; ?>/estudiantes/listar.php"
-                    class="nav-link<?= $claseActiva('estudiantes'); ?>">
-
-                    <i class="bi bi-people-fill"></i>
-                    <span>Estudiantes</span>
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a
-                    href="<?= $baseUrl; ?>/derivaciones/listar.php"
-                    class="nav-link<?= $claseActiva('derivaciones'); ?>">
-
-                    <i class="bi bi-send-fill"></i>
-                    <span>Derivaciones</span>
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a
-                    href="<?= $baseUrl; ?>/citas/listar.php"
-                    class="nav-link<?= $claseActiva('citas'); ?>">
-
-                    <i class="bi bi-calendar2-week-fill"></i>
-                    <span>Citas</span>
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a
-                    href="<?= $baseUrl; ?>/historias_clinicas/listar.php"
-                    class="nav-link<?= $claseActiva('historias_clinicas'); ?>">
-
-                    <i class="bi bi-file-earmark-medical-fill"></i>
-                    <span>Historias clínicas</span>
-                </a>
-            </li>
-
-        </ul>
-
-        <span class="sidebar-section-title">
-            Administración
-        </span>
-
-        <ul class="nav flex-column">
-
-            <li class="nav-item">
-                <a
-                    href="<?= $baseUrl; ?>/docentes/listar.php"
-                    class="nav-link<?= $claseActiva('docentes'); ?>">
-
-                    <i class="bi bi-person-badge-fill"></i>
-                    <span>Docentes</span>
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a
-                    href="<?= $baseUrl; ?>/usuarios/listar.php"
-                    class="nav-link<?= $claseActiva('usuarios'); ?>">
-
-                    <i class="bi bi-person-gear"></i>
-                    <span>Usuarios</span>
-                </a>
-            </li>
-
-        </ul>
-
-        <span class="sidebar-section-title">
-            Resultados
-        </span>
-
-        <ul class="nav flex-column">
-
-            <li class="nav-item">
-                <a
-                    href="<?= $baseUrl; ?>/informes/listar.php"
-                    class="nav-link<?= $claseActiva('informes'); ?>">
-
-                    <i class="bi bi-file-earmark-bar-graph-fill"></i>
-                    <span>Informes</span>
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <span class="nav-link text-muted" aria-disabled="true">
-                    <i class="bi bi-bar-chart-line-fill"></i>
-                    <span>Estadísticas</span>
-                </span>
-            </li>
-
-        </ul>
-
+        <?php foreach ($gruposMenu as $tituloGrupo => $enlaces): ?>
+            <?php
+            $enlaces = array_filter($enlaces, static fn(array $enlace): bool => login_puede($enlace[0]));
+            if (!$enlaces) continue;
+            ?>
+            <span class="sidebar-section-title"><?= login_html($tituloGrupo) ?></span>
+            <ul class="nav flex-column">
+                <?php foreach ($enlaces as [$ruta, $etiqueta, $icono]): ?>
+                    <?php
+                    $activo = $ruta === 'index.php'
+                        ? in_array(rtrim($rutaActual, '/'), [$baseUrl, login_url($ruta)], true)
+                        : str_starts_with($rutaActual, login_url(dirname($ruta)) . '/');
+                    ?>
+                    <li class="nav-item">
+                        <a href="<?= login_html(login_url($ruta)) ?>" class="nav-link<?= $activo ? ' active' : '' ?>">
+                            <i class="bi <?= login_html($icono) ?>"></i>
+                            <span><?= login_html($etiqueta) ?></span>
+                        </a>
+                    </li>
+                <?php endforeach; ?>
+                <?php if ($tituloGrupo === 'Resultados'): ?>
+                    <li class="nav-item">
+                        <span class="nav-link text-muted" aria-disabled="true">
+                            <i class="bi bi-bar-chart-line-fill"></i>
+                            <span>Estadísticas</span>
+                        </span>
+                    </li>
+                <?php endif; ?>
+            </ul>
+        <?php endforeach; ?>
     </nav>
-
 </aside>

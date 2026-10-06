@@ -1,8 +1,8 @@
 <?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('derivaciones/guardar.php');
+
 require_once '../config/conexion.php';
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: registrar.php');
     exit;
@@ -151,6 +151,7 @@ try {
                         <h1 class="h4">Docente responsable</h1>
                         <p>Seleccione al docente que realizó la derivación. Los datos del reporte se conservarán al continuar.</p>
                         <form action="guardar.php" method="POST">
+                            <?= login_campo_csrf() ?>
                             <?php foreach ($datos as $campo => $valor): ?>
                                 <?php if ($campo === 'id_docente' || ($campo === 'solicitar_cita' && !$valor)) { continue; } ?>
                                 <?php if (is_array($valor)): ?>

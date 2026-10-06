@@ -1,14 +1,14 @@
 <?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('historias_clinicas/ver.php');
+
 /**
  * historias_clinicas/ver.php
  * Visualiza una historia clínica completa.
  */
 
 require_once '../config/conexion.php';
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/../includes/historias_datos.php';
 
 /* =========================================================
    HELPERS GENERALES
@@ -102,7 +102,7 @@ function cargarSeguimientos(mysqli $conexion, int $idHistoria): array
         }
     }
 
-    $opcionesProxima = ['proxima_cita', 'siguiente_cita', 'proxima', 'fecha_proxima'];
+    $opcionesProxima = ['proxima_sesion', 'proxima_cita', 'siguiente_cita', 'proxima', 'fecha_proxima'];
     foreach ($opcionesProxima as $cand) {
         if (in_array($cand, $columnasReales, true)) {
             $campos['proxima_cita'] = $cand;
@@ -161,18 +161,17 @@ function cargarSeguimientos(mysqli $conexion, int $idHistoria): array
 /* =========================================================
    PERMISOS
    ========================================================= */
-$modoDesarrollo  = !isset($_SESSION['id_rol']);
 $rolActual       = (int)($_SESSION['id_rol'] ?? 0);
-$rolesPermitidos = [1, 2, 4];
+$rolesPermitidos = [1, 2];
 
-if (!$modoDesarrollo && !in_array($rolActual, $rolesPermitidos, true)) {
+if (!in_array($rolActual, $rolesPermitidos, true)) {
     $_SESSION['mensaje']      = 'No tiene permiso para consultar historias clínicas.';
     $_SESSION['tipo_mensaje'] = 'danger';
     header('Location: ../index.php');
     exit;
 }
 
-$puedeEditar = $modoDesarrollo || in_array($rolActual, [1, 2], true);
+$puedeEditar = in_array($rolActual, [1, 2], true);
 
 /* =========================================================
    VALIDACIÓN DE ID
@@ -328,12 +327,17 @@ include '../includes/navbar.php';
 
 <main class="main-content historia-detalle">
 <div class="container-fluid">
+<?php require_once __DIR__ . '/../includes/trazabilidad_vista.php'; flujo_panel($conexion,'historia',$h); ?>
+<div class="d-flex gap-2 my-3 d-print-none">
+    <a class="btn btn-primary" href="../seguimientos/registrar.php?id_historia=<?= (int)$h['id_historia'] ?>">Registrar seguimiento</a>
+    <a class="btn btn-outline-primary" href="../informes/registrar.php?id_estudiante=<?= (int)$h['id_estudiante'] ?>">Crear informe</a>
+</div>
 
     <!-- BREADCRUMB -->
     <nav aria-label="breadcrumb" class="d-print-none">
         <ol class="breadcrumb">
             <li class="breadcrumb-item">
-                <a href="../index.php">Inicio</a>
+                <a href="<?= login_html(login_inicio_url()) ?>">Inicio</a>
             </li>
             <li class="breadcrumb-item">
                 <a href="listar.php">Historias clínicas</a>
@@ -636,6 +640,10 @@ include '../includes/navbar.php';
                 ? nl2br(escapar($h['impresion_diagnostica']))
                 : '<span class="sin-dato">Sin información registrada.</span>' ?>
         </div>
+        <div class="texto-clinico mt-3">
+            <strong>Evaluación inicial</strong>
+            <p><?= nl2br(mostrarDato($h['evaluacion_inicial'] ?? '')) ?></p>
+        </div>
     </section>
 
     <!-- =====================================================
@@ -666,6 +674,10 @@ include '../includes/navbar.php';
             </div>
         </div>
 
+        <div class="texto-clinico mb-3">
+            <strong>Evaluación del progreso</strong>
+            <p><?= mostrarDato(HISTORIA_EVOLUCIONES[(int)($h['evolucion_caso'] ?? 0)] ?? '', 'Sin evaluar') ?></p>
+        </div>
         <?php if (!empty($h['observaciones'])): ?>
             <div class="evolucion-item">
                 <div class="evolucion-fecha">

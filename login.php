@@ -31,8 +31,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Iniciar sesión | Sistema Psicológico</title>
-<link href="/proyecto_vercionII/asset/css/login.css?v=2" rel="stylesheet">
-    <link href="<?= login_html(login_url('assets/css/login.css')) ?>" rel="stylesheet">
+    <link href="<?= login_html(login_url('asset/css/login.css?v=2')) ?>" rel="stylesheet">
 </head>
 <body class="login-page">
 <main class="login-card">
@@ -72,6 +71,6 @@ try {
         <p class="login-soporte">Si no recuerdas tu contraseña, solicita ayuda al administrador.</p>
     </section>
 </main>
-<script src="<?= login_html(login_url('assets/js/login.js')) ?>" defer></script>
+<script src="<?= login_html(login_url('asset/js/login.js')) ?>" defer></script>
 </body>
 </html>

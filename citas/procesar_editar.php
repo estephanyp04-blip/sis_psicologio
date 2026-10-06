@@ -1,72 +1,17 @@
 <?php
-require_once '../config/conexion.php';
-
-if($_SERVER['REQUEST_METHOD'] != 'POST'){
-    header("Location: listar.php");
-    exit();
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('citas/procesar_editar.php');
+require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__ . '/../includes/citas_datos.php';
+$id = (int)filter_var($_POST['id_cita'] ?? null, FILTER_VALIDATE_INT);
+try {
+    if ($id <= 0) throw new InvalidArgumentException('La cita no es válida.');
+    cita_guardar($conexion, $_POST, (int)$_SESSION['id_usuario'], $id);
+    unset($_SESSION['datos_cita']);
+    header('Location: editar.php?id=' . $id . '&exito=1');
+} catch (Throwable $error) {
+    $_SESSION['datos_cita'] = ['id_cita' => $id] + array_filter(array_intersect_key($_POST, array_flip(['fecha','hora','estado','observaciones'])), 'is_scalar');
+    $_SESSION['mensaje_cita'] = $error instanceof InvalidArgumentException ? $error->getMessage() : 'No se pudo actualizar la cita.';
+    header('Location: ' . ($id > 0 ? 'editar.php?id=' . $id : 'listar.php?error=2'));
 }
-
-$id_cita       = intval($_POST['id_cita']);
-$fecha         = $_POST['fecha'];
-$hora          = $_POST['hora'];
-$estado        = $_POST['estado'];
-$observaciones = trim($_POST['observaciones']);
-
-$estadosPermitidos = ['Pendiente', 'Atendida', 'Cancelada', 'Reprogramada'];
-
-if ($id_cita <= 0 || !in_array($estado, $estadosPermitidos, true)) {
-    header("Location: listar.php?error=2");
-    exit();
-}
-
-$fechaValida = DateTime::createFromFormat('Y-m-d', $fecha);
-if (!$fechaValida || $fechaValida->format('Y-m-d') !== $fecha) {
-    header("Location: editar.php?id=$id_cita&error=2");
-    exit();
-}
-
-// Verificar duplicado excluyendo la cita actual
-$sqlVerificar = "SELECT id_cita FROM citas
-                 WHERE fecha = ?
-                 AND hora = ?
-                 AND id_cita != ?
-                 AND estado != 'Cancelada'";
-
-$stmt = $conexion->prepare($sqlVerificar);
-$stmt->bind_param("ssi", $fecha, $hora, $id_cita);
-$stmt->execute();
-$resVerificar = $stmt->get_result();
-
-if($resVerificar->num_rows > 0){
-    $stmt->close();
-    header("Location: editar.php?id=$id_cita&error=1");
-    exit();
-}
-$stmt->close();
-
-// Actualizar cita
-$sqlActualizar = "UPDATE citas
-                  SET fecha = ?,
-                      hora = ?,
-                      estado = ?,
-                      observaciones = ?
-                  WHERE id_cita = ?";
-
-$stmt2 = $conexion->prepare($sqlActualizar);
-$stmt2->bind_param(
-    "ssssi",
-    $fecha,
-    $hora,
-    $estado,
-    $observaciones,
-    $id_cita
-);
-
-if($stmt2->execute()){
-    header("Location: listar.php?exito=2");
-    exit();
-} else {
-    header("Location: listar.php?error=2");
-    exit();
-}
-?>
+exit;

@@ -1,7 +1,8 @@
 <?php
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('usuarios/ver.php');
 
-if(session_status()===PHP_SESSION_NONE)session_start();
+require_once '../config/conexion.php';
 
 include '../includes/header.php';
 include '../includes/sidebar.php';
@@ -51,7 +52,7 @@ if(!$usuario){
 <div class="main-content">
     <nav class="breadcrumb mb-4">
         <span class="breadcrumb-item">
-            <a href="../index.php">Inicio</a>
+            <a href="<?= login_html(login_inicio_url()) ?>">Inicio</a>
         </span>
         <span class="breadcrumb-item">
             <a href="listar.php">Usuarios</a>

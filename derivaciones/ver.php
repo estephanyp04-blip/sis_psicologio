@@ -1,10 +1,9 @@
 <?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('derivaciones/ver.php');
+
 
 require_once '../config/conexion.php';
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 $baseUrl = '/proyecto_vercionII';
 
@@ -19,15 +18,13 @@ if (!function_exists('escapar')) {
     }
 }
 
-/* Permisos temporales mientras no existe el login */
-$modoDesarrollo = !isset($_SESSION['id_rol']);
+/* Permisos de consulta y alcance del docente autenticado. */
 $rolActual = isset($_SESSION['id_rol'])
     ? (int) $_SESSION['id_rol']
     : 0;
 
 if (
-    !$modoDesarrollo &&
-    !in_array($rolActual, [1, 2, 3, 4], true)
+    !login_puede('derivaciones/ver.php')
 ) {
     $_SESSION['mensaje'] = 'No tiene permiso para ver derivaciones.';
     $_SESSION['tipo_mensaje'] = 'danger';
@@ -55,7 +52,8 @@ if (!$idDerivacion || $idDerivacion <= 0) {
     exit;
 }
 
-/* Consultar derivación */
+/* Consultar únicamente las derivaciones del docente cuando corresponde. */
+$idDocenteSesion = (int) ($_SESSION['id_docente'] ?? 0);
 $sql = "SELECT
             d.id_derivacion,
             d.fecha,
@@ -78,6 +76,7 @@ $sql = "SELECT
         LEFT JOIN docentes doc
             ON doc.id_docente = d.id_docente
         WHERE d.id_derivacion = ?
+          AND (? <> 3 OR d.id_docente = ?)
         LIMIT 1";
 
 $stmt = $conexion->prepare($sql);
@@ -94,7 +93,7 @@ if (!$stmt) {
     exit;
 }
 
-$stmt->bind_param('i', $idDerivacion);
+$stmt->bind_param('iii', $idDerivacion, $rolActual, $idDocenteSesion);
 $stmt->execute();
 
 $resultado = $stmt->get_result();
@@ -122,7 +121,6 @@ $esPropietario = $idDocenteSesion > 0 &&
     (int) $derivacion['derivacion_id_docente'];
 
 if (
-    !$modoDesarrollo &&
     $rolActual === 3 &&
     !$esPropietario
 ) {
@@ -141,7 +139,6 @@ if (
 $puedeEditar =
     $derivacion['estado'] === 'Pendiente' &&
     (
-        $modoDesarrollo ||
         $rolActual === 1 ||
         ($rolActual === 3 && $esPropietario)
     );
@@ -220,13 +217,32 @@ include '../includes/navbar.php';
 
 ?>
 
-<<main class="main-content">
+<main class="main-content">
     <div class="container-fluid">
+        <?php if (!empty($_SESSION['mensaje'])): ?>
+            <div class="alert alert-info"><?= login_html($_SESSION['mensaje']) ?></div>
+            <?php unset($_SESSION['mensaje'],$_SESSION['tipo_mensaje']); ?>
+        <?php endif; ?>
+        <?php if (login_puede('derivaciones/cambiar_estado.php')): ?>
+        <?php require_once __DIR__ . '/../includes/trazabilidad_vista.php'; flujo_panel($conexion,'derivacion',$derivacion); ?>
+        <div class="card p-3 my-3 d-print-none">
+            <div class="d-flex gap-2 mb-3">
+                <a class="btn btn-primary" href="../citas/registrar.php?id_derivacion=<?= (int)$idDerivacion ?>">Programar cita</a>
+                <a class="btn btn-outline-primary" href="../historias_clinicas/registrar.php?id_derivacion=<?= (int)$idDerivacion ?>">Abrir historia</a>
+            </div>
+            <form action="cambiar_estado.php" method="POST">
+                <?= login_campo_csrf() ?><input type="hidden" name="id_derivacion" value="<?= (int)$idDerivacion ?>">
+                <input type="hidden" name="estado" value="<?= $derivacion['estado']==='En seguimiento' ? 'Atendido' : 'En seguimiento' ?>">
+                <p>Para cerrar la atención se requiere un seguimiento registrado de esta derivación. Emitir un informe no cambia su estado.</p>
+                <button class="btn btn-outline-success"><?= $derivacion['estado']==='En seguimiento' ? 'Cerrar atención: Atendido' : ($derivacion['estado']==='Atendido' ? 'Reabrir seguimiento' : 'Iniciar seguimiento') ?></button>
+            </form>
+        </div>
+        <?php endif; ?>
 
         <nav aria-label="breadcrumb" class="d-print-none mb-3">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item">
-                    <a href="<?= $baseUrl ?>/index.php">Inicio</a>
+                    <a href="<?= login_html(login_inicio_url()) ?>">Inicio</a>
                 </li>
                 <li class="breadcrumb-item">
                     <a href="<?= $baseUrl ?>/derivaciones/listar.php">

@@ -1,9 +1,8 @@
 <?php
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('docentes/editar.php');
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once '../config/conexion.php';
 
 function escapar($valor): string
 {
@@ -122,7 +121,7 @@ include '../includes/navbar.php';
 <div class="main-content">
     <nav class="breadcrumb mb-4">
         <span class="breadcrumb-item">
-            <a href="../index.php">Inicio</a>
+            <a href="<?= login_html(login_inicio_url()) ?>">Inicio</a>
         </span>
 
         <span class="breadcrumb-item">
@@ -167,6 +166,7 @@ include '../includes/navbar.php';
                   method="POST"
                   id="formDocente"
                   autocomplete="off">
+                <?= login_campo_csrf() ?>
 
                 <input type="hidden"
                        name="id_docente"

@@ -1,18 +1,16 @@
 <?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('informes/ver.php');
+
 require_once '../config/conexion.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-$modoDesarrollo = !isset($_SESSION['id_rol']);
 $rolActual = (int)($_SESSION['id_rol'] ?? 0);
-if (!$modoDesarrollo && !in_array($rolActual, [1, 2, 4], true)) {
+if (!in_array($rolActual, [1, 2, 4], true)) {
     header('Location: ../index.php');
     exit;
 }
 
-$puedeEditar = $modoDesarrollo || in_array($rolActual, [1, 2], true);
+$puedeEditar = in_array($rolActual, [1, 2], true);
 
 function e($valor): string
 {
@@ -59,7 +57,7 @@ $stmt = $conexion->prepare("
         u.apellido AS psicologo_apellido
     FROM informes i
     INNER JOIN estudiantes e ON e.id_estudiante = i.id_estudiante
-    LEFT JOIN usuarios u ON u.id_usuario = i.elaborado_por
+    LEFT JOIN usuarios u ON u.id_usuario = i.id_usuario
     WHERE i.id_informe = ?
     LIMIT 1
 ");
@@ -79,8 +77,7 @@ $nombreEstudiante = trim($informe['nombres'] . ' ' . $informe['apellidos']);
 $nombrePsicologo = trim(($informe['psicologo_nombre'] ?? '') . ' ' . ($informe['psicologo_apellido'] ?? ''));
 $estadoClase = [
     'Borrador' => 'bg-warning-subtle text-warning-emphasis',
-    'Emitido' => 'bg-success-subtle text-success-emphasis',
-    'Anulado' => 'bg-danger-subtle text-danger-emphasis',
+    'Finalizado' => 'bg-success-subtle text-success-emphasis',
 ][$informe['estado']] ?? 'bg-secondary-subtle text-secondary-emphasis';
 
 $mensaje = $_SESSION['mensaje'] ?? '';
@@ -95,9 +92,10 @@ include '../includes/navbar.php';
 
 <main class="main-content">
     <div class="container-fluid">
+        <?php require_once __DIR__ . '/../includes/trazabilidad_vista.php'; flujo_panel($conexion,'informe',$informe); ?>
         <nav aria-label="breadcrumb" class="d-print-none mb-4">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="../index.php">Inicio</a></li>
+                <li class="breadcrumb-item"><a href="<?= login_html(login_inicio_url()) ?>">Inicio</a></li>
                 <li class="breadcrumb-item"><a href="listar.php">Informes</a></li>
                 <li class="breadcrumb-item active"><?= e($informe['numero_ficha']) ?></li>
             </ol>
@@ -116,6 +114,7 @@ include '../includes/navbar.php';
                 <div>
                     <small>INFORME PSICOLÓGICO</small>
                     <h1><?= e($nombreEstudiante) ?></h1>
+                    <p><?= e($informe['titulo']) ?></p>
                     <p><?= e($informe['estudiante_curso'] . ' ' . $informe['estudiante_paralelo']) ?></p>
                 </div>
             </div>

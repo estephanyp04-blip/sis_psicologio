@@ -1,5 +1,7 @@
 # Login del sistema de psicología
 
+Actualización del 5 de octubre de 2026: el flujo completo, sus transiciones y la matriz de 52 rutas están implementados y documentados en [TRAZABILIDAD.md](TRAZABILIDAD.md). Los seguimientos se registran desde la historia o la cita; administrador y psicóloga pueden iniciar, cerrar y reabrir derivaciones. Las instrucciones históricas de integración que siguen se conservan como referencia.
+
 Paquete para integrar en `C:\xampp\htdocs\proyecto_vercionII` (PHP 8.0 o superior con mysqli/mysqlnd). Creado con los campos de los PHP adjuntos y los roles de la captura más reciente. No se ha conectado a tu XAMPP ni modificado tu sistema instalado.
 
 ## 1. Copiar los archivos
@@ -8,7 +10,7 @@ Extrae este ZIP. Copia el CONTENIDO de la carpeta `login_psicologia` dentro de `
 
 Revisa `config/login.php`: base_url, base_datos, usuario_bd, clave_bd y puerto deben corresponder a tu instalación. Los valores iniciales coinciden con el archivo de conexión adjunto. Si tu carpeta se llama `proyecto`, cambia base_url a `/proyecto`. Si está en la raíz de un dominio, usa una cadena vacía. En HTTPS público activa `cookie_segura`; en localhost por HTTP mantenla en false.
 
-El archivo original `config/conexion.php` se conserva. El login usa `config/conexion_login.php`, que solo conecta, porque el original ejecuta cambios de esquema en cada petición. Un error de clave externa en el original todavía debe corregirse en los módulos que lo cargan.
+Desde la actualización del 2 de octubre de 2026, `config/conexion.php` y el login comparten `config/conexion_login.php` y la configuración de `config/login.php`. Las conexiones no modifican el esquema. La instalación y las migraciones se ejecutan explícitamente según [database/README.md](database/README.md).
 
 ## 2. Usuarios, roles y contraseñas
 

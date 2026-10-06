@@ -1,7 +1,8 @@
 <?php
-require_once '../config/conexion.php';
-if(session_status()===PHP_SESSION_NONE)session_start();
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('usuarios/editar.php');
 
+require_once '../config/conexion.php';
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 
 if(!$id){
@@ -41,7 +42,7 @@ include '../includes/navbar.php';
 <div class="main-content">
     <nav class="breadcrumb mb-4">
         <span class="breadcrumb-item">
-            <a href="../index.php">Inicio</a>
+            <a href="<?= login_html(login_inicio_url()) ?>">Inicio</a>
         </span>
         <span class="breadcrumb-item">
             <a href="listar.php">Usuarios</a>
@@ -68,6 +69,7 @@ include '../includes/navbar.php';
             </div>
 
             <form action="actualizar.php" method="POST" autocomplete="off">
+                <?= login_campo_csrf() ?>
                 <input type="hidden" name="id_usuario" value="<?= (int)$datos['id_usuario']; ?>">
 
                 <div class="form-section mb-4">

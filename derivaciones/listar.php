@@ -1,10 +1,9 @@
 <?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('derivaciones/listar.php');
+
 
 require_once '../config/conexion.php';
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 /*  CONFIGURACIÓN Y SESIÓN */
 
@@ -13,10 +12,9 @@ $baseUrl = '/proyecto_vercionII';
 $rol       = (int) ($_SESSION['id_rol'] ?? 0);
 $idDocente = (int) ($_SESSION['id_docente'] ?? 0);
 
-$modoDesarrollo = !isset($_SESSION['id_rol']);
 $esDocente      = ($rol === 3);
 
-$puedeCrear = true;
+$puedeCrear = login_puede('derivaciones/registrar.php');
 
 
 /* FUNCIONES AUXILIARES */
@@ -208,7 +206,7 @@ include '../includes/navbar.php';
             <ol class="breadcrumb">
 
                 <li class="breadcrumb-item">
-                    <a href="<?= e($baseUrl) ?>/index.php">
+                    <a href="<?= login_html(login_inicio_url()) ?>">
                         Inicio
                     </a>
                 </li>
@@ -555,8 +553,7 @@ include '../includes/navbar.php';
                                     $esDocente
                                     ||
                                     $rol === 1
-                                    ||
-                                    $modoDesarrollo
+
                                 );
 
                             ?>

@@ -1,10 +1,9 @@
 <?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('estudiantes/actualizar.php');
+
 
 require_once '../config/conexion.php';
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 // Verificar que el formulario fue enviado por POST
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {

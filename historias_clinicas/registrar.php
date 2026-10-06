@@ -1,9 +1,10 @@
 <?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('historias_clinicas/registrar.php');
+
 require_once '../config/conexion.php';
-if(session_status()===PHP_SESSION_NONE)session_start();
-$modo=!isset($_SESSION['id_rol']);
 $rol=(int)($_SESSION['id_rol']??0);
-if(!$modo&&!in_array($rol,[1,2],true)){
+if(!in_array($rol,[1,2],true)){
     header('Location: listar.php');
     exit;
 }
@@ -12,6 +13,15 @@ function escapar($v):string{
 }
 $idDerivacion=filter_input(INPUT_GET,'id_derivacion',FILTER_VALIDATE_INT);
 $idEstudiante=filter_input(INPUT_GET,'id_estudiante',FILTER_VALIDATE_INT);
+$idCita=filter_input(INPUT_GET,'id_cita',FILTER_VALIDATE_INT);
+$citaOrigen=null;
+if ($idCita) {
+    require_once __DIR__ . '/../includes/trazabilidad_datos.php';
+    $citaOrigen=flujo_fila($conexion,'SELECT * FROM citas WHERE id_cita=?',[$idCita]);
+    if (!$citaOrigen || $citaOrigen['estado']==='Cancelada') { http_response_code(404); exit('Cita no disponible.'); }
+    $idEstudiante=(int)$citaOrigen['id_estudiante'];
+    $idDerivacion=(int)($citaOrigen['id_derivacion'] ?? 0);
+}
 $historia=[];
 $estudiantes=[];
 $datosIniciales=[
@@ -148,6 +158,13 @@ elseif($idEstudiante){
     ]);
 }
 /* ESTUDIANTES ACTIVOS QUE AÚN NO TIENEN HISTORIA */
+if ($citaOrigen) {
+    $datosIniciales['id_cita']=(int)$citaOrigen['id_cita'];
+    $datosIniciales['id_derivacion']=(int)($citaOrigen['id_derivacion'] ?? 0);
+    if (!$datosIniciales['id_derivacion']) {
+        foreach (['derivado_por','fecha_derivacion','materia_derivacion','prioridad_derivacion','observaciones_derivacion','motivo_consulta'] as $campo) $datosIniciales[$campo]='';
+    }
+}
 $sql="
     SELECT
         e.id_estudiante,
@@ -197,7 +214,7 @@ include '../includes/navbar.php';
 <div class="container-fluid">
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="../index.php">Inicio</a></li>
+        <li class="breadcrumb-item"><a href="<?= login_html(login_inicio_url()) ?>">Inicio</a></li>
         <li class="breadcrumb-item"><a href="listar.php">Historias clínicas</a></li>
         <li class="breadcrumb-item active">Nueva</li>
     </ol>

@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('usuarios/listar.php');
+
 require_once '../config/conexion.php';
 
 include '../includes/header.php';
@@ -28,7 +31,7 @@ if(!$resultado){
 <div class="main-content">
     <nav class="breadcrumb mb-4">
         <span class="breadcrumb-item">
-            <a href="../index.php">Inicio</a>
+            <a href="<?= login_html(login_inicio_url()) ?>">Inicio</a>
         </span>
         <span class="breadcrumb-item active">Usuarios</span>
     </nav>
@@ -128,6 +131,7 @@ if(!$resultado){
                                         </a>
                                         
                                         <form action="cambiar_estado.php" method="POST" class="d-inline" onsubmit="return confirm('¿Está seguro de cambiar el estado de este usuario?');">
+                                            <?= login_campo_csrf() ?>
                                             <input type="hidden" name="id_usuario" value="<?= (int)$fila['id_usuario']; ?>">
 
                                             <?php if($fila['estado']==='Activo'): ?>

@@ -1,9 +1,9 @@
 <?php
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('derivaciones/editar.php');
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once '../config/conexion.php';
+require_once __DIR__ . '/../includes/derivaciones_datos.php';
 
 $baseUrl = '/proyecto_vercionII';
 
@@ -12,9 +12,9 @@ function escapar($valor): string
     return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
 }
 
-$modoDesarrollo = !isset($_SESSION['id_rol']);
 $rolActual = isset($_SESSION['id_rol']) ? (int) $_SESSION['id_rol'] : 0;
-$puedeEditar = $modoDesarrollo || in_array($rolActual, [1,2,3], true);
+$puedeEditar = login_puede('derivaciones/editar.php');
+$idDocenteActual = (int) ($_SESSION['id_docente'] ?? 0);
 
 if (!$puedeEditar) {
     $_SESSION['mensaje'] = 'No tiene permiso para editar derivaciones.';
@@ -54,6 +54,7 @@ $sql = "SELECT
         LEFT JOIN docentes AS doc
             ON d.id_docente = doc.id_docente
         WHERE d.id_derivacion = ?
+          AND (? <> 3 OR d.id_docente = ?)
         LIMIT 1";
 
 $stmt = $conexion->prepare($sql);
@@ -62,7 +63,7 @@ if (!$stmt) {
     die('Error al preparar la consulta: ' . escapar($conexion->error));
 }
 
-$stmt->bind_param('i', $idDerivacion);
+$stmt->bind_param('iii', $idDerivacion, $rolActual, $idDocenteActual);
 $stmt->execute();
 
 $resultado = $stmt->get_result();
@@ -114,53 +115,21 @@ if ($nombreDocente === '') {
 $tituloPagina = 'Editar derivación';
 $textoObservaciones = trim((string) ($derivacion['observaciones'] ?? ''));
 
-$categoriasSeleccionadas = [];
-$observacionAdicional = '';
-$solicitudCita = '';
-$profesionalSolicitado = '';
-
-$bloquesObservaciones = preg_split(
-    '/\R{2,}/',
-    $textoObservaciones
-);
-
-foreach ($bloquesObservaciones as $bloque) {
-    $bloque = trim($bloque);
-
-    if (str_starts_with($bloque, 'Categorías observadas:')) {
-        $texto = trim(
-            substr(
-                $bloque,
-                strlen('Categorías observadas:')
-            )
-        );
-
-        if ($texto !== '') {
-            $categoriasSeleccionadas = array_map(
-                'trim',
-                explode(',', $texto)
-            );
-        }
+$desglose = derivacion_desglosar($textoObservaciones);
+$categoriasSeleccionadas = $desglose['categorias'];
+$observacionAdicional = $desglose['adicionales'];
+$recuperacion = $_SESSION['edicion_derivacion'] ?? [];
+unset($_SESSION['edicion_derivacion']);
+if (($recuperacion['id'] ?? 0) === $idDerivacion) {
+    $datos = $recuperacion['datos'];
+    foreach (['fecha', 'materia', 'motivo', 'prioridad'] as $campo) {
+        if (array_key_exists($campo, $datos)) $derivacion[$campo] = $datos[$campo];
     }
-
-    if (str_starts_with($bloque, 'Observaciones adicionales:')) {
-        $observacionAdicional = trim(
-            substr(
-                $bloque,
-                strlen('Observaciones adicionales:')
-            )
-        );
-    }
-
-    if (str_starts_with($bloque, 'Solicitud de cita psicológica:')) {
-        $solicitudCita = trim($bloque);
-    }
-
-    if (str_starts_with($bloque, 'Profesional solicitado:')) {
-        $profesionalSolicitado = trim($bloque);
-    }
+    $categoriasSeleccionadas = $datos['categorias'] ?? $categoriasSeleccionadas;
+    $observacionAdicional = $datos['observaciones_adicionales'] ?? $observacionAdicional;
 }
-
+$mensaje = $_SESSION['mensaje'] ?? '';
+unset($_SESSION['mensaje'], $_SESSION['tipo_mensaje']);
 include '../includes/header.php';
 include '../includes/sidebar.php';
 include '../includes/navbar.php';
@@ -168,10 +137,13 @@ include '../includes/navbar.php';
 
 <main class="main-content">
     <div class="container-fluid">
+        <?php if ($mensaje !== ''): ?>
+            <div class="alert alert-danger" role="alert"><?= escapar($mensaje) ?></div>
+        <?php endif; ?>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item">
-                    <a href="<?= $baseUrl; ?>/index.php">Inicio</a>
+                    <a href="<?= login_html(login_inicio_url()) ?>">Inicio</a>
                 </li>
                 <li class="breadcrumb-item">
                     <a href="<?= $baseUrl; ?>/derivaciones/listar.php">
@@ -203,8 +175,9 @@ include '../includes/navbar.php';
 
         <section class="card shadow-sm">
             <div class="card-body p-4">
-                <form action="<?= $baseUrl; ?>/derivaciones/actualizar.php"
+                <form id="formEditarDerivacion" action="<?= $baseUrl; ?>/derivaciones/actualizar.php"
                       method="POST">
+                    <?= login_campo_csrf() ?>
 
                     <input type="hidden"
                            name="id_derivacion"
@@ -278,7 +251,7 @@ include '../includes/navbar.php';
                                    id="materia"
                                    name="materia"
                                    class="form-control"
-                                   maxlength="100"
+                                   maxlength="150"
                                    value="<?= escapar($derivacion['materia']); ?>"
                                    required>
                         </div>
@@ -342,7 +315,10 @@ include '../includes/navbar.php';
                                 ];
                                 ?>
 
-                                <?php foreach ($categoriasEditar as $indice => $categoria): ?>
+                                <?php foreach (array_diff($categoriasSeleccionadas, DERIVACION_CATEGORIAS) as $valorHistorico) {
+    $categoriasEditar[] = ['valor' => $valorHistorico, 'titulo' => $valorHistorico, 'detalle' => 'Categoría conservada del registro'];
+} ?>
+<?php foreach ($categoriasEditar as $indice => $categoria): ?>
 
                                     <div class="col-12 col-md-6 col-lg-4">
                                         <div class="form-check categoria-box">
@@ -392,7 +368,7 @@ include '../includes/navbar.php';
                             </label>
 
                             <textarea
-                                id="observaciones_adicionales"
+                                id="observaciones_adicionales" name="observaciones_adicionales"
                                 class="form-control"
                                 rows="3"
                                 maxlength="3000"
@@ -400,13 +376,9 @@ include '../includes/navbar.php';
                             ><?= escapar($observacionAdicional) ?></textarea>
                         </div>
 
-                        <input
-                            type="hidden"
-                            name="observaciones"
-                            id="observaciones"
-                        >
+                        <input type="hidden" name="observaciones_presentes" value="1">
 
-                    
+
                     </div>
 
                     <div class="d-flex justify-content-end gap-2 mt-3 pt-3 border-top">
@@ -425,67 +397,6 @@ include '../includes/navbar.php';
         </section>
     </div>
 </main>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const formulario = document.querySelector('form');
-    const observaciones = document.getElementById('observaciones');
-    const observacionesAdicionales =
-        document.getElementById('observaciones_adicionales');
 
-    formulario.addEventListener('submit', function (event) {
-        const categorias = [
-            ...document.querySelectorAll(
-                'input[name="categorias[]"]:checked'
-            )
-        ].map(input => input.value);
 
-        if (categorias.length === 0) {
-            event.preventDefault();
-            alert('Debe seleccionar al menos una categoría.');
-            return;
-        }
-
-        const partes = [];
-
-        partes.push(
-            'Categorías observadas: ' +
-            categorias.join(', ')
-        );
-
-        const textoObservacion =
-            observacionesAdicionales.value.trim();
-
-        if (textoObservacion !== '') {
-            partes.push(
-                'Observaciones adicionales: ' +
-                textoObservacion
-            );
-        }
-
-        const solicitudCita =
-            <?= json_encode(
-                $solicitudCita,
-                JSON_UNESCAPED_UNICODE
-            ) ?>;
-
-        const profesional =
-            <?= json_encode(
-                $profesionalSolicitado,
-                JSON_UNESCAPED_UNICODE
-            ) ?>;
-
-        if (solicitudCita !== '') {
-            partes.push(solicitudCita);
-        }
-
-        if (profesional !== '') {
-            partes.push(profesional);
-        }
-
-        observaciones.value =
-            partes.join("\n\n");
-    });
-});
-</script>
-
-<?php include '../includes/footer.php'; ?>  
+<?php include '../includes/footer.php'; ?>

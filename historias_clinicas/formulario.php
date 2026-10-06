@@ -1,4 +1,10 @@
 <?php
+if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
+    http_response_code(404);
+    exit;
+}
+require_once __DIR__ . '/../includes/historias_datos.php';
+
 $historia = isset($historia) && is_array($historia)
     ? $historia
     : [];
@@ -11,12 +17,12 @@ $datosIniciales = isset($datosIniciales) && is_array($datosIniciales)
     ? $datosIniciales
     : [];
 
-$datosSesion = isset($_SESSION['datos_historia'])
-    && is_array($_SESSION['datos_historia'])
-        ? $_SESSION['datos_historia']
-        : [];
-
 $esEdicion = !empty($historia['id_historia']);
+$recuperacion = $_SESSION['datos_historia'] ?? [];
+$datosSesion = ($recuperacion['id'] ?? -1) === (int)($historia['id_historia'] ?? 0)
+    ? ($recuperacion['datos'] ?? []) : [];
+unset($_SESSION['datos_historia']);
+if ($esEdicion) unset($datosSesion['id_historia'], $datosSesion['id_estudiante'], $datosSesion['id_derivacion'], $datosSesion['id_cita']);
 
 function valorHistoria(string $campo, $defecto = '')
 {
@@ -47,6 +53,12 @@ function marcado(string $campo, string $valor): string
         : '';
 }
 
+function opcionesHistoria(string $grupo): array
+{
+    // Los valores históricos también se muestran para no perderlos al guardar.
+    return array_values(array_unique(array_merge(HISTORIA_OPCIONES[$grupo], valorHistoria($grupo, []))));
+}
+
 $accionFormulario = $esEdicion ? 'actualizar.php' : 'guardar.php';
 
 $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
@@ -58,6 +70,18 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
     id="formHistoriaClinica"
     autocomplete="off"
 >
+    <?= login_campo_csrf() ?>
+    <input type="hidden" name="id_cita" value="<?= (int)valorHistoria('id_cita', 0) ?>">
+    <?php if ((int)valorHistoria('id_cita', 0)): ?>
+        <p class="alert alert-info">Cita de origen #<?= (int)valorHistoria('id_cita') ?>. Se conservarán su estudiante y derivación al guardar.</p>
+    <?php endif; ?>
+    <?php foreach (HISTORIA_OPCIONES as $grupo => $_): ?>
+        <input type="hidden" name="opciones_presentes[<?= escapar($grupo) ?>]" value="1">
+    <?php endforeach; ?>
+    <input type="hidden" name="familiares_presentes" value="1">
+    <input type="hidden" name="situacion_escolar" value="">
+    <input type="hidden" name="valoracion_familiar" value="">
+    <input type="hidden" name="evolucion_caso" value="">
     <?php if ($esEdicion): ?>
         <input
             type="hidden"
@@ -438,71 +462,48 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
                 Valoración de la situación escolar
             </label>
             <div class="opciones-clinicas">
-                <?php foreach (
-                    ['Muy buena', 'Buena', 'Regular', 'Deficiente'] as $situacion
-                ): ?>
+                <?php foreach (['Muy buena', 'Buena', 'Regular', 'Deficiente'] as $situacion): ?>
                     <label class="opcion-radio">
-                        <input
-                            type="radio"
-                            name="situacion_escolar"
-                            value="<?= escapar($situacion) ?>"
-                            <?= valorHistoria('situacion_escolar') === $situacion
-                                ? 'checked' : '' ?>
-                        >
+                        <input type="radio" name="situacion_escolar" value="<?= escapar($situacion) ?>"
+                            <?= valorHistoria('situacion_escolar') === $situacion ? 'checked' : '' ?>>
                         <span><?= escapar($situacion) ?></span>
                     </label>
                 <?php endforeach; ?>
             </div>
-
             <div class="row g-4 mt-1">
                 <div class="col-md-6">
                     <label class="form-label">Curso(s) repetido(s)</label>
-                    <input type="text" name="cursos_repetidos" class="form-control"
-                        value="<?= escapar(valorHistoria('cursos_repetidos')) ?>">
+                    <input type="text" name="cursos_repetidos" class="form-control" maxlength="150" value="<?= escapar(valorHistoria('cursos_repetidos')) ?>">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Dificultad escolar</label>
-                    <input type="text" name="dificultad_escolar" class="form-control"
-                        value="<?= escapar(valorHistoria('dificultad_escolar')) ?>">
+                    <input type="text" name="dificultad_escolar" class="form-control" maxlength="5000" value="<?= escapar(valorHistoria('dificultad_escolar')) ?>">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Materia que más le agrada</label>
-                    <input type="text" name="materia_agrada" class="form-control"
-                        value="<?= escapar(valorHistoria('materia_agrada')) ?>">
+                    <input type="text" name="materia_agrada" class="form-control" maxlength="150" value="<?= escapar(valorHistoria('materia_agrada')) ?>">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Materia que menos le agrada</label>
-                    <input type="text" name="materia_desagrada" class="form-control"
-                        value="<?= escapar(valorHistoria('materia_desagrada')) ?>">
+                    <input type="text" name="materia_desagrada" class="form-control" maxlength="150" value="<?= escapar(valorHistoria('materia_desagrada')) ?>">
                 </div>
                 <div class="col-12">
                     <label class="form-label">Relación con compañeros(as) y profesores(as)</label>
-                    <textarea name="relacion_escolar" class="form-control textarea-auto" rows="2"
-                        ><?= escapar(valorHistoria('relacion_escolar')) ?></textarea>
+                    <textarea name="relacion_escolar" class="form-control textarea-auto" rows="2" maxlength="5000"><?= escapar(valorHistoria('relacion_escolar')) ?></textarea>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- =====================================================
-         4. CONDUCTAS DE RIESGO
-         ===================================================== -->
     <section class="historia-bloque" id="seccion-riesgo">
         <button type="button" class="historia-bloque-titulo" data-historia-toggle>
             <span class="historia-numero">4</span>
-            <span>
-                <strong>Conductas de riesgo</strong>
-                <small>Seleccione las opciones observadas</small>
-            </span>
+            <span><strong>Conductas de riesgo</strong><small>Seleccione las opciones observadas</small></span>
             <i class="bi bi-chevron-up"></i>
         </button>
-
         <div class="historia-bloque-contenido">
             <div class="opciones-check-grid">
-                <?php foreach (
-                    ['Delictiva', 'Pandillaje', 'Sospecha de consumo/droga', 'Problemática sexual']
-                    as $opcion
-                ): ?>
+                <?php foreach (opcionesHistoria('conductas_riesgo') as $opcion): ?>
                     <label class="opcion-check">
                         <input
                             type="checkbox"
@@ -535,14 +536,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
             <div class="subseccion-clinica">
                 <h3>A. Atención / distracción</h3>
                 <div class="opciones-check-grid">
-                    <?php foreach ([
-                        'Se distrae mirando a cualquier lado',
-                        'Se olvida sus carpetas o tareas',
-                        'Habla constantemente',
-                        'Se equivoca por descuido',
-                        'No termina de hacer tareas / se atrasa',
-                        'Lenguaje inapropiado / conducta obscena'
-                    ] as $opcion): ?>
+                    <?php foreach (opcionesHistoria('atencion_distraccion') as $opcion): ?>
                         <label class="opcion-check">
                             <input type="checkbox" name="atencion_distraccion[]"
                                 value="<?= escapar($opcion) ?>"
@@ -557,10 +551,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
             <div class="subseccion-clinica">
                 <h3>B. Actividad motora en exceso</h3>
                 <div class="opciones-check-grid">
-                    <?php foreach ([
-                        'Se mueve constantemente en su asiento',
-                        'Se para y se sienta constantemente'
-                    ] as $opcion): ?>
+                    <?php foreach (opcionesHistoria('actividad_motora') as $opcion): ?>
                         <label class="opcion-check">
                             <input type="checkbox" name="actividad_motora[]"
                                 value="<?= escapar($opcion) ?>"
@@ -575,17 +566,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
             <div class="subseccion-clinica">
                 <h3>C. Adaptación a normas</h3>
                 <div class="opciones-check-grid">
-                    <?php foreach ([
-                        'No obedece el reglamento del colegio',
-                        'Le es difícil seguir indicaciones / protesta',
-                        'No cumple normas establecidas',
-                        'Propicia el desorden',
-                        'Miente',
-                        'Agrede de manera verbal',
-                        'Agrede de manera física',
-                        'Llama por apodos / bullying',
-                        'Sus compañeros lo rechazan'
-                    ] as $opcion): ?>
+                    <?php foreach (opcionesHistoria('adaptacion_normas') as $opcion): ?>
                         <label class="opcion-check">
                             <input type="checkbox" name="adaptacion_normas[]"
                                 value="<?= escapar($opcion) ?>"
@@ -600,18 +581,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
             <div class="subseccion-clinica">
                 <h3>Dificultades socioemocionales</h3>
                 <div class="opciones-check-grid">
-                    <?php foreach ([
-                        'Falta de interés por aprender',
-                        'Se le observa triste, deprimido, desanimado',
-                        'Cambia de humor frecuentemente',
-                        'Prefiere estar solo(a)',
-                        'No participa en las actividades',
-                        'Se calla y aguanta si lo molestan',
-                        'Tartamudea / habla nerviosamente',
-                        'Se muerde / come las uñas',
-                        'Duda al expresar su opinión',
-                        'Se mantiene callado'
-                    ] as $opcion): ?>
+                    <?php foreach (opcionesHistoria('dificultades_socioemocionales') as $opcion): ?>
                         <label class="opcion-check">
                             <input type="checkbox" name="dificultades_socioemocionales[]"
                                 value="<?= escapar($opcion) ?>"
@@ -626,14 +596,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
             <div class="subseccion-clinica">
                 <h3>Estrategias de intervención antes de la derivación</h3>
                 <div class="opciones-check-grid">
-                    <?php foreach ([
-                        'Conversación con él/ella',
-                        'Llamadas de atención',
-                        'Conversación con el tutor/a a cargo',
-                        'Premios y sanciones',
-                        'Mayor supervisión',
-                        'Ninguna'
-                    ] as $opcion): ?>
+                    <?php foreach (opcionesHistoria('estrategias_previas') as $opcion): ?>
                         <label class="opcion-check">
                             <input type="checkbox" name="estrategias_previas[]"
                                 value="<?= escapar($opcion) ?>"
@@ -755,6 +718,9 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
             <i class="bi bi-chevron-up"></i>
         </button>
         <div class="historia-bloque-contenido">
+            <label class="form-label">Evaluación inicial</label>
+            <textarea name="evaluacion_inicial" class="form-control textarea-auto mb-3" rows="4" maxlength="5000"><?= escapar(valorHistoria('evaluacion_inicial')) ?></textarea>
+            <label class="form-label">Impresión diagnóstica</label>
             <textarea name="impresion_diagnostica" class="form-control textarea-auto"
                 rows="4" maxlength="5000"
                 placeholder="Registre los resultados del diagnóstico psicológico..."
@@ -801,13 +767,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
             </label>
             <div class="opciones-clinicas">
                 <?php
-                $evoluciones = [
-                    1 => 'Empeoró',
-                    2 => 'Sin mejoría',
-                    3 => 'Estable',
-                    4 => 'Mejoró',
-                    5 => 'Mejoró significativamente'
-                ];
+                $evoluciones = HISTORIA_EVOLUCIONES;
                 ?>
                 <?php foreach ($evoluciones as $valor => $texto): ?>
                     <label class="opcion-radio">
@@ -823,10 +783,13 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
                 Esta evaluación permitirá generar estadísticas
                 sobre la evolución de los casos.
             </small>
+            <label class="form-label mt-3">Observaciones clínicas</label>
+            <textarea name="observaciones" class="form-control textarea-auto" rows="4" maxlength="5000"><?= escapar(valorHistoria('observaciones')) ?></textarea>
         </div>
     </section>
 
     <!-- BOTONES -->
+    <input type="hidden" name="formulario_completo" value="1">
     <div class="historia-form-acciones">
         <a href="listar.php" class="btn btn-light border">Cancelar</a>
         <button type="submit" class="btn btn-primary">
@@ -838,6 +801,8 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const esEdicion = <?= $esEdicion ? 'true' : 'false' ?>;
+    const recuperando = <?= $datosSesion ? 'true' : 'false' ?>;
 
     /* =====================================================
        1. TOGGLE DE SECCIONES
@@ -883,16 +848,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const celularEstudiante = document.getElementById('celular_estudiante');
     const padreMadre = document.getElementById('padre_madre');
 
-    function completarDatosEstudiante() {
+    function completarDatosEstudiante(copiarFicha = false) {
         if (!estudianteSelect) return;
 
         const opcion = estudianteSelect.options[estudianteSelect.selectedIndex];
 
         if (!opcion || !opcion.value) {
-            [nombreCompleto, fechaNacimiento, lugarNacimiento,
-             celularEstudiante, padreMadre].forEach(campo => {
+            [nombreCompleto, fechaNacimiento].forEach(campo => {
                 if (campo) campo.value = '';
             });
+            if (copiarFicha) [lugarNacimiento, celularEstudiante, padreMadre].forEach(campo => { if (campo) campo.value = ''; });
             return;
         }
 
@@ -905,14 +870,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 : '';
         }
 
-        if (lugarNacimiento) lugarNacimiento.value = opcion.dataset.lugarNacimiento || '';
-        if (celularEstudiante) celularEstudiante.value = opcion.dataset.celular || '';
-        if (padreMadre) padreMadre.value = opcion.dataset.padreMadre || '';
+        if (copiarFicha) {
+            if (lugarNacimiento) lugarNacimiento.value = opcion.dataset.lugarNacimiento || '';
+            if (celularEstudiante) celularEstudiante.value = opcion.dataset.celular || '';
+            if (padreMadre) padreMadre.value = opcion.dataset.padreMadre || '';
+        }
     }
 
     if (estudianteSelect) {
-        estudianteSelect.addEventListener('change', completarDatosEstudiante);
-        completarDatosEstudiante();
+        estudianteSelect.addEventListener('change', () => completarDatosEstudiante(!esEdicion));
+        completarDatosEstudiante(!esEdicion && !recuperando);
     }
 
     /* =====================================================
@@ -980,7 +947,24 @@ document.addEventListener('DOMContentLoaded', function () {
     const bloquePriDer  = document.getElementById('bloquePrioridadDeriv');
     const bloqueObsDer  = document.getElementById('bloqueObservacionesDeriv');
 
+    // El motivo precargado por URL también pertenece a la derivación elegida.
+    // Al cambiar de estudiante se limpia; el texto recuperado de un error se conserva.
+    if (!esEdicion && !recuperando && Number(inputDeriv.value) > 0) {
+        document.getElementById('motivo_consulta').dataset.autofill = '1';
+    }
+
     let cacheDerivaciones = [];
+    let peticionDerivaciones = 0;
+    let controladorDerivaciones;
+    let derivacionesCargando = false;
+    let errorDerivaciones = false;
+    const formHistoria = document.getElementById('formHistoriaClinica');
+    formHistoria.addEventListener('submit', (evento) => {
+        if (derivacionesCargando || errorDerivaciones) {
+            evento.preventDefault();
+            alert('Espere a que se carguen las derivaciones. Si ocurrió un error, vuelva a seleccionar al estudiante.');
+        }
+    });
 
     const ocultarCamposDeriv = () => {
         [bloqueMatDer, bloquePriDer, bloqueObsDer].forEach(b => {
@@ -988,37 +972,54 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     };
 
-    const cargarDerivaciones = async () => {
+    const cargarDerivaciones = async (conservarEntrada = false) => {
         if (!bloqueDeriv || !selDeriv || !estudianteSelect) return;
-
+        const peticionActual = ++peticionDerivaciones;
+        if (controladorDerivaciones) controladorDerivaciones.abort();
+        controladorDerivaciones = new AbortController();
         const idEst = estudianteSelect.value;
+        const seleccionAnterior = conservarEntrada ? inputDeriv.value : '';
+        if (!conservarEntrada) {
+            inputDeriv.value = '';
+            ['derivado_por', 'fecha_derivacion'].forEach(id => { document.getElementById(id).value = ''; });
+            const motivo = document.getElementById('motivo_consulta');
+            if (motivo.dataset.autofill === '1') motivo.value = '';
+        }
 
         selDeriv.innerHTML = '<option value="">— Sin derivación / sin vincular —</option>';
         bloqueDeriv.style.display = 'none';
         if (infoDeriv) infoDeriv.textContent = '';
         cacheDerivaciones = [];
         ocultarCamposDeriv();
-
+        errorDerivaciones = false;
+        derivacionesCargando = false;
         if (!idEst) return;
+        derivacionesCargando = true;
+        selDeriv.disabled = true;
+        bloqueDeriv.style.display = 'block';
+        if (infoDeriv) infoDeriv.textContent = 'Cargando derivaciones…';
 
         try {
             const resp = await fetch(
                 `ajax_derivaciones.php?id_estudiante=${encodeURIComponent(idEst)}`,
-                { headers: { 'Accept': 'application/json' } }
+                { headers: { 'Accept': 'application/json' }, signal: controladorDerivaciones.signal }
             );
 
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
 
             const data = await resp.json();
-            const lista = data.derivaciones || [];
+            if (peticionActual !== peticionDerivaciones || idEst !== estudianteSelect.value) return;
+            if (!Array.isArray(data.derivaciones)) throw new Error('Respuesta inválida');
+            const lista = data.derivaciones;
             cacheDerivaciones = lista;
 
             if (lista.length === 0) {
                 if (infoDeriv) {
                     infoDeriv.textContent =
-                        'Este estudiante no tiene derivaciones pendientes de vincular.';
+                        'Este estudiante no tiene derivaciones registradas.';
                 }
                 bloqueDeriv.style.display = 'block';
+                inputDeriv.value = '';
                 return;
             }
 
@@ -1040,30 +1041,41 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             /* Si ya viene un id_derivacion preseleccionado (por URL), aplicarlo */
-            if (inputDeriv && inputDeriv.value) {
+            if (seleccionAnterior && seleccionAnterior !== '0') {
                 const existe = lista.some(
-                    (x) => String(x.id) === String(inputDeriv.value)
+                    (x) => String(x.id) === String(seleccionAnterior)
                 );
                 if (existe) {
-                    selDeriv.value = inputDeriv.value;
-                    selDeriv.dispatchEvent(new Event('change'));
+                    selDeriv.value = seleccionAnterior;
+                    inputDeriv.value = seleccionAnterior;
+                    autocompletarDesdeDeriv(lista.find(x => String(x.id) === String(seleccionAnterior)), conservarEntrada);
+                } else {
+                    inputDeriv.value = '';
                 }
             }
 
         } catch (err) {
+            if (peticionActual !== peticionDerivaciones || err.name === 'AbortError') return;
+            errorDerivaciones = true;
+            inputDeriv.value = '';
             console.error(err);
             if (infoDeriv) {
                 infoDeriv.textContent = 'No se pudieron cargar las derivaciones.';
             }
+        } finally {
+            if (peticionActual === peticionDerivaciones) {
+                derivacionesCargando = false;
+                selDeriv.disabled = errorDerivaciones;
+            }
         }
     };
 
-    const autocompletarDesdeDeriv = (d) => {
+    const autocompletarDesdeDeriv = (d, conservarEntrada = false) => {
         const dp = document.getElementById('derivado_por');
-        if (dp) dp.value = d.docente || '';
+        if (dp && !conservarEntrada) dp.value = d.docente || '';
 
         const fd = document.getElementById('fecha_derivacion');
-        if (fd) fd.value = d.fecha || '';
+        if (fd && !conservarEntrada) fd.value = d.fecha || '';
 
         if (bloqueMatDer) {
             const mt = document.getElementById('materia_derivacion');
@@ -1078,7 +1090,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const motivo = document.getElementById('motivo_consulta');
-        if (motivo && (!motivo.value || motivo.dataset.autofill === '1')) {
+        if (!conservarEntrada && motivo && (!motivo.value || motivo.dataset.autofill === '1')) {
             motivo.value = d.motivo || '';
             motivo.dataset.autofill = '1';
             motivo.dispatchEvent(new Event('input'));
@@ -1118,9 +1130,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (estudianteSelect) {
-        estudianteSelect.addEventListener('change', cargarDerivaciones);
-        if (estudianteSelect.value) cargarDerivaciones();
+        estudianteSelect.addEventListener('change', () => cargarDerivaciones(false));
+        if (estudianteSelect.value) cargarDerivaciones(true);
     }
+    document.getElementById('motivo_consulta').addEventListener('input', function (evento) {
+        if (evento.isTrusted) delete this.dataset.autofill;
+    });
 
 });
 </script>

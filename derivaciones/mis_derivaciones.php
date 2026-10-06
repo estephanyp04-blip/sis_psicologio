@@ -1,11 +1,10 @@
 <?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('derivaciones/mis_derivaciones.php');
+
 require_once '../config/conexion.php';
 
 //  consultar las derivaciones registradas por el docente actual.
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 if (!isset($_SESSION['id_usuario']) || ($_SESSION['id_rol'] ?? 0) != 3) {
     header('Location: ../index.php');
     exit;
@@ -101,6 +100,7 @@ $stmt->close();
                                     <?php if ($derivacion['estado'] === 'Pendiente'): ?>
                                         <a href="editar.php?id=<?= (int) $derivacion['id_derivacion'] ?>" class="btn btn-sm btn-outline-warning" title="Editar"><i class="bi bi-pencil-square"></i></a>
                                         <form action="eliminar.php" method="POST" onsubmit="return confirm('¿Eliminar esta derivación pendiente?');">
+                                            <?= login_campo_csrf() ?>
                                             <input type="hidden" name="id_derivacion" value="<?= (int) $derivacion['id_derivacion'] ?>">
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="bi bi-trash"></i></button>
                                         </form>

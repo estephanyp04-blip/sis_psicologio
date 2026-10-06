@@ -1,4 +1,9 @@
 <?php
+if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
+    http_response_code(404);
+    exit;
+}
+
 require_once __DIR__ . '/../config/conexion_login.php';
 function login_config(): array
 {
@@ -140,14 +145,89 @@ function login_usuario_actual(): ?array
     $_SESSION['login_actividad'] = time();
     return $u;
 }
-function requerir_roles(array $permitidos = []): void
+function login_error_json(int $codigo, string $mensaje): void
+{
+    http_response_code($codigo);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store, private');
+    echo json_encode(['error' => $mensaje], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+    exit;
+}
+
+function requerir_roles(array $permitidos = [], bool $json = false): void
 {
     login_iniciar_sesion();
     try { $u = login_usuario_actual(); }
-    catch (Throwable $e) { error_log('Autenticación: ' . $e->getMessage()); http_response_code(503); exit('No se pudo verificar la sesión. Inténtalo más tarde.'); }
-    if (!$u) { $_SESSION = []; session_regenerate_id(true); login_ir('login.php'); }
+    catch (Throwable $e) {
+        error_log('Autenticación: ' . $e->getMessage());
+        if ($json) login_error_json(503, 'No se pudo verificar la sesión.');
+        http_response_code(503); exit('No se pudo verificar la sesión. Inténtalo más tarde.');
+    }
+    if (!$u) {
+        $_SESSION = []; session_regenerate_id(true);
+        if ($json) login_error_json(401, 'La sesión venció. Inicie sesión nuevamente.');
+        login_ir('login.php');
+    }
     if ($permitidos && !in_array((int) $u['id_rol'], $permitidos, true)) {
+        if ($json) login_error_json(403, 'No tiene permiso para realizar esta consulta.');
         http_response_code(403);
         exit('No tienes permiso para realizar esta acción.');
+    }
+}
+
+function login_permisos(): array
+{
+    static $permisos = null;
+    return $permisos ??= require __DIR__ . '/../config/permisos.php';
+}
+
+// Solo para presentar enlaces: el servidor siempre ejecuta requerir_acceso().
+function login_puede(string $ruta): bool
+{
+    $permiso = login_permisos()[$ruta] ?? null;
+    return $permiso !== null
+        && ($_SESSION['autenticado'] ?? false) === true
+        && in_array((int) ($_SESSION['id_rol'] ?? 0), $permiso['roles'], true);
+}
+
+function login_inicio_url(): string
+{
+    $destino = login_config()['destinos'][(int) ($_SESSION['id_rol'] ?? 0)] ?? 'login.php';
+    return login_url($destino);
+}
+
+function login_campo_csrf(): string
+{
+    return '<input type="hidden" name="csrf" value="' . login_html(login_token()) . '">';
+}
+
+function requerir_csrf(): void
+{
+    if (!login_validar_token($_POST['csrf'] ?? null)) {
+        http_response_code(403);
+        exit('El formulario venció o no es válido. Recarga la página e inténtalo de nuevo.');
+    }
+}
+
+// Debe ejecutarse antes de conectar a la base de los módulos o producir HTML.
+function requerir_acceso(string $ruta): void
+{
+    $permiso = login_permisos()[$ruta] ?? null;
+    if ($permiso === null) {
+        http_response_code(403);
+        exit('Esta ruta no tiene permisos definidos.');
+    }
+
+    $json = ($permiso['formato'] ?? '') === 'json';
+    requerir_roles($permiso['roles'], $json);
+    $metodo = $_SERVER['REQUEST_METHOD'] ?? '';
+    if (!in_array($metodo, $permiso['metodos'], true)) {
+        header('Allow: ' . implode(', ', $permiso['metodos']));
+        if ($json) login_error_json(405, 'Método no permitido para esta consulta.');
+        http_response_code(405);
+        exit('Método no permitido para esta operación.');
+    }
+    if ($metodo === 'POST') {
+        requerir_csrf();
     }
 }

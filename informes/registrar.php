@@ -1,7 +1,21 @@
 <?php
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('informes/registrar.php');
 
-if(session_status()===PHP_SESSION_NONE)session_start();
+require_once '../config/conexion.php';
+require_once __DIR__ . '/../includes/informes_datos.php';
+
+$datosInforme = $_SESSION['datos_informe'] ?? [];
+$datosInforme += ['id_estudiante' => (int)filter_var($_GET['id_estudiante'] ?? 0,FILTER_VALIDATE_INT)];
+$seguimientoSolicitado = (int)($datosInforme['id_seguimiento'] ?? filter_var($_GET['id_seguimiento'] ?? 0,FILTER_VALIDATE_INT));
+if (isset($_GET['id_seguimiento']) && !isset($_SESSION['datos_informe'])) {
+    $origen = flujo_fila($conexion,'SELECT s.id_seguimiento,h.id_estudiante FROM seguimientos s JOIN historias_clinicas h ON h.id_historia=s.id_historia WHERE s.id_seguimiento=?',[$seguimientoSolicitado]);
+    if (!$origen || ($datosInforme['id_estudiante'] && (int)$datosInforme['id_estudiante'] !== (int)$origen['id_estudiante'])) {
+        http_response_code(404); exit('El seguimiento no corresponde al estudiante.');
+    }
+    $datosInforme['id_estudiante']=(int)$origen['id_estudiante'];
+}
+unset($_SESSION['datos_informe']);
 
 function e($valor):string{
     return htmlspecialchars((string)$valor,ENT_QUOTES,'UTF-8');
@@ -43,72 +57,23 @@ if($idUsuario>0){
     }
 }
 
-// Número de ficha
-$numeroFicha='INF-0001';
-$resultadoFicha=$conexion->query("SELECT numero_ficha FROM informes ORDER BY id_informe DESC LIMIT 1");
-
-if($resultadoFicha&&$ultimaFicha=$resultadoFicha->fetch_assoc()){
-    if(preg_match('/(\d+)$/',$ultimaFicha['numero_ficha'],$coincidencia)){
-        $numeroFicha='INF-'.str_pad(((int)$coincidencia[1])+1,4,'0',STR_PAD_LEFT);
-    }
-}
+// El número definitivo se reserva dentro de la transacción de guardado.
+$numeroFicha = 'Se asignará al guardar';
 
 // Consulta
-$sqlEstudiantes="SELECT
-e.id_estudiante,
-e.nombres,
-e.apellidos,
-e.curso,
-e.paralelo,
-h.id_historia,
-h.motivo_consulta,
-h.impresion_diagnostica AS diagnostico,
-(
-    SELECT s.recomendaciones
-    FROM seguimientos s
-    WHERE s.id_historia=h.id_historia
-    ORDER BY s.fecha DESC,s.id_seguimiento DESC
-    LIMIT 1
-) AS recomendaciones,
-(
-    SELECT d.id_derivacion
-    FROM derivaciones d
-    WHERE d.id_estudiante=e.id_estudiante
-    ORDER BY d.fecha DESC,d.id_derivacion DESC
-    LIMIT 1
-) AS id_derivacion,
-(
-    SELECT d.motivo
-    FROM derivaciones d
-    WHERE d.id_estudiante=e.id_estudiante
-    ORDER BY d.fecha DESC,d.id_derivacion DESC
-    LIMIT 1
-) AS motivo_derivacion,
-(
-    SELECT CONCAT(doc.nombres,' ',doc.apellidos)
-    FROM derivaciones d
-    INNER JOIN docentes doc ON doc.id_docente=d.id_docente
-    WHERE d.id_estudiante=e.id_estudiante
-    ORDER BY d.fecha DESC,d.id_derivacion DESC
-    LIMIT 1
-) AS docente_referente,
-(
-    SELECT COUNT(*)
-    FROM citas c
-    WHERE c.id_estudiante=e.id_estudiante
-    AND c.estado='Atendida'
-) AS numero_atenciones
-FROM estudiantes e
-LEFT JOIN historias_clinicas h ON h.id_historia=(
-    SELECT h2.id_historia
-    FROM historias_clinicas h2
-    WHERE h2.id_estudiante=e.id_estudiante
-    ORDER BY h2.fecha_apertura DESC,h2.id_historia DESC
-    LIMIT 1
-)
-WHERE e.estado='Activo'
-ORDER BY e.apellidos ASC,e.nombres ASC";
-
+$sqlEstudiantes="SELECT e.id_estudiante,e.nombres,e.apellidos,e.curso,e.paralelo,
+    h.id_historia,h.motivo_consulta,h.impresion_diagnostica diagnostico,
+    s.id_seguimiento,s.recomendaciones,d.id_derivacion,d.motivo motivo_derivacion,
+    CONCAT(doc.nombres,' ',doc.apellidos) docente_referente,
+    (SELECT COUNT(*) FROM citas c WHERE c.id_estudiante=e.id_estudiante AND c.estado='Atendida') numero_atenciones
+    FROM estudiantes e LEFT JOIN historias_clinicas h ON h.id_estudiante=e.id_estudiante
+    LEFT JOIN seguimientos s ON s.id_seguimiento=(SELECT s2.id_seguimiento FROM seguimientos s2 WHERE s2.id_historia=h.id_historia
+        ORDER BY (s2.id_seguimiento=$seguimientoSolicitado) DESC,s2.fecha DESC,s2.id_seguimiento DESC LIMIT 1)
+    LEFT JOIN citas cs ON cs.id_cita=s.id_cita
+    LEFT JOIN derivaciones d ON d.id_derivacion=COALESCE(cs.id_derivacion,h.id_derivacion,
+        CASE WHEN h.id_historia IS NULL THEN (SELECT d2.id_derivacion FROM derivaciones d2 WHERE d2.id_estudiante=e.id_estudiante ORDER BY d2.fecha DESC,d2.id_derivacion DESC LIMIT 1) ELSE NULL END)
+    LEFT JOIN docentes doc ON doc.id_docente=d.id_docente
+    WHERE e.estado='Activo' ORDER BY e.apellidos,e.nombres";
 $resultadoEstudiantes=$conexion->query($sqlEstudiantes);
 
 if(!$resultadoEstudiantes){
@@ -124,7 +89,7 @@ include '../includes/navbar.php';
 <div class="main-content">
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="../index.php">Inicio</a></li>
+            <li class="breadcrumb-item"><a href="<?= login_html(login_inicio_url()) ?>">Inicio</a></li>
             <li class="breadcrumb-item"><a href="listar.php">Informes</a></li>
             <li class="breadcrumb-item active">Registrar</li>
         </ol>
@@ -150,16 +115,20 @@ include '../includes/navbar.php';
         </div>
 
         <form action="guardar.php" method="POST" id="formInforme" autocomplete="off">
-            <input type="hidden" name="id_usuario" value="<?= $idUsuario ?>">
-            <input type="hidden" name="id_historia" id="id_historia">
+            <?= login_campo_csrf() ?>
+            <input type="hidden" name="id_historia" id="id_historia"><input type="hidden" name="id_seguimiento" id="id_seguimiento"><p id="seguimiento_origen" class="text-muted"></p>
             <input type="hidden" name="id_derivacion" id="id_derivacion">
-            <input type="hidden" name="estado" value="Borrador">
+            <input type="hidden" name="estado" value="<?= e($datosInforme['estado'] ?? 'Borrador') ?>">
 
             <!-- Datos generales -->
             <section class="form-section mb-4">
                 <h5 class="section-title"><i class="bi bi-person-vcard me-2"></i>1. Datos generales</h5>
                 <hr>
                 <div class="row g-4">
+                    <div class="col-12">
+                        <label for="titulo" class="form-label">Título <span class="text-danger">*</span></label>
+                        <input type="text" name="titulo" id="titulo" class="form-control" maxlength="180" required value="<?= e($datosInforme['titulo'] ?? 'Informe psicológico individual') ?>">
+                    </div>
                     <div class="col-sm-6 col-lg-3">
                         <label class="form-label">Ficha psicológica</label>
                         <input type="text" class="form-control" value="<?= e($numeroFicha) ?>" readonly>
@@ -168,7 +137,7 @@ include '../includes/navbar.php';
 
                     <div class="col-sm-6 col-lg-3">
                         <label for="fecha" class="form-label">Fecha <span class="text-danger">*</span></label>
-                        <input type="date" name="fecha" id="fecha" class="form-control" value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>" required>
+                        <input type="date" name="fecha" id="fecha" class="form-control" value="<?= e($datosInforme['fecha'] ?? date('Y-m-d')) ?>" max="<?= date('Y-m-d') ?>" required>
                     </div>
 
                     <div class="col-lg-6">
@@ -181,9 +150,10 @@ include '../includes/navbar.php';
 
                                 <option
                                     value="<?= (int)$estudiante['id_estudiante'] ?>"
+                                    <?= (int)($datosInforme['id_estudiante'] ?? 0) === (int)$estudiante['id_estudiante'] ? 'selected' : '' ?>
                                     data-curso="<?= e($estudiante['curso']??'') ?>"
                                     data-paralelo="<?= e($estudiante['paralelo']??'') ?>"
-                                    data-historia="<?= (int)($estudiante['id_historia']??0) ?>"
+                                    data-seguimiento="<?= (int)($estudiante['id_seguimiento']??0) ?>" data-historia="<?= (int)($estudiante['id_historia']??0) ?>"
                                     data-derivacion="<?= (int)($estudiante['id_derivacion']??0) ?>"
                                     data-atenciones="<?= (int)($estudiante['numero_atenciones']??0) ?>"
                                     data-docente="<?= e($estudiante['docente_referente']??'') ?>"
@@ -255,19 +225,13 @@ include '../includes/navbar.php';
 
                 <div class="row g-3 mb-4">
                     <?php
-                    $tiposAtencion=[
-                        'Evaluación',
-                        'Consejería',
-                        'Orientación',
-                        'Terapia',
-                        'Acompañamiento pedagógico'
-                    ];
+                    $tiposAtencion = INFORME_ATENCIONES;
                     ?>
 
                     <?php foreach($tiposAtencion as $indice=>$tipo): ?>
                         <div class="col-sm-6 col-md-4">
                             <div class="form-check border rounded-3 p-3 h-100">
-                                <input class="form-check-input ms-0 me-2" type="checkbox" name="tipo_atencion[]" value="<?= e($tipo) ?>" id="tipo_<?= $indice ?>">
+                                <input class="form-check-input ms-0 me-2" type="checkbox" name="tipo_atencion[]" value="<?= e($tipo) ?>" id="tipo_<?= $indice ?>" <?= in_array($tipo, $datosInforme['tipo_atencion'] ?? [], true) ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="tipo_<?= $indice ?>"><?= e($tipo) ?></label>
                             </div>
                         </div>
@@ -277,12 +241,12 @@ include '../includes/navbar.php';
                 <div class="row g-4">
                     <div class="col-md-6">
                         <label for="motivo" class="form-label">Motivo <span class="text-danger">*</span></label>
-                        <textarea name="motivo" id="motivo" class="form-control" rows="5" maxlength="5000" placeholder="Se cargará desde la última derivación o historia clínica." required></textarea>
+                        <textarea name="motivo" id="motivo" class="form-control" rows="5" maxlength="5000" placeholder="Se cargará desde la última derivación o historia clínica." required><?= e($datosInforme['motivo'] ?? '') ?></textarea>
                     </div>
 
                     <div class="col-md-6">
                         <label for="diagnostico" class="form-label">Diagnóstico</label>
-                        <textarea name="diagnostico" id="diagnostico" class="form-control" rows="5" maxlength="5000" placeholder="Se cargará desde la impresión diagnóstica de la historia clínica."></textarea>
+                        <textarea name="diagnostico" id="diagnostico" class="form-control" rows="5" maxlength="5000" placeholder="Se cargará desde la impresión diagnóstica de la historia clínica."><?= e($datosInforme['diagnostico'] ?? '') ?></textarea>
                     </div>
                 </div>
             </section>
@@ -294,12 +258,12 @@ include '../includes/navbar.php';
                 <div class="row g-4">
                     <div class="col-md-6">
                         <label for="aspecto_cognitivo" class="form-label">Aspecto madurativo y/o cognitivo <span class="text-danger">*</span></label>
-                        <textarea name="aspecto_cognitivo" id="aspecto_cognitivo" class="form-control" rows="6" maxlength="5000" placeholder="Describa los aspectos cognitivos y/o madurativos observados." required></textarea>
+                        <textarea name="aspecto_cognitivo" id="aspecto_cognitivo" class="form-control" rows="6" maxlength="5000" placeholder="Describa los aspectos cognitivos y/o madurativos observados." required><?= e($datosInforme['aspecto_cognitivo'] ?? '') ?></textarea>
                     </div>
 
                     <div class="col-md-6">
                         <label for="aspectos_afectivos" class="form-label">Aspectos afectivos <span class="text-danger">*</span></label>
-                        <textarea name="aspectos_afectivos" id="aspectos_afectivos" class="form-control" rows="6" maxlength="5000" placeholder="Describa los aspectos emocionales y afectivos observados." required></textarea>
+                        <textarea name="aspectos_afectivos" id="aspectos_afectivos" class="form-control" rows="6" maxlength="5000" placeholder="Describa los aspectos emocionales y afectivos observados." required><?= e($datosInforme['aspectos_afectivos'] ?? '') ?></textarea>
                     </div>
                 </div>
             </section>
@@ -308,14 +272,14 @@ include '../includes/navbar.php';
             <section class="form-section mb-4">
                 <h5 class="section-title"><i class="bi bi-check2-square me-2"></i>5. Diagnóstico, acuerdos y/o compromisos</h5>
                 <hr>
-                <textarea name="diagnostico_acuerdos" id="diagnostico_acuerdos" class="form-control" rows="6" maxlength="5000" placeholder="Registre acuerdos, compromisos y acciones establecidas."></textarea>
+                <textarea name="diagnostico_acuerdos" id="diagnostico_acuerdos" class="form-control" rows="6" maxlength="5000" placeholder="Registre acuerdos, compromisos y acciones establecidas."><?= e($datosInforme['diagnostico_acuerdos'] ?? '') ?></textarea>
             </section>
 
             <!-- Recomendaciones -->
             <section class="form-section mb-4">
                 <h5 class="section-title"><i class="bi bi-lightbulb me-2"></i>6. Recomendaciones y/o sugerencias</h5>
                 <hr>
-                <textarea name="recomendaciones" id="recomendaciones" class="form-control" rows="6" maxlength="5000" placeholder="Las recomendaciones del último seguimiento se cargarán automáticamente."></textarea>
+                <textarea name="recomendaciones" id="recomendaciones" class="form-control" rows="6" maxlength="5000" placeholder="Las recomendaciones del último seguimiento se cargarán automáticamente."><?= e($datosInforme['recomendaciones'] ?? '') ?></textarea>
             </section>
 
             <!-- Recepción -->
@@ -325,7 +289,7 @@ include '../includes/navbar.php';
                 <div class="row g-4">
                     <div class="col-md-8">
                         <label for="recibido_por" class="form-label">Recibido por</label>
-                        <input type="text" name="recibido_por" id="recibido_por" class="form-control" maxlength="150" placeholder="Nombre de la persona que recibe el informe">
+                        <input type="text" name="recibido_por" id="recibido_por" value="<?= e($datosInforme['recibido_por'] ?? '') ?>" class="form-control" maxlength="150" placeholder="Nombre de la persona que recibe el informe">
                     </div>
 
                     <div class="col-md-4">
@@ -368,6 +332,8 @@ document.addEventListener('DOMContentLoaded',function(){
     const btnGuardar=document.getElementById('btnGuardar');
 
     function limpiarDatos(){
+        document.getElementById('id_seguimiento').value='0';
+        document.getElementById('seguimiento_origen').textContent='';
         curso.value='';
         paralelo.value='';
         atenciones.value='0';
@@ -394,6 +360,8 @@ document.addEventListener('DOMContentLoaded',function(){
         atenciones.value=opcion.dataset.atenciones||'0';
         docente.value=opcion.dataset.docente||'';
         historia.value=opcion.dataset.historia||'';
+        document.getElementById('id_seguimiento').value=opcion.dataset.seguimiento||'0';
+        document.getElementById('seguimiento_origen').textContent=Number(opcion.dataset.seguimiento) ? 'Seguimiento de origen #'+opcion.dataset.seguimiento : 'Sin seguimiento de origen';
         derivacion.value=opcion.dataset.derivacion||'';
 
         if(opcion.dataset.historia&&opcion.dataset.historia!=='0'){
@@ -414,6 +382,13 @@ document.addEventListener('DOMContentLoaded',function(){
     }
 
     estudiante.addEventListener('change',cargarDatos);
+    cargarDatos();
+    const datosRecuperados = <?= json_encode($datosInforme, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) ?>;
+    for (const campo of ['motivo','diagnostico','aspecto_cognitivo','aspectos_afectivos','diagnostico_acuerdos','recomendaciones','recibido_por','numero_atenciones','referido_por']) {
+        if (Object.prototype.hasOwnProperty.call(datosRecuperados, campo)) {
+            document.getElementById(campo).value = datosRecuperados[campo];
+        }
+    }
 
     form.addEventListener('submit',function(event){
         const tipos=form.querySelectorAll('input[name="tipo_atencion[]"]:checked');
@@ -432,9 +407,8 @@ document.addEventListener('DOMContentLoaded',function(){
         }
 
         if(!historia.value||historia.value==='0'){
-            event.preventDefault();
-
             if(!confirm('El estudiante no tiene una historia clínica registrada. ¿Desea continuar igualmente?')){
+                event.preventDefault();
                 return;
             }
         }

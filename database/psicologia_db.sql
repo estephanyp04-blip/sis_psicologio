@@ -1,265 +1,243 @@
--- phpMyAdmin SQL Dump
--- version 5.2.1
--- https://www.phpmyadmin.net/
---
--- Servidor: 127.0.0.1
--- Tiempo de generación: 01-09-2026 a las 03:44:16
--- Versión del servidor: 10.4.32-MariaDB
--- Versión de PHP: 8.0.30
+-- Esquema canónico, versión 001_alinear_esquema. Sin datos personales.
+-- Importar únicamente en una base vacía. Ver database/README.md.
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS=0;
 
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-START TRANSACTION;
-SET time_zone = "+00:00";
-
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
-
---
--- Base de datos: `psicologia_db`
---
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `categorias_derivacion`
---
-
-CREATE TABLE `categorias_derivacion` (
-  `id_categoria` int(11) NOT NULL,
-  `nombre` varchar(100) NOT NULL,
-  `descripcion` varchar(255) DEFAULT NULL
+CREATE TABLE `auditoria` (
+  `id_auditoria` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `id_usuario` int(10) unsigned DEFAULT NULL,
+  `modulo` varchar(60) NOT NULL,
+  `accion` varchar(40) NOT NULL,
+  `registro_id` int(10) unsigned DEFAULT NULL,
+  `detalle` text DEFAULT NULL,
+  `ip` varchar(45) DEFAULT NULL,
+  `fecha` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id_auditoria`),
+  KEY `fk_auditoria_usuarios` (`id_usuario`),
+  CONSTRAINT `fk_auditoria_usuarios` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Volcado de datos para la tabla `categorias_derivacion`
---
-
-INSERT INTO `categorias_derivacion` (`id_categoria`, `nombre`, `descripcion`) VALUES
-(1, 'Rendimiento Académico', 'Baja de notas, falta de atención o dificultades de aprendizaje.'),
-(2, 'Conducta en Aula', 'Indisciplina, agresividad o interrupciones.'),
-(3, 'Social / Emocional', 'Aislamiento, tristeza, llanto recurrente o ansiedad.'),
-(4, 'Dinámica Familiar', 'Problemas en el hogar, negligencia o conflictos familiares.'),
-(5, 'Acoso escolar / Acoso', 'Víctima o agresor de bullying o ciberacoso.'),
-(6, 'Otro', 'Situación no especificada anteriormente.');
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `citas`
---
 
 CREATE TABLE `citas` (
-  `id_cita` int(11) NOT NULL,
-  `id_derivacion` int(11) DEFAULT NULL,
-  `id_estudiante` int(11) NOT NULL,
-  `id_usuario` int(11) DEFAULT NULL,
+  `id_cita` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `id_estudiante` int(10) unsigned NOT NULL,
+  `id_usuario` int(10) unsigned DEFAULT NULL,
+  `id_derivacion` int(10) unsigned DEFAULT NULL,
   `fecha` date NOT NULL,
   `hora` time NOT NULL,
-  `estado` enum('Pendiente','Atendida','Cancelada','Reprogramada') NOT NULL DEFAULT 'Pendiente',
+  `estado` enum('Pendiente','Atendida','Reprogramada','Cancelada') NOT NULL DEFAULT 'Pendiente',
   `observaciones` text DEFAULT NULL,
-  `fecha_registro` datetime NOT NULL DEFAULT current_timestamp()
+  `motivo` varchar(500) DEFAULT NULL,
+  `fecha_registro` timestamp NOT NULL DEFAULT current_timestamp(),
+  `fecha_actualizacion` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_cita`),
+  UNIQUE KEY `uk_cita_profesional_fecha_hora` (`id_usuario`,`fecha`,`hora`),
+  KEY `idx_citas_estudiante` (`id_estudiante`,`fecha`),
+  KEY `fk_citas_derivaciones` (`id_derivacion`),
+  CONSTRAINT `fk_citas_derivaciones` FOREIGN KEY (`id_derivacion`) REFERENCES `derivaciones` (`id_derivacion`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_citas_estudiantes` FOREIGN KEY (`id_estudiante`) REFERENCES `estudiantes` (`id_estudiante`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_citas_usuarios` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `derivaciones`
---
-
-CREATE TABLE `derivaciones` (
-  `id_derivacion` int(11) NOT NULL,
-  `fecha` date NOT NULL,
-  `id_estudiante` int(11) NOT NULL,
-  `id_docente` int(11) NOT NULL,
-  `id_profesional_asignado` int(11) DEFAULT NULL,
-  `materia` varchar(150) NOT NULL,
-  `motivo` text NOT NULL,
-  `observaciones` text DEFAULT NULL,
-  `prioridad` enum('Alta','Media','Baja') NOT NULL DEFAULT 'Media',
-  `estado` enum('Pendiente','En seguimiento','En atención','Atendido','Finalizado','Rechazado') NOT NULL DEFAULT 'Pendiente',
-  `solicita_cita` tinyint(1) NOT NULL DEFAULT 0,
-  `fecha_registro` datetime NOT NULL DEFAULT current_timestamp(),
-  `categorias` text DEFAULT NULL,
-  `solicitar_cita` tinyint(1) NOT NULL DEFAULT 0,
-  `id_profesional` int(11) DEFAULT NULL
+CREATE TABLE `cursos` (
+  `id_curso` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(50) NOT NULL,
+  `nivel` varchar(30) NOT NULL DEFAULT 'Secundaria',
+  `estado` enum('Activo','Inactivo') NOT NULL DEFAULT 'Activo',
+  PRIMARY KEY (`id_curso`),
+  UNIQUE KEY `nombre` (`nombre`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `derivacion_categorias`
---
-
-CREATE TABLE `derivacion_categorias` (
-  `id_derivacion` int(11) NOT NULL,
-  `id_categoria` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `derivacion_evidencias`
---
 
 CREATE TABLE `derivacion_evidencias` (
-  `id_evidencia` int(11) NOT NULL,
-  `id_derivacion` int(11) NOT NULL,
+  `id_evidencia` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `id_derivacion` int(10) unsigned NOT NULL,
   `nombre_original` varchar(255) NOT NULL,
   `ruta` varchar(500) NOT NULL,
   `tipo_mime` varchar(50) NOT NULL,
-  `fecha_registro` datetime NOT NULL DEFAULT current_timestamp()
+  `fecha_registro` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id_evidencia`),
+  KEY `idx_evidencia_derivacion` (`id_derivacion`),
+  CONSTRAINT `fk_evidencia_derivacion` FOREIGN KEY (`id_derivacion`) REFERENCES `derivaciones` (`id_derivacion`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `docentes`
---
-
-CREATE TABLE `docentes` (
-  `id_docente` int(11) NOT NULL,
-  `id_usuario` int(11) DEFAULT NULL,
-  `nombres` varchar(60) NOT NULL,
-  `apellidos` varchar(60) NOT NULL,
-  `telefono` varchar(20) DEFAULT NULL,
-  `correo` varchar(100) DEFAULT NULL,
-  `materia` varchar(150) DEFAULT NULL
+CREATE TABLE `derivaciones` (
+  `id_derivacion` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `fecha` date NOT NULL,
+  `id_estudiante` int(10) unsigned NOT NULL,
+  `id_docente` int(10) unsigned NOT NULL,
+  `materia` varchar(150) DEFAULT NULL,
+  `motivo` text NOT NULL,
+  `observaciones` text DEFAULT NULL,
+  `prioridad` enum('Alta','Media','Baja') NOT NULL DEFAULT 'Media',
+  `estado` enum('Pendiente','En seguimiento','Atendido') NOT NULL DEFAULT 'Pendiente',
+  `fecha_registro` timestamp NOT NULL DEFAULT current_timestamp(),
+  `fecha_actualizacion` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `categorias` text DEFAULT NULL,
+  `solicitar_cita` tinyint(1) NOT NULL DEFAULT 0,
+  `id_profesional` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`id_derivacion`),
+  KEY `idx_derivaciones_estado` (`estado`,`prioridad`,`fecha`),
+  KEY `fk_derivaciones_estudiantes` (`id_estudiante`),
+  KEY `fk_derivaciones_docentes` (`id_docente`),
+  CONSTRAINT `fk_derivaciones_docentes` FOREIGN KEY (`id_docente`) REFERENCES `docentes` (`id_docente`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_derivaciones_estudiantes` FOREIGN KEY (`id_estudiante`) REFERENCES `estudiantes` (`id_estudiante`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `estudiantes`
---
-
-CREATE TABLE `estudiantes` (
-  `id_estudiante` int(11) NOT NULL,
-  `codigo` varchar(30) DEFAULT NULL,
-  `ci` varchar(20) NOT NULL,
+CREATE TABLE `docentes` (
+  `id_docente` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `id_usuario` int(10) unsigned DEFAULT NULL,
   `nombres` varchar(60) NOT NULL,
   `apellidos` varchar(60) NOT NULL,
+  `ci` varchar(20) DEFAULT NULL,
+  `telefono` varchar(25) DEFAULT NULL,
+  `correo` varchar(120) DEFAULT NULL,
+  `materias` varchar(255) DEFAULT NULL,
+  `estado` enum('Activo','Inactivo') NOT NULL DEFAULT 'Activo',
+  `fecha_registro` timestamp NOT NULL DEFAULT current_timestamp(),
+  `materia` varchar(150) DEFAULT NULL,
+  PRIMARY KEY (`id_docente`),
+  UNIQUE KEY `id_usuario` (`id_usuario`),
+  UNIQUE KEY `ci` (`ci`),
+  CONSTRAINT `fk_docentes_usuarios` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `estudiantes` (
+  `id_estudiante` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `codigo` varchar(20) NOT NULL,
+  `ci` varchar(20) DEFAULT NULL,
+  `rude` varchar(30) DEFAULT NULL,
+  `nombres` varchar(80) NOT NULL,
+  `apellidos` varchar(80) NOT NULL,
   `fecha_nacimiento` date DEFAULT NULL,
   `lugar_nacimiento` varchar(100) DEFAULT NULL,
   `sexo` enum('M','F') DEFAULT NULL,
-  `curso` varchar(20) NOT NULL,
-  `paralelo` varchar(5) NOT NULL,
-  `turno` enum('Mañana','Tarde') NOT NULL,
-  `direccion` varchar(150) DEFAULT NULL,
-  `telefono` varchar(20) DEFAULT NULL,
-  `nombre_tutor` varchar(100) DEFAULT NULL,
-  `telefono_tutor` varchar(20) DEFAULT NULL,
+  `direccion` varchar(255) DEFAULT NULL,
+  `telefono` varchar(25) DEFAULT NULL,
+  `celular` varchar(25) DEFAULT NULL,
+  `nombre_padre` varchar(120) DEFAULT NULL,
+  `telefono_padre` varchar(25) DEFAULT NULL,
+  `nombre_madre` varchar(120) DEFAULT NULL,
+  `telefono_madre` varchar(25) DEFAULT NULL,
+  `nombre_tutor` varchar(120) DEFAULT NULL,
+  `telefono_tutor` varchar(25) DEFAULT NULL,
+  `id_curso` int(10) unsigned NOT NULL,
+  `id_paralelo` int(10) unsigned NOT NULL,
+  `turno` enum('Mañana','Tarde') NOT NULL DEFAULT 'Mañana',
   `estado` enum('Activo','Retirado') NOT NULL DEFAULT 'Activo',
+  `fecha_registro` timestamp NOT NULL DEFAULT current_timestamp(),
+  `fecha_actualizacion` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `genero` varchar(20) DEFAULT NULL,
   `padre` varchar(150) DEFAULT NULL,
   `madre` varchar(150) DEFAULT NULL,
   `tutor` varchar(150) DEFAULT NULL,
-  `fecha_registro` datetime NOT NULL DEFAULT current_timestamp()
+  `curso` varchar(10) DEFAULT NULL,
+  `paralelo` varchar(10) DEFAULT NULL,
+  PRIMARY KEY (`id_estudiante`),
+  UNIQUE KEY `codigo` (`codigo`),
+  UNIQUE KEY `ci` (`ci`),
+  UNIQUE KEY `rude` (`rude`),
+  KEY `idx_estudiantes_nombre` (`apellidos`,`nombres`),
+  KEY `idx_estudiantes_curso` (`id_curso`,`id_paralelo`,`turno`,`estado`),
+  KEY `fk_estudiantes_paralelos` (`id_paralelo`),
+  CONSTRAINT `fk_estudiantes_cursos` FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id_curso`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_estudiantes_paralelos` FOREIGN KEY (`id_paralelo`) REFERENCES `paralelos` (`id_paralelo`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `historias_clinicas`
---
-
-CREATE TABLE `historias_clinicas` (
-  `id_historia` int(11) NOT NULL,
-  `id_estudiante` int(11) NOT NULL,
-  `id_usuario` int(11) DEFAULT NULL,
-  `id_derivacion` int(11) DEFAULT NULL,
-  `fecha_apertura` date NOT NULL,
-  `nombre_completo` varchar(130) DEFAULT NULL,
-  `fecha_nacimiento_estudiante` date DEFAULT NULL,
-  `lugar_nacimiento` varchar(100) DEFAULT NULL,
-  `celular_estudiante` varchar(20) DEFAULT NULL,
-  `padre_madre` varchar(100) DEFAULT NULL,
-  `derivado_por` varchar(120) DEFAULT NULL,
-  `fecha_derivacion` date DEFAULT NULL,
-  `materia_derivacion` varchar(150) DEFAULT NULL,
-  `prioridad_derivacion` enum('Alta','Media','Baja') DEFAULT NULL,
-  `observaciones_derivacion` text DEFAULT NULL,
-  `tutor_curso` varchar(120) DEFAULT NULL,
-  `situacion_escolar` enum('Muy buena','Buena','Regular','Deficiente') DEFAULT NULL,
-  `cursos_repetidos` varchar(255) DEFAULT NULL,
-  `dificultad_escolar` text DEFAULT NULL,
-  `materia_agrada` varchar(100) DEFAULT NULL,
-  `materia_desagrada` varchar(100) DEFAULT NULL,
-  `relacion_escolar` text DEFAULT NULL,
-  `talla` varchar(20) DEFAULT NULL,
-  `peso` varchar(20) DEFAULT NULL,
-  `valoracion` varchar(255) DEFAULT NULL,
-  `enfermedades_actuales` text DEFAULT NULL,
-  `motivo_consulta` text DEFAULT NULL,
-  `conductas_riesgo` text DEFAULT NULL,
-  `atencion_distraccion` text DEFAULT NULL,
-  `actividad_motora` text DEFAULT NULL,
-  `adaptacion_normas` text DEFAULT NULL,
-  `dificultades_socioemocionales` text DEFAULT NULL,
-  `estrategias_previas` text DEFAULT NULL,
-  `antecedentes` text DEFAULT NULL,
-  `familiares` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`familiares`)),
-  `valoracion_familiar` enum('Muy buena','Buena','Regular','Conflictiva') DEFAULT NULL,
-  `contexto_familiar` text DEFAULT NULL,
-  `impresion_diagnostica` text DEFAULT NULL,
-  `plan_intervencion` text DEFAULT NULL,
-  `evolucion_caso` tinyint(4) DEFAULT NULL,
-  `estado` enum('Activa','En seguimiento','Cerrada') NOT NULL DEFAULT 'Activa',
-  `fecha_actualizacion` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `evaluacion_inicial` text DEFAULT NULL,
-  `fecha_registro` datetime NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `historia_familiares`
---
 
 CREATE TABLE `historia_familiares` (
-  `id_familiar` int(11) NOT NULL,
-  `id_historia` int(11) NOT NULL,
+  `id_familiar` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `id_historia` int(10) unsigned NOT NULL,
   `nombre` varchar(150) NOT NULL,
   `edad` int(11) DEFAULT NULL,
   `relacion` varchar(100) DEFAULT NULL,
   `profesion` varchar(150) DEFAULT NULL,
   `ocupacion` varchar(150) DEFAULT NULL,
-  `observaciones` text DEFAULT NULL
+  `observaciones` text DEFAULT NULL,
+  PRIMARY KEY (`id_familiar`),
+  KEY `idx_familiares_historia` (`id_historia`),
+  CONSTRAINT `fk_familiares_historia` FOREIGN KEY (`id_historia`) REFERENCES `historias_clinicas` (`id_historia`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `historia_opciones`
---
 
 CREATE TABLE `historia_opciones` (
-  `id_opcion` int(11) NOT NULL,
-  `id_historia` int(11) NOT NULL,
+  `id_opcion` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `id_historia` int(10) unsigned NOT NULL,
   `grupo` varchar(80) NOT NULL,
-  `valor` varchar(255) NOT NULL
+  `valor` varchar(255) NOT NULL,
+  PRIMARY KEY (`id_opcion`),
+  KEY `idx_opciones_historia` (`id_historia`),
+  CONSTRAINT `fk_opciones_historia` FOREIGN KEY (`id_historia`) REFERENCES `historias_clinicas` (`id_historia`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `informes`
---
+CREATE TABLE `historias_clinicas` (
+  `id_historia` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `id_estudiante` int(10) unsigned NOT NULL,
+  `id_usuario` int(10) unsigned NOT NULL COMMENT 'Psicologa responsable',
+  `id_derivacion` int(11) unsigned DEFAULT NULL,
+  `fecha_apertura` date NOT NULL,
+  `motivo_consulta` text NOT NULL,
+  `antecedentes` text DEFAULT NULL,
+  `situacion_escolar` text DEFAULT NULL,
+  `valoracion_familiar` text DEFAULT NULL,
+  `evaluacion_inicial` text DEFAULT NULL,
+  `impresion_diagnostica` text DEFAULT NULL,
+  `plan_intervencion` text DEFAULT NULL,
+  `observaciones` text DEFAULT NULL,
+  `estado` enum('Activa','En seguimiento','Cerrada') NOT NULL DEFAULT 'Activa',
+  `fecha_registro` timestamp NOT NULL DEFAULT current_timestamp(),
+  `fecha_actualizacion` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `lugar_nacimiento` varchar(150) DEFAULT NULL,
+  `celular_estudiante` varchar(30) DEFAULT NULL,
+  `padre_madre` varchar(150) DEFAULT NULL,
+  `derivado_por` varchar(150) DEFAULT NULL,
+  `fecha_derivacion` date DEFAULT NULL,
+  `tutor_curso` varchar(150) DEFAULT NULL,
+  `talla` varchar(30) DEFAULT NULL,
+  `peso` varchar(30) DEFAULT NULL,
+  `valoracion` varchar(150) DEFAULT NULL,
+  `enfermedades_actuales` text DEFAULT NULL,
+  `cursos_repetidos` varchar(150) DEFAULT NULL,
+  `dificultad_escolar` text DEFAULT NULL,
+  `materia_agrada` varchar(150) DEFAULT NULL,
+  `materia_desagrada` varchar(150) DEFAULT NULL,
+  `relacion_escolar` text DEFAULT NULL,
+  `contexto_familiar` text DEFAULT NULL,
+  PRIMARY KEY (`id_historia`),
+  UNIQUE KEY `id_estudiante` (`id_estudiante`),
+  KEY `fk_historias_usuarios` (`id_usuario`),
+  KEY `fk_historia_derivacion` (`id_derivacion`),
+  CONSTRAINT `fk_historia_derivacion` FOREIGN KEY (`id_derivacion`) REFERENCES `derivaciones` (`id_derivacion`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_historias_estudiantes` FOREIGN KEY (`id_estudiante`) REFERENCES `estudiantes` (`id_estudiante`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_historias_usuarios` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `informes` (
-  `id_informe` int(11) NOT NULL,
-  `id_estudiante` int(11) NOT NULL,
-  `id_historia` int(11) NOT NULL,
-  `elaborado_por` int(11) NOT NULL,
-  `fecha` date NOT NULL,
-  `resumen` text NOT NULL,
+  `id_informe` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `id_usuario` int(10) unsigned NOT NULL COMMENT 'Usuario que genera el informe',
+  `tipo` enum('Mensual','Trimestral','Anual','Individual','General') NOT NULL DEFAULT 'Mensual',
+  `titulo` varchar(180) NOT NULL,
+  `mes` tinyint(3) unsigned DEFAULT NULL,
+  `gestion` year(4) DEFAULT NULL,
+  `fecha_inicio` date DEFAULT NULL,
+  `fecha_fin` date DEFAULT NULL,
+  `total_estudiantes` int(10) unsigned NOT NULL DEFAULT 0,
+  `total_derivaciones` int(10) unsigned NOT NULL DEFAULT 0,
+  `derivaciones_pendientes` int(10) unsigned NOT NULL DEFAULT 0,
+  `derivaciones_atendidas` int(10) unsigned NOT NULL DEFAULT 0,
+  `total_citas` int(10) unsigned NOT NULL DEFAULT 0,
+  `citas_atendidas` int(10) unsigned NOT NULL DEFAULT 0,
+  `total_historias` int(10) unsigned NOT NULL DEFAULT 0,
+  `descripcion` text DEFAULT NULL,
+  `conclusiones` text DEFAULT NULL,
   `recomendaciones` text DEFAULT NULL,
+  `estado` enum('Borrador','Finalizado') NOT NULL DEFAULT 'Borrador',
+  `fecha_generacion` timestamp NOT NULL DEFAULT current_timestamp(),
+  `fecha_actualizacion` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `numero_ficha` varchar(30) NOT NULL DEFAULT '',
+  `fecha` date DEFAULT NULL,
+  `id_estudiante` int(10) unsigned NOT NULL DEFAULT 0,
+  `elaborado_por` int(10) unsigned DEFAULT NULL,
   `numero_atenciones` int(11) NOT NULL DEFAULT 0,
   `referido_por` varchar(150) DEFAULT NULL,
-  `id_derivacion` int(11) DEFAULT NULL,
+  `id_historia` int(10) unsigned DEFAULT NULL,
+  `id_derivacion` int(10) unsigned DEFAULT NULL,
   `tipo_atencion` text DEFAULT NULL,
   `motivo` text DEFAULT NULL,
   `diagnostico` text DEFAULT NULL,
@@ -267,354 +245,161 @@ CREATE TABLE `informes` (
   `aspectos_afectivos` text DEFAULT NULL,
   `diagnostico_acuerdos` text DEFAULT NULL,
   `recibido_por` varchar(150) DEFAULT NULL,
-  `estado` varchar(30) NOT NULL DEFAULT 'Borrador',
   `fecha_registro` datetime NOT NULL DEFAULT current_timestamp(),
-  `fecha_actualizacion` datetime DEFAULT NULL
+  PRIMARY KEY (`id_informe`),
+  KEY `fk_informes_usuarios` (`id_usuario`),
+  CONSTRAINT `fk_informes_usuarios` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON UPDATE CASCADE,
+  CONSTRAINT `chk_informes_mes` CHECK (`mes` is null or `mes` between 1 and 12)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
+CREATE TABLE `modulos` (
+  `id_modulo` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(50) NOT NULL,
+  `ruta` varchar(100) DEFAULT NULL,
+  `icono` varchar(60) DEFAULT NULL,
+  `orden` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `estado` enum('Activo','Inactivo') NOT NULL DEFAULT 'Activo',
+  PRIMARY KEY (`id_modulo`),
+  UNIQUE KEY `nombre` (`nombre`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Estructura de tabla para la tabla `roles`
---
+CREATE TABLE `paralelos` (
+  `id_paralelo` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `id_curso` int(10) unsigned NOT NULL,
+  `nombre` varchar(10) NOT NULL,
+  `estado` enum('Activo','Inactivo') NOT NULL DEFAULT 'Activo',
+  PRIMARY KEY (`id_paralelo`),
+  UNIQUE KEY `uk_curso_paralelo` (`id_curso`,`nombre`),
+  CONSTRAINT `fk_paralelos_cursos` FOREIGN KEY (`id_curso`) REFERENCES `cursos` (`id_curso`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `permisos` (
+  `id_permiso` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `id_rol` int(10) unsigned NOT NULL,
+  `id_modulo` int(10) unsigned NOT NULL,
+  `puede_ver` tinyint(1) NOT NULL DEFAULT 0,
+  `puede_crear` tinyint(1) NOT NULL DEFAULT 0,
+  `puede_editar` tinyint(1) NOT NULL DEFAULT 0,
+  `puede_eliminar` tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id_permiso`),
+  UNIQUE KEY `uk_permiso_rol_modulo` (`id_rol`,`id_modulo`),
+  KEY `fk_permisos_modulos` (`id_modulo`),
+  CONSTRAINT `fk_permisos_modulos` FOREIGN KEY (`id_modulo`) REFERENCES `modulos` (`id_modulo`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_permisos_roles` FOREIGN KEY (`id_rol`) REFERENCES `roles` (`id_rol`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `roles` (
-  `id_rol` int(11) NOT NULL,
-  `nombre` varchar(30) NOT NULL
+  `id_rol` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(40) NOT NULL,
+  `descripcion` varchar(255) DEFAULT NULL,
+  `estado` enum('Activo','Inactivo') NOT NULL DEFAULT 'Activo',
+  `fecha_registro` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id_rol`),
+  UNIQUE KEY `nombre` (`nombre`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Volcado de datos para la tabla `roles`
---
-
-INSERT INTO `roles` (`id_rol`, `nombre`) VALUES
-(1, 'Administrador'),
-(4, 'Director'),
-(3, 'Docente'),
-(2, 'Psicóloga');
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `seguimientos`
---
 
 CREATE TABLE `seguimientos` (
-  `id_seguimiento` int(11) NOT NULL,
-  `id_historia` int(11) NOT NULL,
-  `id_usuario` int(11) DEFAULT NULL,
+  `id_seguimiento` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `id_historia` int(10) unsigned NOT NULL,
+  `id_usuario` int(10) unsigned NOT NULL,
+  `id_cita` int(10) unsigned DEFAULT NULL,
   `fecha` date NOT NULL,
-  `evolucion` text NOT NULL,
-  `recomendaciones` text DEFAULT NULL,
-  `proxima_cita` date DEFAULT NULL
+  `descripcion` text NOT NULL,
+  `tecnicas_aplicadas` text DEFAULT NULL,
+  `acuerdos` text DEFAULT NULL,
+  `proxima_sesion` date DEFAULT NULL,
+  `fecha_registro` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id_seguimiento`),
+  KEY `fk_seguimientos_historias` (`id_historia`),
+  KEY `fk_seguimientos_usuarios` (`id_usuario`),
+  KEY `fk_seguimientos_citas` (`id_cita`),
+  CONSTRAINT `fk_seguimientos_citas` FOREIGN KEY (`id_cita`) REFERENCES `citas` (`id_cita`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_seguimientos_historias` FOREIGN KEY (`id_historia`) REFERENCES `historias_clinicas` (`id_historia`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_seguimientos_usuarios` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Estructura de tabla para la tabla `usuarios`
---
 
 CREATE TABLE `usuarios` (
-  `id_usuario` int(11) NOT NULL,
-  `nombre` varchar(50) NOT NULL,
-  `apellido` varchar(50) NOT NULL,
-  `usuario` varchar(30) NOT NULL,
+  `id_usuario` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(60) NOT NULL,
+  `apellido` varchar(60) NOT NULL,
+  `usuario` varchar(40) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `correo` varchar(100) DEFAULT NULL,
+  `correo` varchar(120) DEFAULT NULL,
+  `telefono` varchar(25) DEFAULT NULL,
   `estado` enum('Activo','Inactivo') NOT NULL DEFAULT 'Activo',
-  `id_rol` int(11) NOT NULL
+  `id_rol` int(10) unsigned NOT NULL,
+  `ultimo_acceso` datetime DEFAULT NULL,
+  `fecha_registro` timestamp NOT NULL DEFAULT current_timestamp(),
+  `fecha_actualizacion` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id_usuario`),
+  UNIQUE KEY `usuario` (`usuario`),
+  UNIQUE KEY `correo` (`correo`),
+  KEY `fk_usuarios_roles` (`id_rol`),
+  CONSTRAINT `fk_usuarios_roles` FOREIGN KEY (`id_rol`) REFERENCES `roles` (`id_rol`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Índices para tablas volcadas
---
+INSERT INTO `roles` (id_rol,nombre,estado) VALUES ('1','Administrador','Activo');
+INSERT INTO `roles` (id_rol,nombre,estado) VALUES ('2','Psicóloga','Activo');
+INSERT INTO `roles` (id_rol,nombre,estado) VALUES ('3','Docente','Activo');
+INSERT INTO `roles` (id_rol,nombre,estado) VALUES ('4','Director','Activo');
+INSERT INTO `cursos` (id_curso,nombre,nivel,estado) VALUES ('1','1ro de Secundaria','Secundaria','Activo');
+INSERT INTO `cursos` (id_curso,nombre,nivel,estado) VALUES ('2','2do de Secundaria','Secundaria','Activo');
+INSERT INTO `cursos` (id_curso,nombre,nivel,estado) VALUES ('3','3ro de Secundaria','Secundaria','Activo');
+INSERT INTO `cursos` (id_curso,nombre,nivel,estado) VALUES ('4','4to de Secundaria','Secundaria','Activo');
+INSERT INTO `cursos` (id_curso,nombre,nivel,estado) VALUES ('5','5to de Secundaria','Secundaria','Activo');
+INSERT INTO `cursos` (id_curso,nombre,nivel,estado) VALUES ('6','6to de Secundaria','Secundaria','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('1','1','A','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('2','1','B','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('3','1','C','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('4','1','D','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('5','2','A','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('6','2','B','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('7','2','C','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('8','2','D','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('9','3','A','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('10','3','B','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('11','3','C','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('12','3','D','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('13','4','A','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('14','4','B','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('15','4','C','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('16','4','D','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('17','5','A','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('18','5','B','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('19','5','C','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('20','5','D','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('21','6','A','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('22','6','B','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('23','6','C','Activo');
+INSERT INTO `paralelos` (id_paralelo,id_curso,nombre,estado) VALUES ('24','6','D','Activo');
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `vista_citas` AS select `ci`.`id_cita` AS `id_cita`,`ci`.`id_estudiante` AS `id_estudiante`,`ci`.`id_usuario` AS `id_usuario`,`ci`.`id_derivacion` AS `id_derivacion`,`ci`.`fecha` AS `fecha`,`ci`.`hora` AS `hora`,`ci`.`estado` AS `estado`,`ci`.`observaciones` AS `observaciones`,`ci`.`motivo` AS `motivo`,`ci`.`fecha_registro` AS `fecha_registro`,`ci`.`fecha_actualizacion` AS `fecha_actualizacion`,concat(`e`.`apellidos`,' ',`e`.`nombres`) AS `estudiante`,concat(`u`.`nombre`,' ',`u`.`apellido`) AS `psicologa` from ((`citas` `ci` join `estudiantes` `e` on(`e`.`id_estudiante` = `ci`.`id_estudiante`)) join `usuarios` `u` on(`u`.`id_usuario` = `ci`.`id_usuario`));
 
---
--- Indices de la tabla `categorias_derivacion`
---
-ALTER TABLE `categorias_derivacion`
-  ADD PRIMARY KEY (`id_categoria`),
-  ADD UNIQUE KEY `nombre` (`nombre`);
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `vista_derivaciones` AS select `d`.`id_derivacion` AS `id_derivacion`,`d`.`fecha` AS `fecha`,`d`.`id_estudiante` AS `id_estudiante`,`d`.`id_docente` AS `id_docente`,`d`.`materia` AS `materia`,`d`.`motivo` AS `motivo`,`d`.`observaciones` AS `observaciones`,`d`.`prioridad` AS `prioridad`,`d`.`estado` AS `estado`,`d`.`fecha_registro` AS `fecha_registro`,`d`.`fecha_actualizacion` AS `fecha_actualizacion`,concat(`e`.`apellidos`,' ',`e`.`nombres`) AS `estudiante`,`c`.`nombre` AS `curso`,`p`.`nombre` AS `paralelo`,concat(`doc`.`apellidos`,' ',`doc`.`nombres`) AS `docente` from ((((`derivaciones` `d` join `estudiantes` `e` on(`e`.`id_estudiante` = `d`.`id_estudiante`)) join `cursos` `c` on(`c`.`id_curso` = `e`.`id_curso`)) join `paralelos` `p` on(`p`.`id_paralelo` = `e`.`id_paralelo`)) join `docentes` `doc` on(`doc`.`id_docente` = `d`.`id_docente`));
 
---
--- Indices de la tabla `citas`
---
-ALTER TABLE `citas`
-  ADD PRIMARY KEY (`id_cita`),
-  ADD KEY `fk_citas_derivaciones` (`id_derivacion`),
-  ADD KEY `idx_citas_fecha` (`fecha`,`hora`),
-  ADD KEY `idx_citas_estudiante` (`id_estudiante`),
-  ADD KEY `idx_citas_usuario` (`id_usuario`),
-  ADD KEY `idx_citas_estado` (`estado`);
+CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `vista_estudiantes` AS select `e`.`id_estudiante` AS `id_estudiante`,`e`.`codigo` AS `codigo`,`e`.`ci` AS `ci`,`e`.`rude` AS `rude`,`e`.`nombres` AS `nombres`,`e`.`apellidos` AS `apellidos`,`e`.`fecha_nacimiento` AS `fecha_nacimiento`,`e`.`lugar_nacimiento` AS `lugar_nacimiento`,`e`.`sexo` AS `sexo`,`e`.`direccion` AS `direccion`,`e`.`telefono` AS `telefono`,`e`.`celular` AS `celular`,`e`.`nombre_padre` AS `nombre_padre`,`e`.`telefono_padre` AS `telefono_padre`,`e`.`nombre_madre` AS `nombre_madre`,`e`.`telefono_madre` AS `telefono_madre`,`e`.`nombre_tutor` AS `nombre_tutor`,`e`.`telefono_tutor` AS `telefono_tutor`,`e`.`id_curso` AS `id_curso`,`e`.`id_paralelo` AS `id_paralelo`,`e`.`turno` AS `turno`,`e`.`estado` AS `estado`,`e`.`fecha_registro` AS `fecha_registro`,`e`.`fecha_actualizacion` AS `fecha_actualizacion`,`c`.`nombre` AS `curso`,`p`.`nombre` AS `paralelo` from ((`estudiantes` `e` join `cursos` `c` on(`c`.`id_curso` = `e`.`id_curso`)) join `paralelos` `p` on(`p`.`id_paralelo` = `e`.`id_paralelo`));
 
---
--- Indices de la tabla `derivaciones`
---
-ALTER TABLE `derivaciones`
-  ADD PRIMARY KEY (`id_derivacion`),
-  ADD KEY `idx_derivaciones_estado` (`estado`,`prioridad`,`fecha`),
-  ADD KEY `idx_derivaciones_estudiante` (`id_estudiante`),
-  ADD KEY `idx_derivaciones_docente` (`id_docente`),
-  ADD KEY `idx_derivaciones_profesional` (`id_profesional_asignado`),
-  ADD KEY `idx_derivaciones_fecha` (`fecha`),
-  ADD KEY `idx_derivaciones_materia` (`materia`);
+SET FOREIGN_KEY_CHECKS=1;
 
---
--- Indices de la tabla `derivacion_categorias`
---
-ALTER TABLE `derivacion_categorias`
-  ADD PRIMARY KEY (`id_derivacion`,`id_categoria`),
-  ADD KEY `fk_derivacion_categoria_categoria` (`id_categoria`);
+-- Actualización 001
+ALTER TABLE seguimientos ADD COLUMN recomendaciones TEXT NULL;
+ALTER TABLE historias_clinicas ADD COLUMN evolucion_caso TINYINT UNSIGNED NULL;
+ALTER TABLE informes ADD UNIQUE KEY uk_informes_ficha (numero_ficha);
+ALTER TABLE informes ADD CONSTRAINT `fk_informes_id_estudiante` FOREIGN KEY (`id_estudiante`) REFERENCES `estudiantes` (`id_estudiante`) ON UPDATE CASCADE;
+ALTER TABLE informes ADD CONSTRAINT `fk_informes_elaborado_por` FOREIGN KEY (`elaborado_por`) REFERENCES `usuarios` (`id_usuario`) ON UPDATE CASCADE;
+ALTER TABLE informes ADD CONSTRAINT `fk_informes_id_historia` FOREIGN KEY (`id_historia`) REFERENCES `historias_clinicas` (`id_historia`) ON UPDATE CASCADE;
+ALTER TABLE informes ADD CONSTRAINT `fk_informes_id_derivacion` FOREIGN KEY (`id_derivacion`) REFERENCES `derivaciones` (`id_derivacion`) ON UPDATE CASCADE;
+CREATE TABLE informes_secuencia (id TINYINT UNSIGNED NOT NULL PRIMARY KEY, ultimo BIGINT UNSIGNED NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO informes_secuencia (id, ultimo) SELECT 1, COALESCE(MAX(CAST(SUBSTRING(numero_ficha, 5) AS UNSIGNED)), 0) FROM informes WHERE numero_ficha REGEXP '^INF-[0-9]+$';
+CREATE TABLE esquema_migraciones (version VARCHAR(80) NOT NULL PRIMARY KEY, aplicada_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO esquema_migraciones (version) VALUES ('001_alinear_esquema');
 
---
--- Indices de la tabla `derivacion_evidencias`
---
-ALTER TABLE `derivacion_evidencias`
-  ADD PRIMARY KEY (`id_evidencia`),
-  ADD KEY `idx_evidencia_derivacion` (`id_derivacion`);
-
---
--- Indices de la tabla `docentes`
---
-ALTER TABLE `docentes`
-  ADD PRIMARY KEY (`id_docente`),
-  ADD UNIQUE KEY `id_usuario` (`id_usuario`),
-  ADD KEY `idx_docentes_materia` (`materia`);
-
---
--- Indices de la tabla `estudiantes`
---
-ALTER TABLE `estudiantes`
-  ADD PRIMARY KEY (`id_estudiante`),
-  ADD UNIQUE KEY `ci` (`ci`),
-  ADD UNIQUE KEY `codigo` (`codigo`),
-  ADD KEY `idx_estudiantes_curso` (`curso`,`paralelo`,`turno`),
-  ADD KEY `idx_estudiantes_apellidos` (`apellidos`),
-  ADD KEY `idx_estudiantes_estado` (`estado`);
-
---
--- Indices de la tabla `historias_clinicas`
---
-ALTER TABLE `historias_clinicas`
-  ADD PRIMARY KEY (`id_historia`),
-  ADD UNIQUE KEY `id_estudiante` (`id_estudiante`),
-  ADD KEY `fk_historias_usuarios` (`id_usuario`),
-  ADD KEY `idx_historias_estado` (`estado`),
-  ADD KEY `idx_historias_fecha` (`fecha_apertura`),
-  ADD KEY `idx_historias_derivacion` (`id_derivacion`);
-
---
--- Indices de la tabla `historia_familiares`
---
-ALTER TABLE `historia_familiares`
-  ADD PRIMARY KEY (`id_familiar`),
-  ADD KEY `idx_familiares_historia` (`id_historia`);
-
---
--- Indices de la tabla `historia_opciones`
---
-ALTER TABLE `historia_opciones`
-  ADD PRIMARY KEY (`id_opcion`),
-  ADD KEY `idx_opciones_historia` (`id_historia`);
-
---
--- Indices de la tabla `informes`
---
-ALTER TABLE `informes`
-  ADD PRIMARY KEY (`id_informe`),
-  ADD KEY `fk_informes_usuarios` (`elaborado_por`),
-  ADD KEY `idx_informes_estudiante` (`id_estudiante`),
-  ADD KEY `idx_informes_historia` (`id_historia`),
-  ADD KEY `idx_informes_fecha` (`fecha`);
-
---
--- Indices de la tabla `roles`
---
-ALTER TABLE `roles`
-  ADD PRIMARY KEY (`id_rol`),
-  ADD UNIQUE KEY `nombre` (`nombre`);
-
---
--- Indices de la tabla `seguimientos`
---
-ALTER TABLE `seguimientos`
-  ADD PRIMARY KEY (`id_seguimiento`),
-  ADD KEY `fk_seguimientos_usuarios` (`id_usuario`),
-  ADD KEY `idx_seguimientos_historia` (`id_historia`),
-  ADD KEY `idx_seguimientos_fecha` (`fecha`);
-
---
--- Indices de la tabla `usuarios`
---
-ALTER TABLE `usuarios`
-  ADD PRIMARY KEY (`id_usuario`),
-  ADD UNIQUE KEY `usuario` (`usuario`),
-  ADD KEY `idx_usuarios_rol` (`id_rol`);
-
---
--- AUTO_INCREMENT de las tablas volcadas
---
-
---
--- AUTO_INCREMENT de la tabla `categorias_derivacion`
---
-ALTER TABLE `categorias_derivacion`
-  MODIFY `id_categoria` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
-
---
--- AUTO_INCREMENT de la tabla `citas`
---
-ALTER TABLE `citas`
-  MODIFY `id_cita` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT de la tabla `derivaciones`
---
-ALTER TABLE `derivaciones`
-  MODIFY `id_derivacion` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT de la tabla `derivacion_evidencias`
---
-ALTER TABLE `derivacion_evidencias`
-  MODIFY `id_evidencia` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT de la tabla `docentes`
---
-ALTER TABLE `docentes`
-  MODIFY `id_docente` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT de la tabla `estudiantes`
---
-ALTER TABLE `estudiantes`
-  MODIFY `id_estudiante` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT de la tabla `historias_clinicas`
---
-ALTER TABLE `historias_clinicas`
-  MODIFY `id_historia` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT de la tabla `historia_familiares`
---
-ALTER TABLE `historia_familiares`
-  MODIFY `id_familiar` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT de la tabla `historia_opciones`
---
-ALTER TABLE `historia_opciones`
-  MODIFY `id_opcion` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT de la tabla `informes`
---
-ALTER TABLE `informes`
-  MODIFY `id_informe` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT de la tabla `roles`
---
-ALTER TABLE `roles`
-  MODIFY `id_rol` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
-
---
--- AUTO_INCREMENT de la tabla `seguimientos`
---
-ALTER TABLE `seguimientos`
-  MODIFY `id_seguimiento` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT de la tabla `usuarios`
---
-ALTER TABLE `usuarios`
-  MODIFY `id_usuario` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- Restricciones para tablas volcadas
---
-
---
--- Filtros para la tabla `citas`
---
-ALTER TABLE `citas`
-  ADD CONSTRAINT `fk_citas_derivaciones` FOREIGN KEY (`id_derivacion`) REFERENCES `derivaciones` (`id_derivacion`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_citas_estudiantes` FOREIGN KEY (`id_estudiante`) REFERENCES `estudiantes` (`id_estudiante`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_citas_usuarios` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `derivaciones`
---
-ALTER TABLE `derivaciones`
-  ADD CONSTRAINT `fk_derivaciones_docentes` FOREIGN KEY (`id_docente`) REFERENCES `docentes` (`id_docente`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_derivaciones_estudiantes` FOREIGN KEY (`id_estudiante`) REFERENCES `estudiantes` (`id_estudiante`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_derivaciones_profesional` FOREIGN KEY (`id_profesional_asignado`) REFERENCES `usuarios` (`id_usuario`) ON DELETE SET NULL ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `derivacion_categorias`
---
-ALTER TABLE `derivacion_categorias`
-  ADD CONSTRAINT `fk_derivacion_categoria_categoria` FOREIGN KEY (`id_categoria`) REFERENCES `categorias_derivacion` (`id_categoria`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_derivacion_categoria_derivacion` FOREIGN KEY (`id_derivacion`) REFERENCES `derivaciones` (`id_derivacion`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `derivacion_evidencias`
---
-ALTER TABLE `derivacion_evidencias`
-  ADD CONSTRAINT `fk_evidencia_derivacion` FOREIGN KEY (`id_derivacion`) REFERENCES `derivaciones` (`id_derivacion`) ON DELETE CASCADE;
-
---
--- Filtros para la tabla `docentes`
---
-ALTER TABLE `docentes`
-  ADD CONSTRAINT `fk_docentes_usuarios` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE SET NULL ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `historias_clinicas`
---
-ALTER TABLE `historias_clinicas`
-  ADD CONSTRAINT `fk_historias_derivaciones` FOREIGN KEY (`id_derivacion`) REFERENCES `derivaciones` (`id_derivacion`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_historias_estudiantes` FOREIGN KEY (`id_estudiante`) REFERENCES `estudiantes` (`id_estudiante`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_historias_usuarios` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE SET NULL ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `historia_familiares`
---
-ALTER TABLE `historia_familiares`
-  ADD CONSTRAINT `fk_familiares_historia` FOREIGN KEY (`id_historia`) REFERENCES `historias_clinicas` (`id_historia`) ON DELETE CASCADE;
-
---
--- Filtros para la tabla `historia_opciones`
---
-ALTER TABLE `historia_opciones`
-  ADD CONSTRAINT `fk_opciones_historia` FOREIGN KEY (`id_historia`) REFERENCES `historias_clinicas` (`id_historia`) ON DELETE CASCADE;
-
---
--- Filtros para la tabla `informes`
---
-ALTER TABLE `informes`
-  ADD CONSTRAINT `fk_informes_estudiantes` FOREIGN KEY (`id_estudiante`) REFERENCES `estudiantes` (`id_estudiante`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_informes_historias` FOREIGN KEY (`id_historia`) REFERENCES `historias_clinicas` (`id_historia`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_informes_usuarios` FOREIGN KEY (`elaborado_por`) REFERENCES `usuarios` (`id_usuario`) ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `seguimientos`
---
-ALTER TABLE `seguimientos`
-  ADD CONSTRAINT `fk_seguimientos_historias` FOREIGN KEY (`id_historia`) REFERENCES `historias_clinicas` (`id_historia`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_seguimientos_usuarios` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios` (`id_usuario`) ON DELETE SET NULL ON UPDATE CASCADE;
-
---
--- Filtros para la tabla `usuarios`
---
-ALTER TABLE `usuarios`
-  ADD CONSTRAINT `fk_usuarios_roles` FOREIGN KEY (`id_rol`) REFERENCES `roles` (`id_rol`) ON UPDATE CASCADE;
-COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+-- Actualización 002: vínculos explícitos y reserva atómica de la agenda única.
+ALTER TABLE citas ADD turno_reservado TINYINT GENERATED ALWAYS AS (CASE WHEN estado='Cancelada' THEN NULL ELSE 1 END) STORED;
+ALTER TABLE citas ADD UNIQUE KEY uk_citas_horario_vigente (fecha,hora,turno_reservado);
+ALTER TABLE citas ADD INDEX idx_citas_usuario (id_usuario);
+ALTER TABLE citas DROP INDEX uk_cita_profesional_fecha_hora;
+ALTER TABLE historias_clinicas ADD id_cita INT UNSIGNED NULL;
+ALTER TABLE historias_clinicas ADD CONSTRAINT fk_historias_clinicas_id_cita_origen FOREIGN KEY (id_cita) REFERENCES citas (id_cita) ON UPDATE CASCADE;
+ALTER TABLE informes ADD id_seguimiento INT UNSIGNED NULL;
+ALTER TABLE informes ADD CONSTRAINT fk_informes_id_seguimiento_origen FOREIGN KEY (id_seguimiento) REFERENCES seguimientos (id_seguimiento) ON UPDATE CASCADE;
+INSERT INTO esquema_migraciones (version) VALUES ('002_trazabilidad');

@@ -1,13 +1,12 @@
 <?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('informes/editar.php');
+
 require_once '../config/conexion.php';
+require_once __DIR__ . '/../includes/informes_datos.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-$modoDesarrollo = !isset($_SESSION['id_rol']);
 $rolActual = (int)($_SESSION['id_rol'] ?? 0);
-if (!$modoDesarrollo && !in_array($rolActual, [1, 2], true)) {
+if (!in_array($rolActual, [1, 2], true)) {
     $_SESSION['mensaje'] = 'No tiene permiso para editar informes.';
     $_SESSION['tipo_mensaje'] = 'danger';
     header('Location: listar.php');
@@ -44,18 +43,20 @@ if (!$informe) {
     exit;
 }
 
+$recuperado = $_SESSION['edicion_informe'] ?? [];
+unset($_SESSION['edicion_informe']);
 $tipos = array_filter(array_map('trim', explode(',', (string)$informe['tipo_atencion'])));
+if (($recuperado['id'] ?? 0) === $idInforme) {
+    $datos = $recuperado['datos'];
+    $tipos = $datos['tipo_atencion'];
+    unset($datos['id_estudiante'], $datos['id_historia'], $datos['tipo_atencion']);
+    $informe = array_replace($informe, $datos);
+}
 $mensaje = $_SESSION['mensaje'] ?? '';
 $tipoMensaje = $_SESSION['tipo_mensaje'] ?? 'info';
 unset($_SESSION['mensaje'], $_SESSION['tipo_mensaje']);
 
-$opcionesAtencion = [
-    'Evaluación',
-    'Consejería',
-    'Orientación',
-    'Terapia',
-    'Acompañamiento pedagógico',
-];
+$opcionesAtencion = INFORME_ATENCIONES;
 
 $tituloPagina = 'Editar informe ' . $informe['numero_ficha'];
 include '../includes/header.php';
@@ -67,7 +68,7 @@ include '../includes/navbar.php';
     <div class="container-fluid">
         <nav aria-label="breadcrumb" class="mb-4">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="../index.php">Inicio</a></li>
+                <li class="breadcrumb-item"><a href="<?= login_html(login_inicio_url()) ?>">Inicio</a></li>
                 <li class="breadcrumb-item"><a href="listar.php">Informes</a></li>
                 <li class="breadcrumb-item active">Editar <?= e($informe['numero_ficha']) ?></li>
             </ol>
@@ -90,12 +91,17 @@ include '../includes/navbar.php';
             </div>
 
             <form action="actualizar.php" method="POST" id="formInforme" autocomplete="off">
+                <?= login_campo_csrf() ?>
                 <input type="hidden" name="id_informe" value="<?= (int)$idInforme ?>">
 
                 <section class="form-section">
                     <h5 class="section-title"><i class="bi bi-person-vcard"></i>Datos generales</h5>
                     <hr>
                     <div class="row g-4">
+                        <div class="col-12">
+                            <label for="titulo" class="form-label">Título <span class="text-danger">*</span></label>
+                            <input type="text" name="titulo" id="titulo" class="form-control" maxlength="180" required value="<?= e($informe['titulo']) ?>">
+                        </div>
                         <div class="col-md-3">
                             <label class="form-label">Ficha psicológica</label>
                             <input type="text" class="form-control" value="<?= e($informe['numero_ficha']) ?>" readonly>
@@ -176,7 +182,7 @@ include '../includes/navbar.php';
                     <input type="text" name="recibido_por" id="recibido_por" class="form-control mb-4" value="<?= e($informe['recibido_por']) ?>" maxlength="150">
                     <label for="estado" class="form-label">Estado</label>
                     <select name="estado" id="estado" class="form-select">
-                        <?php foreach (['Borrador', 'Emitido', 'Anulado'] as $estado): ?>
+                        <?php foreach (INFORME_ESTADOS as $estado): ?>
                             <option value="<?= e($estado) ?>" <?= $informe['estado'] === $estado ? 'selected' : '' ?>><?= e($estado) ?></option>
                         <?php endforeach; ?>
                     </select>

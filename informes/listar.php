@@ -1,20 +1,18 @@
 <?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('informes/listar.php');
+
 require_once '../config/conexion.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-$modoDesarrollo = !isset($_SESSION['id_rol']);
 $rolActual = (int) ($_SESSION['id_rol'] ?? 0);
 $rolesPermitidos = [1, 2, 4];
 
-if (!$modoDesarrollo && !in_array($rolActual, $rolesPermitidos, true)) {
+if (!in_array($rolActual, $rolesPermitidos, true)) {
     header('Location: ../index.php');
     exit;
 }
 
-$puedeGestionar = $modoDesarrollo || in_array($rolActual, [1, 2], true);
+$puedeGestionar = in_array($rolActual, [1, 2], true);
 $mensaje = $_SESSION['mensaje'] ?? '';
 $tipoMensaje = $_SESSION['tipo_mensaje'] ?? 'info';
 unset($_SESSION['mensaje'], $_SESSION['tipo_mensaje']);
@@ -36,7 +34,7 @@ $sql = "SELECT
             u.apellido AS apellido_psicologo
         FROM informes i
         INNER JOIN estudiantes e ON i.id_estudiante = e.id_estudiante
-        INNER JOIN usuarios u ON i.elaborado_por = u.id_usuario
+        INNER JOIN usuarios u ON i.id_usuario = u.id_usuario
         ORDER BY i.fecha DESC, i.id_informe DESC";
 
 $resultado = $conexion->query($sql);
@@ -48,8 +46,7 @@ if (!$resultado) {
 $sqlEstadisticas = "SELECT
     COUNT(*) AS total,
     SUM(CASE WHEN estado = 'Borrador' THEN 1 ELSE 0 END) AS borradores,
-    SUM(CASE WHEN estado = 'Emitido' THEN 1 ELSE 0 END) AS emitidos,
-    SUM(CASE WHEN estado = 'Anulado' THEN 1 ELSE 0 END) AS anulados
+    SUM(CASE WHEN estado = 'Finalizado' THEN 1 ELSE 0 END) AS finalizados
     FROM informes";
 
 $resultadoEstadisticas = $conexion->query($sqlEstadisticas);
@@ -57,8 +54,7 @@ $resultadoEstadisticas = $conexion->query($sqlEstadisticas);
 $estadisticas = [
     'total' => 0,
     'borradores' => 0,
-    'emitidos' => 0,
-    'anulados' => 0
+    'finalizados' => 0
 ];
 
 if ($resultadoEstadisticas) {
@@ -85,7 +81,7 @@ include '../includes/navbar.php';
 
     <nav class="breadcrumb mb-4">
         <span class="breadcrumb-item">
-            <a href="../index.php">Inicio</a>
+            <a href="<?= login_html(login_inicio_url()) ?>">Inicio</a>
         </span>
         <span class="breadcrumb-item active">Informes</span>
     </nav>
@@ -132,18 +128,8 @@ include '../includes/navbar.php';
                 <i class="bi bi-check-circle"></i>
             </div>
             <div>
-                <strong><?= (int)$estadisticas['emitidos']; ?></strong>
-                <span>Emitidos</span>
-            </div>
-        </article>
-
-        <article>
-            <div class="resumen-icono">
-                <i class="bi bi-x-circle"></i>
-            </div>
-            <div>
-                <strong><?= (int)$estadisticas['anulados']; ?></strong>
-                <span>Anulados</span>
+                <strong><?= (int)$estadisticas['finalizados']; ?></strong>
+                <span>Finalizados</span>
             </div>
         </article>
 
@@ -169,8 +155,7 @@ include '../includes/navbar.php';
         <select id="filtroEstado" class="form-select">
             <option value="">Todos los estados</option>
             <option value="Borrador">Borrador</option>
-            <option value="Emitido">Emitido</option>
-            <option value="Anulado">Anulado</option>
+            <option value="Finalizado">Finalizado</option>
         </select>
 
     </div>
@@ -216,10 +201,8 @@ include '../includes/navbar.php';
 
                         if ($informe['estado'] === 'Borrador') {
                             $estadoClase = 'estado-pendiente';
-                        } elseif ($informe['estado'] === 'Emitido') {
+                        } elseif ($informe['estado'] === 'Finalizado') {
                             $estadoClase = 'estado-atendido';
-                        } elseif ($informe['estado'] === 'Anulado') {
-                            $estadoClase = 'estado-rechazado';
                         }
                         ?>
 

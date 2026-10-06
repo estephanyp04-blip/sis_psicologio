@@ -1,4 +1,9 @@
 <?php
+if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
+    http_response_code(404);
+    exit;
+}
+
 // Incluir en el navbar, después de proteger la página con requerir_roles().
 require_once __DIR__ . '/autenticacion.php';
 ?>

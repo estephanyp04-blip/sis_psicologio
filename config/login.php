@@ -1,6 +1,12 @@
 <?php
+if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
+    http_response_code(404);
+    exit;
+}
+
 // Configuración del inicio de sesión.
 return [
+    'zona_horaria' => 'America/La_Paz',
     'base_url' => '/proyecto_vercionII',
     'host' => '127.0.0.1',
     'puerto' => 3306,

@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('estudiantes/editar.php');
+
 
 // 1) Conectar con la base de datos
 require_once '../config/conexion.php';
@@ -43,6 +46,7 @@ $fila = $resultado->fetch_assoc();
     <!-- 7) Si existe el estudiante, mostrar el formulario con los datos cargados -->
                     <?php if ($fila): ?>
                         <form action="actualizar.php" method="POST">
+                            <?= login_campo_csrf() ?>
                             <!-- id oculto para saber qué estudiante se actualiza -->
                             <input type="hidden" name="id_estudiante" value="<?= htmlspecialchars($fila['id_estudiante'], ENT_QUOTES, 'UTF-8'); ?>">
 

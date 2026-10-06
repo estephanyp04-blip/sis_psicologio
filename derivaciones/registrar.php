@@ -1,4 +1,6 @@
-﻿<?php
+<?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('derivaciones/registrar.php');
 require_once '../config/conexion.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
@@ -116,7 +118,7 @@ $materias = [
 
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="../index.php">Inicio</a></li>
+            <li class="breadcrumb-item"><a href="<?= login_html(login_inicio_url()) ?>">Inicio</a></li>
             <li class="breadcrumb-item"><a href="listar.php">Derivaciones</a></li>
             <li class="breadcrumb-item active" aria-current="page">Registrar</li>
         </ol>
@@ -137,7 +139,9 @@ $materias = [
 
     <div class="card shadow-sm">
         <div class="card-body p-4 p-md-5">
+            <form action="registrar.php" method="GET" id="formBuscarEstudiante"></form>
             <form action="guardar.php" method="POST" id="formDerivacion">
+                <?= login_campo_csrf() ?>
 
                 <!-- 1. DATOS DEL ESTUDIANTE -->
                 <div class="form-section mb-5">
@@ -148,7 +152,7 @@ $materias = [
                     <div class="row g-3 align-items-end mb-4">
                         <div class="col-md-4">
                             <label for="curso" class="form-label">Curso</label>
-                            <select name="curso" id="curso" class="form-select">
+                            <select name="curso" id="curso" class="form-select" form="formBuscarEstudiante">
                                 <option value="">Todos los cursos</option>
                                 <?php foreach ($cursos as $c): ?>
                                     <option value="<?= escapar($c) ?>" <?= $cursoFiltro === $c ? 'selected' : '' ?>>
@@ -159,7 +163,7 @@ $materias = [
                         </div>
                         <div class="col-md-4">
                             <label for="paralelo" class="form-label">Paralelo</label>
-                            <select name="paralelo" id="paralelo" class="form-select">
+                            <select name="paralelo" id="paralelo" class="form-select" form="formBuscarEstudiante">
                                 <option value="">Todos</option>
                                 <?php foreach ($paralelos as $p): ?>
                                     <option value="<?= escapar($p) ?>" <?= $paraleloFiltro === $p ? 'selected' : '' ?>>
@@ -169,7 +173,7 @@ $materias = [
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <button type="submit" formmethod="GET" formaction="registrar.php" formnovalidate class="btn btn-outline-primary w-100">
+                            <button type="submit" form="formBuscarEstudiante" class="btn btn-outline-primary w-100">
                                 <i class="bi bi-search me-1"></i> Buscar
                             </button>
                         </div>

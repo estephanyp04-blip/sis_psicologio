@@ -1,22 +1,18 @@
 <?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('historias_clinicas/listar.php');
+
 require_once '../config/conexion.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 /* PERMISOS*/
-
-$modoDesarrollo = !isset($_SESSION['id_rol']);
 
 $rolActual = isset($_SESSION['id_rol'])
     ? (int) $_SESSION['id_rol']
     : 0;
 
-$rolesPermitidos = [1, 2, 4];
+$rolesPermitidos = [1, 2];
 
 if (
-    !$modoDesarrollo &&
     !in_array($rolActual, $rolesPermitidos, true)
 ) {
     $_SESSION['mensaje'] =
@@ -28,8 +24,7 @@ if (
     exit;
 }
 
-$puedeEditar = $modoDesarrollo ||
-    in_array($rolActual, [1, 2], true);
+$puedeEditar = in_array($rolActual, [1, 2], true);
 
 /*  FUNCIONES */
 
@@ -118,7 +113,7 @@ include '../includes/navbar.php';
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item">
-                    <a href="../index.php">Inicio</a>
+                    <a href="<?= login_html(login_inicio_url()) ?>">Inicio</a>
                 </li>
                 <li class="breadcrumb-item active">
                     Historias clínicas

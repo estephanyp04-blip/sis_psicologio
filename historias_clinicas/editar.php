@@ -1,12 +1,12 @@
 <?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('historias_clinicas/editar.php');
+
 require_once '../config/conexion.php';
 
-if (session_status() === PHP_SESSION_NONE) session_start();
-
-$modo = !isset($_SESSION['id_rol']);
 $rol = (int)($_SESSION['id_rol'] ?? 0);
 
-if (!$modo && !in_array($rol, [1, 2], true)) {
+if (!in_array($rol, [1, 2], true)) {
     header('Location: listar.php');
     exit;
 }
@@ -32,11 +32,15 @@ $stmt = $conexion->prepare("
         e.curso,
         e.paralelo,
         e.fecha_nacimiento,
-        e.lugar_nacimiento,
+        e.lugar_nacimiento AS estudiante_lugar_nacimiento,
         e.telefono,
-        e.nombre_tutor
+        e.nombre_tutor,
+        d.materia AS materia_derivacion,
+        d.prioridad AS prioridad_derivacion,
+        d.observaciones AS observaciones_derivacion
     FROM historias_clinicas h
     INNER JOIN estudiantes e ON e.id_estudiante = h.id_estudiante
+    LEFT JOIN derivaciones d ON d.id_derivacion = h.id_derivacion
     WHERE h.id_historia = ?
     LIMIT 1
 ");
@@ -59,9 +63,9 @@ $estudiantes = [[
     'curso' => $historia['curso'],
     'paralelo' => $historia['paralelo'],
     'fecha_nacimiento' => $historia['fecha_nacimiento'],
-    'lugar_nacimiento' => $historia['lugar_nacimiento'],
-    'telefono' => $historia['celular_estudiante'] ?: $historia['telefono'],
-    'nombre_tutor' => $historia['padre_madre'] ?: $historia['nombre_tutor']
+    'lugar_nacimiento' => $historia['estudiante_lugar_nacimiento'],
+    'telefono' => $historia['telefono'],
+    'nombre_tutor' => $historia['nombre_tutor']
 ]];
 
 /* OPCIONES MARCADAS */
@@ -141,7 +145,7 @@ include '../includes/navbar.php';
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item">
-                    <a href="../index.php">Inicio</a>
+                    <a href="<?= login_html(login_inicio_url()) ?>">Inicio</a>
                 </li>
                 <li class="breadcrumb-item">
                     <a href="listar.php">Historias clínicas</a>

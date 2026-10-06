@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('citas/listar.php');
+
 require_once '../config/conexion.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
@@ -19,6 +22,10 @@ $total_citas = $resultado->num_rows;
 ?>
 
 <div class="main-content">
+    <?php if (!empty($_SESSION['mensaje_cita'])): ?>
+        <div class="alert alert-danger"><?= login_html($_SESSION['mensaje_cita']) ?></div>
+        <?php unset($_SESSION['mensaje_cita']); ?>
+    <?php endif; ?>
 
     <!-- Breadcrumb -->
     <nav class="breadcrumb mb-3">
@@ -176,10 +183,12 @@ $total_citas = $resultado->num_rows;
                         <a href="editar.php?id=<?= $fila['id_cita'] ?>"
                            class="btn btn-sm btn-warning"
                            title="Editar">✏</a>
-                        <a href="cancelar.php?id=<?= $fila['id_cita'] ?>"
-                           class="btn btn-sm btn-danger"
-                           title="Cancelar"
-                           onclick="return confirm('¿Está segura de cancelar esta cita?')">❌</a>
+                        <form action="cancelar.php" method="POST" class="d-inline"
+                              onsubmit="return confirm('¿Está segura de cancelar esta cita?')">
+                            <?= login_campo_csrf() ?>
+                            <input type="hidden" name="id_cita" value="<?= (int) $fila['id_cita'] ?>">
+                            <button type="submit" class="btn btn-sm btn-danger" title="Cancelar">❌</button>
+                        </form>
                     </td>
                 </tr>
                 <?php

@@ -1,9 +1,8 @@
 <?php
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../includes/autenticacion.php';
+requerir_acceso('usuarios/actualizar.php');
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once '../config/conexion.php';
 
 function regresarAEdicion(string $mensaje, int $idUsuario): void
 {

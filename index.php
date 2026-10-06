@@ -1,10 +1,9 @@
 <?php
+require_once __DIR__ . '/includes/autenticacion.php';
+requerir_acceso('index.php');
+
 
 require_once 'config/conexion.php';
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 date_default_timezone_set('America/La_Paz');
 
