@@ -46,6 +46,8 @@ if (!$idInforme) {
 $stmt = $conexion->prepare("
     SELECT
         i.*,
+        d.*,
+        i.fecha_inicio AS fecha,
         e.codigo,
         e.ci,
         e.nombres,
@@ -53,11 +55,13 @@ $stmt = $conexion->prepare("
         e.fecha_nacimiento,
         e.curso AS estudiante_curso,
         e.paralelo AS estudiante_paralelo,
-        u.nombre AS psicologo_nombre,
-        u.apellido AS psicologo_apellido
+        p.nombres AS psicologo_nombre,
+        p.apellidos AS psicologo_apellido
     FROM informes i
-    INNER JOIN estudiantes e ON e.id_estudiante = i.id_estudiante
-    LEFT JOIN usuarios u ON u.id_usuario = i.id_usuario
+    LEFT JOIN informe_individual d ON d.id_informe=i.id_informe
+    LEFT JOIN vista_estudiantes e ON e.id_estudiante = d.id_estudiante
+    LEFT JOIN usuarios u ON u.id_usuario = i.id_elaborado_por
+    LEFT JOIN personas p ON p.id_persona=u.id_persona
     WHERE i.id_informe = ?
     LIMIT 1
 ");

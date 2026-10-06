@@ -15,7 +15,16 @@ include '../includes/navbar.php';
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 // 4) Preparar la consulta para traer el estudiante solicitado
-$sql = "SELECT * FROM estudiantes WHERE id_estudiante = ?";
+$sql = "SELECT ve.*, c.orden AS curso_orden,
+               (SELECT r.nombres
+                FROM estudiante_responsables er
+                INNER JOIN responsables r ON r.id_responsable = er.id_responsable
+                WHERE er.id_estudiante = ve.id_estudiante AND er.parentesco = 'Tutor'
+                ORDER BY er.es_principal DESC
+                LIMIT 1) AS nombre_tutor
+        FROM vista_estudiantes ve
+        LEFT JOIN cursos c ON c.id_curso = ve.id_curso
+        WHERE ve.id_estudiante = ?";
 $stmt = $conexion->prepare($sql);
 
 // 5) Vincular el parámetro y ejecutar la consulta
@@ -68,12 +77,12 @@ $fila = $resultado->fetch_assoc();
                             <div class="form-select">
                                 <label for="curso">Curso</label>
                                 <select id="curso" name="curso" class="form-control" required>
-                                    <option value="1" <?= $fila['curso'] == "1" ? "selected" : ""; ?>>1°</option>
-                                    <option value="2" <?= $fila['curso'] == "2" ? "selected" : ""; ?>>2°</option>
-                                    <option value="3" <?= $fila['curso'] == "3" ? "selected" : ""; ?>>3°</option>
-                                    <option value="4" <?= $fila['curso'] == "4" ? "selected" : ""; ?>>4°</option>
-                                    <option value="5" <?= $fila['curso'] == "5" ? "selected" : ""; ?>>5°</option>
-                                    <option value="6" <?= $fila['curso'] == "6" ? "selected" : ""; ?>>6°</option>
+                                    <option value="1" <?= (int)$fila['curso_orden'] === 1 ? "selected" : ""; ?>>1°</option>
+                                    <option value="2" <?= (int)$fila['curso_orden'] === 2 ? "selected" : ""; ?>>2°</option>
+                                    <option value="3" <?= (int)$fila['curso_orden'] === 3 ? "selected" : ""; ?>>3°</option>
+                                    <option value="4" <?= (int)$fila['curso_orden'] === 4 ? "selected" : ""; ?>>4°</option>
+                                    <option value="5" <?= (int)$fila['curso_orden'] === 5 ? "selected" : ""; ?>>5°</option>
+                                    <option value="6" <?= (int)$fila['curso_orden'] === 6 ? "selected" : ""; ?>>6°</option>
                                 </select>
                             </div>
 

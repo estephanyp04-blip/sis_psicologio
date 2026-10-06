@@ -20,22 +20,24 @@ unset($_SESSION['mensaje'], $_SESSION['tipo_mensaje']);
 $sql = "SELECT
             i.id_informe,
             i.numero_ficha,
-            i.fecha,
-            i.numero_atenciones,
-            i.tipo_atencion,
-            i.referido_por,
+            i.fecha_inicio AS fecha,
+            d.numero_atenciones,
+            d.tipo_atencion,
+            d.referido_por,
             i.estado,
             e.id_estudiante,
             e.nombres,
             e.apellidos,
             e.curso,
             e.paralelo,
-            u.nombre AS nombre_psicologo,
-            u.apellido AS apellido_psicologo
+            p.nombres AS nombre_psicologo,
+            p.apellidos AS apellido_psicologo
         FROM informes i
-        INNER JOIN estudiantes e ON i.id_estudiante = e.id_estudiante
-        INNER JOIN usuarios u ON i.id_usuario = u.id_usuario
-        ORDER BY i.fecha DESC, i.id_informe DESC";
+        INNER JOIN informe_individual d ON d.id_informe=i.id_informe
+        INNER JOIN vista_estudiantes e ON d.id_estudiante=e.id_estudiante
+        INNER JOIN usuarios u ON i.id_elaborado_por=u.id_usuario
+        INNER JOIN personas p ON p.id_persona=u.id_persona
+        ORDER BY i.fecha_inicio DESC, i.id_informe DESC";
 
 $resultado = $conexion->query($sql);
 
@@ -47,7 +49,8 @@ $sqlEstadisticas = "SELECT
     COUNT(*) AS total,
     SUM(CASE WHEN estado = 'Borrador' THEN 1 ELSE 0 END) AS borradores,
     SUM(CASE WHEN estado = 'Finalizado' THEN 1 ELSE 0 END) AS finalizados
-    FROM informes";
+    FROM informes
+    WHERE tipo = 'Individual'";
 
 $resultadoEstadisticas = $conexion->query($sqlEstadisticas);
 
@@ -284,10 +287,10 @@ include '../includes/navbar.php';
                                     <?php endif; ?>
 
                                     <a
-                                        href="imprimir.php?id=<?= (int)$informe['id_informe']; ?>"
+                                        href="ver.php?id=<?= (int)$informe['id_informe']; ?>"
                                         class="btn-accion"
-                                        title="Imprimir informe"
-                                        target="_blank">
+                                        title="Abrir informe para imprimir"
+                                        target="_blank" rel="noopener">
                                         <i class="bi bi-printer"></i>
                                         <span>Imprimir</span>
                                     </a>

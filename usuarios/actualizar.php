@@ -158,6 +158,17 @@ try {
 
     $correoBaseDatos = $correo !== '' ? $correo : null;
 
+    $conexion->begin_transaction();
+    $stmtPersona = $conexion->prepare(
+        'UPDATE personas p
+         INNER JOIN usuarios u ON u.id_persona = p.id_persona
+         SET p.nombres = ?, p.apellidos = ?, p.correo = ?
+         WHERE u.id_usuario = ?'
+    );
+    $stmtPersona->bind_param('sssi', $nombre, $apellido, $correoBaseDatos, $idUsuario);
+    $stmtPersona->execute();
+    $stmtPersona->close();
+
     if ($cambiarPassword) {
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
@@ -170,17 +181,13 @@ try {
 
         $stmtActualizar = $conexion->prepare(
             'UPDATE usuarios
-             SET nombre = ?, apellido = ?, usuario = ?, password = ?,
-                 correo = ?, estado = ?, id_rol = ?
+             SET usuario = ?, password = ?, estado = ?, id_rol = ?
              WHERE id_usuario = ?'
         );
         $stmtActualizar->bind_param(
-            'ssssssii',
-            $nombre,
-            $apellido,
+            'sssii',
             $usuario,
             $passwordHash,
-            $correoBaseDatos,
             $estado,
             $idRol,
             $idUsuario
@@ -188,16 +195,12 @@ try {
     } else {
         $stmtActualizar = $conexion->prepare(
             'UPDATE usuarios
-             SET nombre = ?, apellido = ?, usuario = ?, correo = ?,
-                 estado = ?, id_rol = ?
+             SET usuario = ?, estado = ?, id_rol = ?
              WHERE id_usuario = ?'
         );
         $stmtActualizar->bind_param(
-            'sssssii',
-            $nombre,
-            $apellido,
+            'ssii',
             $usuario,
-            $correoBaseDatos,
             $estado,
             $idRol,
             $idUsuario
@@ -205,7 +208,10 @@ try {
     }
 
     $stmtActualizar->execute();
+    $stmtActualizar->close();
+    $conexion->commit();
 } catch (mysqli_sql_exception $error) {
+    $conexion->rollback();
     error_log('Error al actualizar usuario: ' . $error->getMessage());
     regresarAEdicion(
         'No se pudo actualizar el usuario. Inténtelo nuevamente.',
@@ -215,6 +221,8 @@ try {
 
 if ((int) ($_SESSION['id_usuario'] ?? 0) === $idUsuario) {
     $_SESSION['nombre'] = $nombre;
+    $_SESSION['apellido'] = $apellido;
+    $_SESSION['nombre_completo'] = trim($nombre . ' ' . $apellido);
     $_SESSION['id_rol'] = $idRol;
 }
 

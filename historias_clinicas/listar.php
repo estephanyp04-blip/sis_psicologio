@@ -49,12 +49,14 @@ $sql = "
         e.apellidos,
         e.curso,
         e.paralelo,
-        CONCAT_WS(' ', u.nombre, u.apellido) AS profesional
+        CONCAT_WS(' ', p.nombres, p.apellidos) AS profesional
     FROM historias_clinicas h
-    INNER JOIN estudiantes e
+    INNER JOIN vista_estudiantes e
         ON e.id_estudiante = h.id_estudiante
     LEFT JOIN usuarios u
-        ON u.id_usuario = h.id_usuario
+        ON u.id_usuario = h.id_psicologa
+    LEFT JOIN personas p
+        ON p.id_persona = u.id_persona
     ORDER BY
         h.fecha_apertura DESC,
         h.id_historia DESC

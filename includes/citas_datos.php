@@ -27,7 +27,7 @@ function cita_guardar(mysqli $bd, array $entrada, int $autor, ?int $id = null): 
         if ($anterior && $fecha !== $anterior['fecha'] && $fecha < date('Y-m-d')) throw new InvalidArgumentException('No se puede reprogramar una cita hacia una fecha pasada.');
         if ($estado === 'Atendida' && $fecha > date('Y-m-d')) throw new InvalidArgumentException('No se puede atender una cita futura.');
         if ($anterior && ($fecha !== $anterior['fecha'] || $hora !== substr($anterior['hora'],0,5) || $estado === 'Cancelada')
-            && (flujo_fila($bd,'SELECT id_historia FROM historias_clinicas WHERE id_cita=? LIMIT 1',[$id])
+            && (flujo_fila($bd,'SELECT id_historia FROM historias_clinicas WHERE id_cita_origen=? LIMIT 1',[$id])
                 || flujo_fila($bd,'SELECT id_seguimiento FROM seguimientos WHERE id_cita=? LIMIT 1',[$id]))) {
             throw new InvalidArgumentException('La cita ya tiene atención clínica vinculada y conserva su horario.');
         }
@@ -44,7 +44,7 @@ function cita_guardar(mysqli $bd, array $entrada, int $autor, ?int $id = null): 
         if ($anterior) {
             flujo_ejecutar($bd, 'UPDATE citas SET fecha=?,hora=?,estado=?,observaciones=? WHERE id_cita=?', [$fecha,$hora,$estado,$observaciones,$id]);
         } else {
-            flujo_ejecutar($bd, 'INSERT INTO citas (id_estudiante,id_usuario,id_derivacion,fecha,hora,estado,observaciones) VALUES (?,?,NULLIF(?,0),?,?,?,?)', [$estudiante,$autor,$derivacion,$fecha,$hora,$estado,$observaciones]);
+            flujo_ejecutar($bd, 'INSERT INTO citas (id_estudiante,id_psicologa,id_derivacion,fecha,hora,estado,observaciones) VALUES (?,?,NULLIF(?,0),?,?,?,?)', [$estudiante,$autor,$derivacion,$fecha,$hora,$estado,$observaciones]);
             $id = (int)$bd->insert_id;
         }
         flujo_auditar($bd, $autor, 'citas', $anterior ? 'Actualizar' : 'Crear', $id, ($anterior['estado'] ?? 'Nueva') . ' → ' . $estado);

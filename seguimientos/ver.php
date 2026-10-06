@@ -4,7 +4,12 @@ requerir_acceso('seguimientos/ver.php');
 require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/../includes/trazabilidad_vista.php';
 $id = (int)filter_var($_GET['id'] ?? null,FILTER_VALIDATE_INT);
-$s = flujo_fila($conexion, 'SELECT s.*,h.id_estudiante,COALESCE(c.id_derivacion,h.id_derivacion) id_derivacion,CONCAT(u.nombre,\' \',u.apellido) profesional FROM seguimientos s JOIN historias_clinicas h ON h.id_historia=s.id_historia JOIN usuarios u ON u.id_usuario=s.id_usuario LEFT JOIN citas c ON c.id_cita=s.id_cita WHERE s.id_seguimiento=?', [$id]);
+$s = flujo_fila($conexion, 'SELECT s.*,h.id_estudiante,COALESCE(c.id_derivacion,h.id_derivacion_origen) id_derivacion,
+    CONCAT(p.nombres,\' \',p.apellidos) profesional
+    FROM seguimientos s JOIN historias_clinicas h ON h.id_historia=s.id_historia
+    JOIN usuarios u ON u.id_usuario=s.id_psicologa
+    JOIN personas p ON p.id_persona=u.id_persona
+    LEFT JOIN citas c ON c.id_cita=s.id_cita WHERE s.id_seguimiento=?', [$id]);
 if (!$s) { http_response_code(404); exit('Seguimiento no encontrado.'); }
 $tituloPagina='Seguimiento #' . $id;
 include '../includes/header.php'; include '../includes/sidebar.php'; include '../includes/navbar.php';

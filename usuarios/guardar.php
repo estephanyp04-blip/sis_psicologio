@@ -90,26 +90,29 @@ if($resultadoUsuario->num_rows>0){
 }
 
 $passwordHash=password_hash($password,PASSWORD_DEFAULT);
+$correoBaseDatos = $correo !== '' ? $correo : null;
 
-$stmt=$conexion->prepare("INSERT INTO usuarios(nombre,apellido,usuario,password,correo,estado,id_rol) VALUES(?,?,?,?,?,?,?)");
+$conexion->begin_transaction();
+try {
+    $stmtPersona = $conexion->prepare(
+        'INSERT INTO personas (nombres, apellidos, correo) VALUES (?, ?, ?)'
+    );
+    $stmtPersona->bind_param('sss', $nombre, $apellido, $correoBaseDatos);
+    $stmtPersona->execute();
+    $idPersona = $conexion->insert_id;
+    $stmtPersona->close();
 
-if(!$stmt){
-    regresarConError('Error al preparar el registro: '.$conexion->error);
-}
-
-$stmt->bind_param(
-    'ssssssi',
-    $nombre,
-    $apellido,
-    $usuario,
-    $passwordHash,
-    $correo,
-    $estado,
-    $idRol
-);
-
-if(!$stmt->execute()){
-    regresarConError('No se pudo registrar el usuario: '.$stmt->error);
+    $stmt = $conexion->prepare(
+        'INSERT INTO usuarios (id_persona, usuario, password, id_rol, estado) VALUES (?, ?, ?, ?, ?)'
+    );
+    $stmt->bind_param('issis', $idPersona, $usuario, $passwordHash, $idRol, $estado);
+    $stmt->execute();
+    $stmt->close();
+    $conexion->commit();
+} catch (mysqli_sql_exception $error) {
+    $conexion->rollback();
+    error_log('Error al registrar usuario: ' . $error->getMessage());
+    regresarConError('No se pudo registrar el usuario. Verifique que el nombre de usuario y correo no estén en uso.');
 }
 
 $_SESSION['mensaje']='Usuario registrado correctamente.';

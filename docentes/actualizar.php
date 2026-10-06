@@ -94,22 +94,10 @@ if (empty($materiasRecibidas)) {
     );
 }
 
-$materiasPermitidas = [
-    'Matemática',
-    'Lenguaje y Comunicación',
-    'Ciencias Naturales',
-    'Ciencias Sociales',
-    'Biología',
-    'Física',
-    'Química',
-    'Inglés',
-    'Educación Física',
-    'Artes Plásticas',
-    'Música',
-    'Tecnología',
-    'Valores',
-    'Otra'
-];
+$materiasPermitidas = array_column(
+    $conexion->query("SELECT nombre FROM materias WHERE estado='Activo'")->fetch_all(MYSQLI_ASSOC),
+    'nombre'
+);
 
 foreach ($materiasRecibidas as $materiaSeleccionada) {
     if (
@@ -125,8 +113,6 @@ foreach ($materiasRecibidas as $materiaSeleccionada) {
         );
     }
 }
-
-$materia = implode(', ', $materiasRecibidas);
 
 /* VALIDAR LONGITUDES */
 
@@ -154,13 +140,6 @@ if (mb_strlen($telefono) > 20) {
 if (mb_strlen($correo) > 100) {
     regresarConError(
         'El correo no puede superar los 100 caracteres.',
-        $idDocente
-    );
-}
-
-if (mb_strlen($materia) > 500) {
-    regresarConError(
-        'La lista de materias es demasiado extensa.',
         $idDocente
     );
 }
@@ -207,138 +186,70 @@ if (
     );
 }
 
-/* COMPROBAR QUE EL DOCENTE EXISTE */
+$correoDb = $correo !== '' ? $correo : null;
+$telefonoDb = $telefono !== '' ? $telefono : null;
+$conexion->begin_transaction();
+try {
+    $stmt = $conexion->prepare('SELECT id_docente FROM docentes WHERE id_docente=? FOR UPDATE');
+    $stmt->bind_param('i', $idDocente);
+    $stmt->execute();
+    $docenteExiste = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$docenteExiste) throw new InvalidArgumentException('El docente no existe.');
 
-$sqlDocente = "
-    SELECT id_docente
-    FROM docentes
-    WHERE id_docente = ?
-    LIMIT 1
-";
+    $stmt = $conexion->prepare("SELECT id_persona FROM usuarios WHERE id_usuario=? AND id_rol=3 AND estado='Activo' FOR UPDATE");
+    $stmt->bind_param('i', $idUsuario);
+    $stmt->execute();
+    $cuenta = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$cuenta) throw new InvalidArgumentException('La cuenta seleccionada no está activa o no pertenece a un docente.');
+    $idPersona = (int)$cuenta['id_persona'];
 
-$stmtDocente = $conexion->prepare($sqlDocente);
-$stmtDocente->bind_param('i', $idDocente);
-$stmtDocente->execute();
+    $stmt = $conexion->prepare('SELECT id_docente FROM docentes WHERE id_persona=? AND id_docente<>? LIMIT 1');
+    $stmt->bind_param('ii', $idPersona, $idDocente);
+    $stmt->execute();
+    $ocupado = $stmt->get_result()->num_rows > 0;
+    $stmt->close();
+    if ($ocupado) throw new InvalidArgumentException('La cuenta seleccionada ya pertenece a otro docente.');
 
-if ($stmtDocente->get_result()->num_rows === 0) {
-    $stmtDocente->close();
+    $stmt = $conexion->prepare('UPDATE personas SET nombres=?,apellidos=?,telefono=?,correo=? WHERE id_persona=?');
+    $stmt->bind_param('ssssi', $nombres, $apellidos, $telefonoDb, $correoDb, $idPersona);
+    $stmt->execute();
+    $stmt->close();
 
-    $_SESSION['mensaje'] = 'El docente no existe.';
-    $_SESSION['tipo_mensaje'] = 'danger';
+    $stmt = $conexion->prepare('UPDATE docentes SET id_persona=? WHERE id_docente=?');
+    $stmt->bind_param('ii', $idPersona, $idDocente);
+    $stmt->execute();
+    $stmt->close();
 
-    header('Location: listar.php');
-    exit;
-}
+    $stmt = $conexion->prepare('DELETE FROM docente_materias WHERE id_docente=?');
+    $stmt->bind_param('i', $idDocente);
+    $stmt->execute();
+    $stmt->close();
 
-$stmtDocente->close();
-
-/* VALIDAR CUENTA DE USUARIO */
-
-$sqlUsuario = "
-    SELECT id_usuario
-    FROM usuarios
-    WHERE id_usuario = ?
-      AND id_rol = 3
-    LIMIT 1
-";
-
-$stmtUsuario = $conexion->prepare($sqlUsuario);
-$stmtUsuario->bind_param('i', $idUsuario);
-$stmtUsuario->execute();
-
-if ($stmtUsuario->get_result()->num_rows === 0) {
-    $stmtUsuario->close();
-
-    regresarConError(
-        'La cuenta seleccionada no pertenece a un docente.',
-        $idDocente
-    );
-}
-
-$stmtUsuario->close();
-
-/* COMPROBAR QUE LA CUENTA NO ESTÉ OCUPADA */
-
-$sqlExiste = "
-    SELECT id_docente
-    FROM docentes
-    WHERE id_usuario = ?
-      AND id_docente <> ?
-    LIMIT 1
-";
-
-$stmtExiste = $conexion->prepare($sqlExiste);
-
-$stmtExiste->bind_param(
-    'ii',
-    $idUsuario,
-    $idDocente
-);
-
-$stmtExiste->execute();
-
-if ($stmtExiste->get_result()->num_rows > 0) {
-    $stmtExiste->close();
-
-    regresarConError(
-        'La cuenta seleccionada ya pertenece a otro docente.',
-        $idDocente
-    );
-}
-
-$stmtExiste->close();
-
-/* ACTUALIZAR DOCENTE */
-
-$sqlActualizar = "
-    UPDATE docentes
-    SET
-        id_usuario = ?,
-        nombres = ?,
-        apellidos = ?,
-        telefono = ?,
-        correo = ?,
-        materia = ?
-    WHERE id_docente = ?
-";
-
-$stmtActualizar = $conexion->prepare($sqlActualizar);
-
-if (!$stmtActualizar) {
-    regresarConError(
-        'No se pudo preparar la actualización: ' .
-        $conexion->error,
-        $idDocente
-    );
-}
-
-$stmtActualizar->bind_param(
-    'isssssi',
-    $idUsuario,
-    $nombres,
-    $apellidos,
-    $telefono,
-    $correo,
-    $materia,
-    $idDocente
-);
-
-if ($stmtActualizar->execute()) {
-    $stmtActualizar->close();
-
-    $_SESSION['mensaje'] =
-        'Los datos del docente fueron actualizados correctamente.';
-
+    $stmtMateria = $conexion->prepare("SELECT id_materia FROM materias WHERE nombre=? AND estado='Activo' LIMIT 1");
+    $stmtVinculo = $conexion->prepare('INSERT INTO docente_materias (id_docente,id_materia) VALUES (?,?)');
+    foreach ($materiasRecibidas as $materia) {
+        $stmtMateria->bind_param('s', $materia);
+        $stmtMateria->execute();
+        $fila = $stmtMateria->get_result()->fetch_assoc();
+        if (!$fila) throw new InvalidArgumentException('Una de las materias dejó de estar activa.');
+        $idMateria = (int)$fila['id_materia'];
+        $stmtVinculo->bind_param('ii', $idDocente, $idMateria);
+        $stmtVinculo->execute();
+    }
+    $stmtMateria->close();
+    $stmtVinculo->close();
+    $conexion->commit();
+    $_SESSION['mensaje'] = 'Los datos del docente fueron actualizados correctamente.';
     $_SESSION['tipo_mensaje'] = 'success';
-
     header('Location: ver.php?id=' . $idDocente);
-    exit;
+} catch (Throwable $error) {
+    $conexion->rollback();
+    error_log('Error al actualizar docente: ' . $error->getMessage());
+    regresarConError(
+        $error instanceof InvalidArgumentException ? $error->getMessage() : 'No se pudo actualizar el docente.',
+        $idDocente
+    );
 }
-
-$error = $stmtActualizar->error;
-$stmtActualizar->close();
-
-regresarConError(
-    'No se pudo actualizar el docente: ' . $error,
-    $idDocente
-);
+exit;

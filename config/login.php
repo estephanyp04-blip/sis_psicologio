@@ -4,18 +4,26 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
     exit;
 }
 
-// Configuración del inicio de sesión.
+$dbPass = getenv('DB_PASS');
+
 return [
     'zona_horaria' => 'America/La_Paz',
-    'base_url' => '/proyecto_vercionII',
-    'host' => '127.0.0.1',
-    'puerto' => 3306,
-    'base_datos' => 'psicologia_db',
-    'usuario_bd' => 'root',
-    'clave_bd' => '',
-    'cookie_segura' => false,
+    'base_url' => getenv('APP_BASE_URL') ?: '/proyecto_vercionII',
+
+    'host' => getenv('DB_HOST') ?: '127.0.0.1',
+    'puerto' => (int) (getenv('DB_PORT') ?: 3306),
+    'base_datos' => getenv('DB_NAME') ?: 'psicologia_db',
+    'usuario_bd' => getenv('DB_USER') ?: 'root',
+    'clave_bd' => $dbPass === false ? '' : $dbPass,
+
+    'cookie_segura' => filter_var(
+        getenv('COOKIE_SEGURA') ?: false,
+        FILTER_VALIDATE_BOOL
+    ),
+
     'inactividad' => 1800,
     'duracion_maxima' => 28800,
+
     'destinos' => [
         1 => 'index.php',
         2 => 'index.php',

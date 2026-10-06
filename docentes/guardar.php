@@ -147,22 +147,10 @@ if (
 
 /* VALIDAR MATERIAS */
 
-$materiasPermitidas = [
-    'Matemática',
-    'Lenguaje y Comunicación',
-    'Ciencias Naturales',
-    'Ciencias Sociales',
-    'Biología',
-    'Física',
-    'Química',
-    'Inglés',
-    'Educación Física',
-    'Artes Plásticas',
-    'Música',
-    'Tecnología',
-    'Valores',
-    'Otra'
-];
+$materiasPermitidas = array_column(
+    $conexion->query("SELECT nombre FROM materias WHERE estado='Activo'")->fetch_all(MYSQLI_ASSOC),
+    'nombre'
+);
 
 foreach ($materiasRecibidas as $materiaSeleccionada) {
     if (
@@ -180,22 +168,11 @@ foreach ($materiasRecibidas as $materiaSeleccionada) {
     }
 }
 
-/* UNIR MATERIAS PARA GUARDARLAS */
-
-$materia = implode(', ', $materiasRecibidas);
-
-if (mb_strlen($materia) > 500) {
-    regresarConError(
-        'La lista de materias seleccionadas es demasiado extensa.'
-    );
-}
-
 /* COMPROBAR USUARIO */
 
 $sqlUsuario = "
-    SELECT
-        id_usuario
-    FROM usuarios
+    SELECT u.id_persona
+    FROM usuarios u
     WHERE id_usuario = ?
       AND id_rol = 3
       AND estado = 'Activo'
@@ -216,7 +193,7 @@ $stmtUsuario->execute();
 
 $resultadoUsuario = $stmtUsuario->get_result();
 
-if ($resultadoUsuario->num_rows === 0) {
+if ($resultadoUsuario->num_rows !== 1) {
     $stmtUsuario->close();
 
     regresarConError(
@@ -224,86 +201,53 @@ if ($resultadoUsuario->num_rows === 0) {
         'o no tiene el rol Docente.'
     );
 }
-
+$idPersona = (int)$resultadoUsuario->fetch_assoc()['id_persona'];
 $stmtUsuario->close();
 
 /* COMPROBAR QUE LA CUENTA NO ESTÉ ASIGNADA */
+$correoDb = $correo !== '' ? $correo : null;
+$telefonoDb = $telefono !== '' ? $telefono : null;
+$conexion->begin_transaction();
+try {
+    $stmt = $conexion->prepare('SELECT id_docente FROM docentes WHERE id_persona=? FOR UPDATE');
+    $stmt->bind_param('i', $idPersona);
+    $stmt->execute();
+    $ocupado = $stmt->get_result()->num_rows > 0;
+    $stmt->close();
+    if ($ocupado) throw new InvalidArgumentException('La cuenta seleccionada ya está asignada a un docente.');
 
-$sqlExiste = "
-    SELECT
-        id_docente
-    FROM docentes
-    WHERE id_usuario = ?
-    LIMIT 1
-";
+    $stmt = $conexion->prepare('UPDATE personas SET nombres=?,apellidos=?,telefono=?,correo=? WHERE id_persona=?');
+    $stmt->bind_param('ssssi', $nombres, $apellidos, $telefonoDb, $correoDb, $idPersona);
+    $stmt->execute();
+    $stmt->close();
 
-$stmtExiste = $conexion->prepare($sqlExiste);
+    $stmt = $conexion->prepare('INSERT INTO docentes (id_persona) VALUES (?)');
+    $stmt->bind_param('i', $idPersona);
+    $stmt->execute();
+    $idDocente = (int)$conexion->insert_id;
+    $stmt->close();
 
-if (!$stmtExiste) {
-    regresarConError(
-        'No se pudo comprobar la cuenta seleccionada: ' .
-        $conexion->error
-    );
+    $stmtMateria = $conexion->prepare("SELECT id_materia FROM materias WHERE nombre=? AND estado='Activo' LIMIT 1");
+    $stmtVinculo = $conexion->prepare('INSERT INTO docente_materias (id_docente,id_materia) VALUES (?,?)');
+    foreach ($materiasRecibidas as $materia) {
+        $stmtMateria->bind_param('s', $materia);
+        $stmtMateria->execute();
+        $fila = $stmtMateria->get_result()->fetch_assoc();
+        if (!$fila) throw new InvalidArgumentException('Una de las materias dejó de estar activa.');
+        $idMateria = (int)$fila['id_materia'];
+        $stmtVinculo->bind_param('ii', $idDocente, $idMateria);
+        $stmtVinculo->execute();
+    }
+    $stmtMateria->close();
+    $stmtVinculo->close();
+    $conexion->commit();
+} catch (Throwable $error) {
+    $conexion->rollback();
+    error_log('Error al registrar docente: ' . $error->getMessage());
+    regresarConError($error instanceof InvalidArgumentException
+        ? $error->getMessage()
+        : 'No se pudo registrar el docente. Verifique la cuenta y las materias seleccionadas.');
 }
-
-$stmtExiste->bind_param('i', $idUsuario);
-$stmtExiste->execute();
-
-$resultadoExiste = $stmtExiste->get_result();
-
-if ($resultadoExiste->num_rows > 0) {
-    $stmtExiste->close();
-
-    regresarConError(
-        'La cuenta seleccionada ya está asignada a otro docente.'
-    );
-}
-
-$stmtExiste->close();
-
-/* GUARDAR DOCENTE */
-
-$sqlGuardar = "
-    INSERT INTO docentes (
-        id_usuario,
-        nombres,
-        apellidos,
-        telefono,
-        correo,
-        materia
-    )
-    VALUES (?, ?, ?, ?, ?, ?)
-";
-
-$stmtGuardar = $conexion->prepare($sqlGuardar);
-
-if (!$stmtGuardar) {
-    regresarConError(
-        'No se pudo preparar el registro: ' .
-        $conexion->error
-    );
-}
-
-$stmtGuardar->bind_param(
-    'isssss',
-    $idUsuario,
-    $nombres,
-    $apellidos,
-    $telefono,
-    $correo,
-    $materia
-);
-
-if (!$stmtGuardar->execute()) {
-    $error = $stmtGuardar->error;
-    $stmtGuardar->close();
-
-    regresarConError(
-        'No se pudo registrar el docente: ' . $error
-    );
-}
-
-$stmtGuardar->close();
 
 $_SESSION['mensaje'] =
     'El docente fue registrado correctamente.';

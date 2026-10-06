@@ -196,24 +196,32 @@ try {
     $stmt = $conexion->prepare("
         SELECT
             h.*,
+            h.talla_cm AS talla,
+            h.peso_kg AS peso,
+            h.valoracion_fisica AS valoracion,
             e.codigo,
             e.ci,
             e.nombres,
             e.apellidos,
             e.fecha_nacimiento,
-            e.genero,
+            e.sexo AS genero,
             e.curso,
             e.paralelo,
             e.turno,
-            e.tutor,
+            (SELECT r.nombres FROM estudiante_responsables er
+                INNER JOIN responsables r ON r.id_responsable=er.id_responsable
+                WHERE er.id_estudiante=e.id_estudiante AND er.parentesco='Tutor'
+                ORDER BY er.es_principal DESC LIMIT 1) AS tutor,
             e.telefono,
-            u.nombre   AS profesional_nombre,
-            u.apellido AS profesional_apellido
+            p.nombres AS profesional_nombre,
+            p.apellidos AS profesional_apellido
         FROM historias_clinicas h
-        INNER JOIN estudiantes e
+        INNER JOIN vista_estudiantes e
             ON e.id_estudiante = h.id_estudiante
         LEFT JOIN usuarios u
-            ON u.id_usuario = h.id_usuario
+            ON u.id_usuario = h.id_psicologa
+        LEFT JOIN personas p
+            ON p.id_persona = u.id_persona
         WHERE h.id_historia = ?
         LIMIT 1
     ");
@@ -233,20 +241,15 @@ try {
     }
 
     /* ---------- 2. Opciones marcadas ---------- */
-    $opciones = [
-        'conductas_riesgo'              => [],
-        'atencion_distraccion'          => [],
-        'actividad_motora'              => [],
-        'adaptacion_normas'             => [],
-        'dificultades_socioemocionales' => [],
-        'estrategias_previas'           => [],
-    ];
+    $opciones = array_fill_keys(array_keys(HISTORIA_OPCIONES), []);
 
     $stmt = $conexion->prepare("
-        SELECT grupo, valor
-        FROM historia_opciones
-        WHERE id_historia = ?
-        ORDER BY id_opcion ASC
+        SELECT g.codigo AS grupo, o.descripcion AS valor
+        FROM historia_opciones ho
+        INNER JOIN opciones_historia o ON o.id_opcion=ho.id_opcion
+        INNER JOIN grupos_opciones_historia g ON g.id_grupo=o.id_grupo
+        WHERE ho.id_historia = ?
+        ORDER BY ho.id_opcion ASC
     ");
 
     if ($stmt) {
@@ -500,29 +503,12 @@ include '../includes/navbar.php';
     <!-- =====================================================
          4. CONDUCTAS DE RIESGO
          ===================================================== -->
-    <section class="expediente-seccion">
-        <div class="expediente-seccion-titulo">
-            <span>4</span>
-            <div><h2>Conductas de riesgo</h2></div>
-        </div>
-
-        <div class="opciones-registradas">
-            <?php if (!empty($opciones['conductas_riesgo'])): ?>
-                <?php foreach ($opciones['conductas_riesgo'] as $valor): ?>
-                    <span><i class="bi bi-check2"></i><?= escapar($valor) ?></span>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <span class="sin-dato">Sin conductas de riesgo registradas.</span>
-            <?php endif; ?>
-        </div>
-    </section>
-
     <!-- =====================================================
          5. CONDUCTAS PROBLEMA
          ===================================================== -->
     <section class="expediente-seccion">
         <div class="expediente-seccion-titulo">
-            <span>5</span>
+            <span>4</span>
             <div><h2>Conducta(s) problema(s)</h2></div>
         </div>
 
@@ -530,9 +516,8 @@ include '../includes/navbar.php';
         $grupos = [
             'atencion_distraccion'          => 'A. Atención / distracción',
             'actividad_motora'              => 'B. Actividad motora en exceso',
-            'adaptacion_normas'             => 'C. Adaptación a normas',
-            'dificultades_socioemocionales' => 'Dificultades socioemocionales',
-            'estrategias_previas'           => 'Estrategias de intervención antes de la derivación',
+            'dificultades_socioemocionales' => 'C. Dificultades socioemocionales',
+            'estrategias_previas'           => 'D. Estrategias de intervención antes de la derivación',
         ];
         ?>
 
@@ -558,7 +543,7 @@ include '../includes/navbar.php';
          ===================================================== -->
     <section class="expediente-seccion">
         <div class="expediente-seccion-titulo">
-            <span>6</span>
+            <span>5</span>
             <div><h2>Contexto familiar</h2></div>
         </div>
 
@@ -628,7 +613,7 @@ include '../includes/navbar.php';
          ===================================================== -->
     <section class="expediente-seccion">
         <div class="expediente-seccion-titulo">
-            <span>7</span>
+            <span>6</span>
             <div>
                 <h2>Resultados del diagnóstico psicológico</h2>
                 <p>Intelectual, emocional, organicidad y personalidad</p>
@@ -651,7 +636,7 @@ include '../includes/navbar.php';
          ===================================================== -->
     <section class="expediente-seccion">
         <div class="expediente-seccion-titulo">
-            <span>8</span>
+            <span>7</span>
             <div><h2>Acuerdos con estudiante y/o Padre-Madre</h2></div>
         </div>
 
@@ -667,17 +652,13 @@ include '../includes/navbar.php';
          ===================================================== -->
     <section class="expediente-seccion">
         <div class="expediente-seccion-titulo">
-            <span>9</span>
+            <span>8</span>
             <div>
                 <h2>Evolución del caso</h2>
                 <p>Registro cronológico del seguimiento</p>
             </div>
         </div>
 
-        <div class="texto-clinico mb-3">
-            <strong>Evaluación del progreso</strong>
-            <p><?= mostrarDato(HISTORIA_EVOLUCIONES[(int)($h['evolucion_caso'] ?? 0)] ?? '', 'Sin evaluar') ?></p>
-        </div>
         <?php if (!empty($h['observaciones'])): ?>
             <div class="evolucion-item">
                 <div class="evolucion-fecha">

@@ -36,7 +36,7 @@ if($idDerivacion){
             d.id_estudiante,
             d.fecha AS fecha_derivacion,
             d.motivo,
-            d.materia,
+            m.nombre AS materia,
             d.prioridad,
             d.observaciones AS observaciones_derivacion,
             e.nombres,
@@ -46,13 +46,18 @@ if($idDerivacion){
             e.fecha_nacimiento,
             e.lugar_nacimiento,
             e.telefono,
-            e.nombre_tutor,
-            doc.nombres AS docente_nombres,
-            doc.apellidos AS docente_apellidos,
+            (SELECT r.nombres FROM estudiante_responsables er
+                INNER JOIN responsables r ON r.id_responsable=er.id_responsable
+                WHERE er.id_estudiante=e.id_estudiante AND er.parentesco='Tutor'
+                ORDER BY er.es_principal DESC LIMIT 1) AS nombre_tutor,
+            dp.nombres AS docente_nombres,
+            dp.apellidos AS docente_apellidos,
             h.id_historia
         FROM derivaciones d
-        INNER JOIN estudiantes e ON e.id_estudiante=d.id_estudiante
+        INNER JOIN vista_estudiantes e ON e.id_estudiante=d.id_estudiante
         LEFT JOIN docentes doc ON doc.id_docente=d.id_docente
+        LEFT JOIN personas dp ON dp.id_persona=doc.id_persona
+        LEFT JOIN materias m ON m.id_materia=d.id_materia
         LEFT JOIN historias_clinicas h ON h.id_estudiante=e.id_estudiante
         WHERE d.id_derivacion=?
         AND e.estado='Activo'
@@ -100,17 +105,20 @@ elseif($idEstudiante){
             e.fecha_nacimiento,
             e.lugar_nacimiento,
             e.telefono,
-            e.nombre_tutor,
+            (SELECT r.nombres FROM estudiante_responsables er
+                INNER JOIN responsables r ON r.id_responsable=er.id_responsable
+                WHERE er.id_estudiante=e.id_estudiante AND er.parentesco='Tutor'
+                ORDER BY er.es_principal DESC LIMIT 1) AS nombre_tutor,
             d.id_derivacion,
             d.fecha AS fecha_derivacion,
             d.motivo,
-            d.materia,
+            m.nombre AS materia,
             d.prioridad,
             d.observaciones AS observaciones_derivacion,
-            doc.nombres AS docente_nombres,
-            doc.apellidos AS docente_apellidos,
+            dp.nombres AS docente_nombres,
+            dp.apellidos AS docente_apellidos,
             h.id_historia
-        FROM estudiantes e
+        FROM vista_estudiantes e
         LEFT JOIN historias_clinicas h ON h.id_estudiante=e.id_estudiante
         LEFT JOIN derivaciones d ON d.id_derivacion=(
             SELECT d2.id_derivacion
@@ -120,6 +128,8 @@ elseif($idEstudiante){
             LIMIT 1
         )
         LEFT JOIN docentes doc ON doc.id_docente=d.id_docente
+        LEFT JOIN personas dp ON dp.id_persona=doc.id_persona
+        LEFT JOIN materias m ON m.id_materia=d.id_materia
         WHERE e.id_estudiante=?
         AND e.estado='Activo'
         LIMIT 1
@@ -174,16 +184,19 @@ $sql="
         e.paralelo,
         e.fecha_nacimiento,
         e.lugar_nacimiento,
-        e.nombre_tutor,
+        (SELECT r.nombres FROM estudiante_responsables er
+            INNER JOIN responsables r ON r.id_responsable=er.id_responsable
+            WHERE er.id_estudiante=e.id_estudiante AND er.parentesco='Tutor'
+            ORDER BY er.es_principal DESC LIMIT 1) AS nombre_tutor,
         e.telefono,
         d.id_derivacion,
         d.fecha AS fecha_derivacion,
         d.motivo AS motivo_derivacion,
-        d.materia AS materia_derivacion,
+        m.nombre AS materia_derivacion,
         d.prioridad AS prioridad_derivacion,
         d.observaciones AS observaciones_derivacion,
-        TRIM(CONCAT(COALESCE(doc.nombres,''),' ',COALESCE(doc.apellidos,''))) AS derivado_por
-    FROM estudiantes e
+        TRIM(CONCAT(COALESCE(dp.nombres,''),' ',COALESCE(dp.apellidos,''))) AS derivado_por
+    FROM vista_estudiantes e
     LEFT JOIN historias_clinicas h ON h.id_estudiante=e.id_estudiante
     LEFT JOIN derivaciones d ON d.id_derivacion=(
         SELECT d2.id_derivacion
@@ -193,6 +206,8 @@ $sql="
         LIMIT 1
     )
     LEFT JOIN docentes doc ON doc.id_docente=d.id_docente
+    LEFT JOIN personas dp ON dp.id_persona=doc.id_persona
+    LEFT JOIN materias m ON m.id_materia=d.id_materia
     WHERE e.estado='Activo'
     AND h.id_historia IS NULL
     ORDER BY e.curso,e.paralelo,e.apellidos,e.nombres

@@ -25,9 +25,10 @@ if (!$idInforme) {
 }
 
 $stmt = $conexion->prepare("
-    SELECT i.*, e.nombres, e.apellidos, e.curso, e.paralelo
+    SELECT i.*,d.*,i.fecha_inicio AS fecha,e.nombres,e.apellidos,e.curso,e.paralelo
     FROM informes i
-    INNER JOIN estudiantes e ON e.id_estudiante = i.id_estudiante
+    INNER JOIN informe_individual d ON d.id_informe=i.id_informe
+    INNER JOIN vista_estudiantes e ON e.id_estudiante=d.id_estudiante
     WHERE i.id_informe = ?
     LIMIT 1
 ");

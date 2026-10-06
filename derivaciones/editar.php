@@ -37,7 +37,7 @@ $sql = "SELECT
             d.fecha,
             d.id_estudiante,
             d.id_docente,
-            d.materia,
+            m.nombre AS materia,
             d.motivo,
             d.observaciones,
             d.prioridad,
@@ -46,13 +46,17 @@ $sql = "SELECT
             e.apellidos AS estudiante_apellidos,
             e.curso,
             e.paralelo,
-            doc.nombres AS docente_nombres,
-            doc.apellidos AS docente_apellidos
+            persona.nombres AS docente_nombres,
+            persona.apellidos AS docente_apellidos
         FROM derivaciones AS d
-        LEFT JOIN estudiantes AS e
+        LEFT JOIN vista_estudiantes AS e
             ON d.id_estudiante = e.id_estudiante
+        LEFT JOIN materias AS m
+            ON m.id_materia = d.id_materia
         LEFT JOIN docentes AS doc
             ON d.id_docente = doc.id_docente
+        LEFT JOIN personas AS persona
+            ON persona.id_persona = doc.id_persona
         WHERE d.id_derivacion = ?
           AND (? <> 3 OR d.id_docente = ?)
         LIMIT 1";

@@ -13,7 +13,7 @@ $sql = "SELECT c.id_cita, c.fecha, c.hora,
                e.nombres, e.apellidos,
                e.curso, e.paralelo
         FROM citas c
-        INNER JOIN estudiantes e 
+        INNER JOIN vista_estudiantes e
             ON c.id_estudiante = e.id_estudiante
         ORDER BY c.fecha DESC, c.hora ASC";
 

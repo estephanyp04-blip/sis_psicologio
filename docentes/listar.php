@@ -14,16 +14,18 @@ $busqueda = trim($_GET['buscar'] ?? '');
 $sql = "
     SELECT
         d.id_docente,
-        d.id_usuario,
-        d.nombres,
-        d.apellidos,
-        d.telefono,
-        d.correo,
-        d.materia,
+        d.id_persona,
+        p.nombres,
+        p.apellidos,
+        p.telefono,
+        p.correo,
+        GROUP_CONCAT(DISTINCT m.nombre ORDER BY m.nombre SEPARATOR ', ') AS materia,
         u.usuario
     FROM docentes d
-    LEFT JOIN usuarios u
-        ON u.id_usuario = d.id_usuario
+    INNER JOIN personas p ON p.id_persona=d.id_persona
+    LEFT JOIN usuarios u ON u.id_persona=d.id_persona
+    LEFT JOIN docente_materias dm ON dm.id_docente=d.id_docente
+    LEFT JOIN materias m ON m.id_materia=dm.id_materia
 ";
 
 $parametros = [];
@@ -31,11 +33,11 @@ $tipos = '';
 
 if ($busqueda !== '') {
     $sql .= "
-        WHERE d.nombres LIKE ?
-        OR d.apellidos LIKE ?
-        OR d.telefono LIKE ?
-        OR d.correo LIKE ?
-        OR d.materia LIKE ?
+        WHERE p.nombres LIKE ?
+        OR p.apellidos LIKE ?
+        OR p.telefono LIKE ?
+        OR p.correo LIKE ?
+        OR m.nombre LIKE ?
         OR u.usuario LIKE ?
     ";
 
@@ -53,7 +55,7 @@ if ($busqueda !== '') {
     $tipos = 'ssssss';
 }
 
-$sql .= " ORDER BY d.apellidos ASC, d.nombres ASC";
+$sql .= " GROUP BY d.id_docente,p.id_persona,p.nombres,p.apellidos,p.telefono,p.correo,u.usuario ORDER BY p.apellidos ASC,p.nombres ASC";
 
 $stmt = $conexion->prepare($sql);
 
@@ -250,15 +252,6 @@ include '../includes/navbar.php';
                                                 <i class="bi bi-pencil"></i>
                                             </a>
 
-                                            <a href="eliminar.php?id=<?= (int)
-                                                $docente['id_docente']; ?>"
-                                               class="btn btn-sm btn-outline-danger"
-                                               title="Eliminar docente"
-                                               onclick="return confirm(
-                                                   '¿Está seguro de eliminar este docente?'
-                                               );">
-                                                <i class="bi bi-trash"></i>
-                                            </a>
                                         </div>
                                     </td>
                                 </tr>

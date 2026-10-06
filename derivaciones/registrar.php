@@ -24,7 +24,7 @@ if (!in_array($tipoMensaje, ['success', 'danger', 'warning', 'info'], true)) {
 
 // Cursos disponibles (para el filtro)
 $rsCursos = $conexion->query(
-    "SELECT DISTINCT curso FROM estudiantes WHERE estado = 'Activo' ORDER BY curso ASC"
+    "SELECT DISTINCT curso FROM vista_estudiantes WHERE estado = 'Activo' ORDER BY curso ASC"
 );
 $cursos = [];
 if ($rsCursos) {
@@ -38,7 +38,7 @@ $cursoFiltro = $_GET['curso'] ?? '';
 $paraleloFiltro = $_GET['paralelo'] ?? '';
 
 $rsParalelos = $conexion->query(
-    "SELECT DISTINCT paralelo FROM estudiantes WHERE estado = 'Activo'" .
+    "SELECT DISTINCT paralelo FROM vista_estudiantes WHERE estado = 'Activo'" .
     ($cursoFiltro !== '' ? " AND curso = '" . $conexion->real_escape_string($cursoFiltro) . "'" : '') .
     " ORDER BY paralelo ASC"
 );
@@ -51,7 +51,7 @@ if ($rsParalelos) {
 
 // Estudiantes activos, filtrados por curso y paralelo si se eligieron
 $sqlEstudiantes = "SELECT id_estudiante, nombres, apellidos, curso, paralelo
-                    FROM estudiantes
+                    FROM vista_estudiantes
                     WHERE estado = 'Activo'";
 
 if ($cursoFiltro !== '') {
@@ -71,8 +71,9 @@ if (!$rsEstudiantes) {
 
 // Psicólogas activas disponibles para la atención.
 $rsProfesionales = $conexion->query(
-    "SELECT id_usuario, nombre, apellido, usuario, correo FROM usuarios
-     WHERE id_rol = 2 AND estado = 'Activo' ORDER BY apellido ASC, nombre ASC"
+    "SELECT u.id_usuario,p.nombres AS nombre,p.apellidos AS apellido,u.usuario,p.correo
+     FROM usuarios u INNER JOIN personas p ON p.id_persona=u.id_persona
+     WHERE u.id_rol = 2 AND u.estado = 'Activo' ORDER BY p.apellidos,p.nombres"
 );
 $profesionales = $rsProfesionales->fetch_all(MYSQLI_ASSOC);
 $rsProfesionales->free();
@@ -98,20 +99,14 @@ if (!array_key_exists('id_profesional', $d)) {
     }
 }
 
-$categorias = [
-    ['Rendimiento Académico', 'Baja de notas o falta de atención.'],
-    ['Conducta en Aula', 'Indisciplina, agresividad o interrupciones.'],
-    ['Social / Emocional', 'Aislamiento, tristeza o llanto recurrente.'],
-    ['Dinámica Familiar', 'Problemas en el hogar o negligencia.'],
-    ['Acoso escolar / Acoso', 'Víctima, agresor o ciberacoso.'],
-    ['Otro', 'Situación no especificada anteriormente.'],
-];
-
-$materias = [
-    'Matemática', 'Lenguaje y Comunicación', 'Ciencias Naturales', 'Ciencias Sociales',
-    'Biología', 'Física', 'Química', 'Inglés', 'Educación Física',
-    'Artes Plásticas', 'Música', 'Tecnología', 'Valores', 'Otra',
-];
+$categorias = array_map(
+    static fn(array $categoria): array => [$categoria['nombre'], ''],
+    $conexion->query("SELECT nombre FROM categorias_derivacion WHERE estado='Activo' ORDER BY nombre")->fetch_all(MYSQLI_ASSOC)
+);
+$materias = array_column(
+    $conexion->query("SELECT nombre FROM materias WHERE estado='Activo' ORDER BY nombre")->fetch_all(MYSQLI_ASSOC),
+    'nombre'
+);
 ?>
 
 <div class="main-content">

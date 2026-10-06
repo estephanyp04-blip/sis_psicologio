@@ -81,7 +81,6 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
     <input type="hidden" name="familiares_presentes" value="1">
     <input type="hidden" name="situacion_escolar" value="">
     <input type="hidden" name="valoracion_familiar" value="">
-    <input type="hidden" name="evolucion_caso" value="">
     <?php if ($esEdicion): ?>
         <input
             type="hidden"
@@ -121,7 +120,6 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
         <a href="#seccion-datos">Datos</a>
         <a href="#seccion-motivo">Motivo</a>
         <a href="#seccion-escolar">Situación escolar</a>
-        <a href="#seccion-riesgo">Conductas de riesgo</a>
         <a href="#seccion-conductas">Conductas problema</a>
         <a href="#seccion-familia">Familia</a>
         <a href="#seccion-diagnostico">Diagnóstico</a>
@@ -495,38 +493,15 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
         </div>
     </section>
 
-    <section class="historia-bloque" id="seccion-riesgo">
-        <button type="button" class="historia-bloque-titulo" data-historia-toggle>
-            <span class="historia-numero">4</span>
-            <span><strong>Conductas de riesgo</strong><small>Seleccione las opciones observadas</small></span>
-            <i class="bi bi-chevron-up"></i>
-        </button>
-        <div class="historia-bloque-contenido">
-            <div class="opciones-check-grid">
-                <?php foreach (opcionesHistoria('conductas_riesgo') as $opcion): ?>
-                    <label class="opcion-check">
-                        <input
-                            type="checkbox"
-                            name="conductas_riesgo[]"
-                            value="<?= escapar($opcion) ?>"
-                            <?= marcado('conductas_riesgo', $opcion) ?>
-                        >
-                        <span><?= escapar($opcion) ?></span>
-                    </label>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </section>
-
     <!-- =====================================================
          5. CONDUCTAS PROBLEMA
          ===================================================== -->
     <section class="historia-bloque" id="seccion-conductas">
         <button type="button" class="historia-bloque-titulo" data-historia-toggle>
-            <span class="historia-numero">5</span>
+            <span class="historia-numero">4</span>
             <span>
                 <strong>Conducta(s) problema(s)</strong>
-                <small>Atención, actividad motora y adaptación</small>
+                <small>Atención, actividad motora y comportamiento socioemocional</small>
             </span>
             <i class="bi bi-chevron-up"></i>
         </button>
@@ -556,21 +531,6 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
                             <input type="checkbox" name="actividad_motora[]"
                                 value="<?= escapar($opcion) ?>"
                                 <?= marcado('actividad_motora', $opcion) ?>>
-                            <span><?= escapar($opcion) ?></span>
-                        </label>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-
-            <!-- C. ADAPTACIÓN -->
-            <div class="subseccion-clinica">
-                <h3>C. Adaptación a normas</h3>
-                <div class="opciones-check-grid">
-                    <?php foreach (opcionesHistoria('adaptacion_normas') as $opcion): ?>
-                        <label class="opcion-check">
-                            <input type="checkbox" name="adaptacion_normas[]"
-                                value="<?= escapar($opcion) ?>"
-                                <?= marcado('adaptacion_normas', $opcion) ?>>
                             <span><?= escapar($opcion) ?></span>
                         </label>
                     <?php endforeach; ?>
@@ -614,7 +574,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
          ===================================================== -->
     <section class="historia-bloque" id="seccion-familia">
         <button type="button" class="historia-bloque-titulo" data-historia-toggle>
-            <span class="historia-numero">6</span>
+            <span class="historia-numero">5</span>
             <span>
                 <strong>Contexto familiar</strong>
                 <small>Antecedentes y composición familiar</small>
@@ -710,7 +670,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
          ===================================================== -->
     <section class="historia-bloque" id="seccion-diagnostico">
         <button type="button" class="historia-bloque-titulo" data-historia-toggle>
-            <span class="historia-numero">7</span>
+            <span class="historia-numero">6</span>
             <span>
                 <strong>Resultados del diagnóstico psicológico</strong>
                 <small>Intelectual, emocional, organicidad y personalidad</small>
@@ -733,7 +693,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
          ===================================================== -->
     <section class="historia-bloque" id="seccion-acuerdos">
         <button type="button" class="historia-bloque-titulo" data-historia-toggle>
-            <span class="historia-numero">8</span>
+            <span class="historia-numero">7</span>
             <span>
                 <strong>Acuerdos con estudiante y/o Padre-Madre</strong>
                 <small>Compromisos acordados durante la atención</small>
@@ -753,7 +713,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
          ===================================================== -->
     <section class="historia-bloque" id="seccion-evolucion">
         <button type="button" class="historia-bloque-titulo" data-historia-toggle>
-            <span class="historia-numero">9</span>
+            <span class="historia-numero">8</span>
             <span>
                 <strong>Evolución del caso</strong>
                 <small>Evaluación general del progreso del estudiante</small>
@@ -762,27 +722,6 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
         </button>
 
         <div class="historia-bloque-contenido">
-            <label class="form-label fw-semibold mb-3">
-                Seleccione la evolución observada
-            </label>
-            <div class="opciones-clinicas">
-                <?php
-                $evoluciones = HISTORIA_EVOLUCIONES;
-                ?>
-                <?php foreach ($evoluciones as $valor => $texto): ?>
-                    <label class="opcion-radio">
-                        <input type="radio" name="evolucion_caso"
-                            value="<?= (int)$valor ?>"
-                            <?= (int)valorHistoria('evolucion_caso', 0) === (int)$valor
-                                ? 'checked' : '' ?>>
-                        <span><?= (int)$valor ?> - <?= escapar($texto) ?></span>
-                    </label>
-                <?php endforeach; ?>
-            </div>
-            <small class="text-muted d-block mt-3">
-                Esta evaluación permitirá generar estadísticas
-                sobre la evolución de los casos.
-            </small>
             <label class="form-label mt-3">Observaciones clínicas</label>
             <textarea name="observaciones" class="form-control textarea-auto" rows="4" maxlength="5000"><?= escapar(valorHistoria('observaciones')) ?></textarea>
         </div>

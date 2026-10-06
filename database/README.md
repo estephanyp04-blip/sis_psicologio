@@ -1,72 +1,60 @@
-# Esquema e instalación
+# Base de datos e instalación
 
-Versión: `002_trazabilidad`, 5 de octubre de 2026. PHP 8.2 con mysqli/mysqlnd y mbstring; validado con MariaDB 10.4.32.
+## Esquema actual
 
-La migración 002 agrega `historias_clinicas.id_cita` e `informes.id_seguimiento`, ambos opcionales y con clave externa. La columna generada `citas.turno_reservado` y su índice único reservan fecha/hora para citas no canceladas; se retira el índice antiguo por profesional, que impedía reutilizar citas canceladas. La agenda sigue siendo única y compartida. Si existen horarios vigentes duplicados, el plan se detiene antes de aplicar cambios y exige resolverlos: nunca borra ni reprograma datos por su cuenta.
+El archivo [psicologia_db.sql](psicologia_db.sql) contiene el esquema normalizado que usa la aplicación:
 
-El ejecutor aplica los planes de `database/migrations/` en orden y comprueba su idempotencia. No rellena relaciones históricas. Reglas de uso y permisos en [TRAZABILIDAD.md](../TRAZABILIDAD.md).
+- `personas` comparte los datos de usuarios y docentes.
+- `secciones` e `inscripciones` relacionan curso, paralelo, turno y gestión de los estudiantes.
+- `historias_clinicas` usa `id_psicologa`, `id_derivacion_origen` e `id_cita_origen`.
+- `informes` guarda la cabecera y `informe_individual` el detalle y las relaciones del informe.
+- Las opciones clínicas, materias y categorías de derivación se guardan en catálogos relacionados.
 
-La versión 002 quedó aplicada en la base local, sin operaciones pendientes. Respaldo previo: `%LOCALAPPDATA%\Psicologia\respaldos\2026-10-05-trazabilidad-002-9819439a\`. `validacion.txt` y `huellas-antes.json` certifican que los valores originales de las 18 tablas de datos se conservaron; solo se agregaron las columnas, restricciones y la versión de migración.
+El SQL es una exportación que incluye catálogos, secciones para la gestión 2026 y registros iniciales de personas/usuarios. No es una plantilla sin datos. Sus vistas declaran `DEFINER=root@localhost`; al instalar con otra cuenta hay que adaptar ese definidor al servidor de destino.
 
-`config/login.php` concentra conexión, URL y zona horaria (`America/La_Paz`). Tanto login como módulos usan `login_bd()`. Abrir una página **no crea bases, tablas, columnas ni registros de catálogo**.
+## Instalación en una base nueva
 
-## Instalación vacía
-
-Desde la raíz del proyecto, con MySQL iniciado:
+Con MySQL iniciado, desde la raíz del proyecto:
 
 ```powershell
 & C:\xampp\php\php.exe database\migrar.php --base=psicologia_nueva --aplicar --instalar
 ```
 
-El comando crea la base si falta y exige que esté vacía antes de importar `database/psicologia_db.sql`. El SQL es autocontenido, sin `USE`, `DROP` ni datos personales: incluye todas las tablas y vistas, cuatro roles activos, seis cursos y sus paralelos A–D, claves externas, numeración de informes y versión de esquema. También puede importarse directamente en una base vacía seleccionada en phpMyAdmin.
+El comando crea la base si falta y exige que esté vacía antes de importar el SQL. Después, configurar `base_datos` en [config/login.php](../config/login.php), o `DB_NAME` en el entorno del proceso PHP, con el nombre elegido.
 
-La instalación no crea cuentas ni contraseñas predeterminadas. Aprovisionar el administrador con un hash generado por `password_hash`, luego configurar `base_datos` en `config/login.php`. `herramientas/establecer_clave.php` permite cambiar la contraseña de una cuenta ya existente.
-
-## Actualización de la base existente
-
-Respaldar antes de ejecutar DDL; MariaDB confirma `ALTER TABLE` aunque la operación se haya iniciado dentro de una transacción. Mantener la aplicación sin escrituras durante el respaldo y la actualización.
+Para establecer la contraseña de una cuenta importada:
 
 ```powershell
-# Solo lectura: enumera operaciones pendientes y verifica compatibilidad.
-& C:\xampp\php\php.exe database\migrar.php --base=psicologia_db --comprobar
-
-# Aplicación explícita, exclusivamente desde CLI.
-& C:\xampp\php\php.exe database\migrar.php --base=psicologia_db --aplicar
+& C:\xampp\php\php.exe herramientas\establecer_clave.php nombre_usuario
 ```
 
-El origen admitido es la estructura de la base activa revisada el 02-10-2026: IDs unsigned, cursos/paralelos relacionados y modelo de informes con `id_usuario`/`titulo`. El antiguo SQL exportado y las tablas incompletas creadas por la conexión anterior **no se convierten automáticamente**: el preanálisis los rechaza antes de aplicar cambios. Las instalaciones nuevas deben usar el SQL actual.
+La herramienta usa la base configurada, solicita la contraseña por terminal y guarda su hash. No crea cuentas.
 
-La migración agrega `seguimientos.recomendaciones`, `historias_clinicas.evolucion_caso`, unicidad de `informes.numero_ficha`, las cuatro relaciones de informes que faltaban y `informes_secuencia`. La secuencia empieza en el mayor sufijo `INF-...` existente; su fila se bloquea dentro de la transacción de guardado. Se registra la versión en `esquema_migraciones`. Repetir el comando verifica la estructura y no duplica los cambios. Una interrupción puede dejar DDL parcial: corregir su causa y repetir el comando; no se promete rollback del DDL.
+## Comprobación y migraciones históricas
 
-Antes de escribir, se rechazan fichas vacías/duplicadas, relaciones huérfanas y estados de origen incompatibles. No se reinterpreta `acuerdos` como recomendaciones ni se sustituyen autores o cursos de registros existentes. La persistencia de `evolucion_caso` en historias se completó en el punto 3: admite valores 1–5 o NULL cuando no se ha evaluado.
+```powershell
+& C:\xampp\php\php.exe database\migrar.php --base=psicologia_db --comprobar
+```
 
-## Contratos de los módulos corregidos
+Si detecta las tablas y columnas identificativas del esquema normalizado, el ejecutor termina indicando que omite las migraciones 001/002. Esta detección no comprueba exhaustivamente todas las relaciones ni todos los datos.
 
-- Historias clínicas: alta y edición transaccionales, autor original conservado y editor registrado en `auditoria`. La evolución, los campos clínicos, opciones y familiares se recuperan en edición y detalle. La edición mantiene el estudiante y la derivación original; los campos omitidos se conservan. Las referencias de la derivación se consultan desde su registro y la ficha estudiantil no sobrescribe los datos clínicos al editar. No se requiere una migración adicional para el punto 3.
-- Informes individuales: título de hasta 180 caracteres, autor de la sesión en `id_usuario` y `elaborado_por`, `tipo=Individual`, historia opcional, estados `Borrador`/`Finalizado`. La edición conserva autor y relaciones, valida existencia y comparte las validaciones con el alta. El listado, detalle, filtros y estadísticas usan los mismos estados y el autor canónico.
-- Seguimientos: se conservan `descripcion`, `acuerdos` y `proxima_sesion`; `recomendaciones` es un campo independiente, inicialmente NULL para registros previos.
-- Estudiantes: alta manual e importación comparten límites, fechas, género, turno, estados `Activo`/`Retirado` y resolución de catálogos activos. El grado visible no se interpreta como ID; una combinación inexistente o ambigua se rechaza. Se guardan texto e IDs correspondientes, además de sexo coherente con el género del formulario. La edición académica antigua sigue pendiente del punto 4.
+Los archivos de [migrations/](migrations/) corresponden al esquema anterior. Se conservan para las bases antiguas y las pruebas históricas. **No convierten el esquema anterior al normalizado.** Respaldar una base existente antes de aplicar cualquier migración; las operaciones DDL de MariaDB pueden confirmar cambios aunque estén dentro de una transacción.
+
+Abrir una página de la aplicación no instala ni modifica el esquema. La conexión está centralizada en `login_bd()`.
 
 ## CSV de estudiantes
 
-Archivo UTF-8 (BOM opcional), separado por `;`, máximo 5 MB. Encabezados requeridos:
+Archivo UTF-8 (BOM opcional), separado por `;`, máximo 5 MB:
 
 ```csv
 codigo;ci;nombres;apellidos;fecha_nacimiento;genero;curso;paralelo;turno;estado
 EJEMPLO001;EJEMPLOCI001;Ana;Ejemplo;2011-05-12;Femenino;1;A;Mañana;Activo
 ```
 
-Opcionales: `padre`, `madre`, `tutor`, `telefono`, `direccion`. Curso: grado 1–6 o nombre exacto del catálogo compatible con el campo de curso. Paralelo: nombre activo perteneciente a ese curso. Género: `Masculino`/`Femenino`; turno: `Mañana`/`Tarde`; estado: `Activo`/`Retirado`. Fechas reales no futuras, en `YYYY-MM-DD`.
+Columnas opcionales: `padre`, `madre`, `tutor`, `telefono`, `direccion`. Curso, paralelo y turno deben identificar una sección activa de la gestión actual; la institución y sus catálogos también deben estar activos. Género: `Masculino`/`Femenino`; turno: `Mañana`/`Tarde`; estado: `Activo`/`Retirado`. La fecha debe existir y no ser futura.
 
-**Política parcial:** cada fila válida se guarda; las filas inválidas o duplicadas se rechazan y el proceso continúa. El resumen indica cantidades y los primeros cinco errores con número de fila. No se actualizan registros existentes. Un error de encabezados impide comenzar; una pérdida de conexión interrumpe el procesamiento y conserva el resumen de lo procesado.
+Cada fila válida se guarda con su inscripción y responsables dentro de una transacción. Las filas inválidas o duplicadas se rechazan y el procesamiento continúa; no se actualizan estudiantes existentes. Un encabezado inválido impide comenzar. El resumen muestra las cantidades y los primeros cinco errores por fila.
 
-## Verificación
+## Pruebas
 
-```powershell
-& C:\xampp\php\php.exe tests\esquema_informes_importacion.php
-& C:\xampp\php\php.exe tests\seguridad.php
-```
-
-La primera suite crea bases con prefijo `psicologia_test_` y nombres aleatorios. Compara instalación limpia con actualización desde una copia de **solo la estructura** local, usando datos sintéticos; verifica conservación de datos previos, importación y operaciones HTTP reales en una copia temporal de la aplicación. También comprueba conflictos, rollback y cuatro creaciones concurrentes de informes. Borra únicamente sus bases y archivos temporales al terminar. Requiere permisos de creación/eliminación de bases; nunca ejecuta escrituras de prueba en `psicologia_db`.
-
-La migración local se aplicó después de esas pruebas, con respaldo fuera del DocumentRoot en `%LOCALAPPDATA%\Psicologia\respaldos\2026-10-02-esquema-001-d415380b\`. `validacion.txt` y `huellas-antes.json` acompañan el respaldo: los valores de todas las columnas originales en las 17 tablas existentes se conservaron.
+Consultar [tests/README.md](../tests/README.md) para las pruebas vigentes y las pendientes de adaptación. Las pruebas de acceso y edición de informes utilizan datos sintéticos en tablas `TEMPORARY`; no escriben en los registros reales.

@@ -1,5 +1,6 @@
 <?php
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(404); exit; }
+require_once __DIR__ . '/trazabilidad_datos.php';
 
 const DERIVACION_CATEGORIAS = ['Rendimiento Académico', 'Conducta en Aula', 'Social / Emocional', 'Dinámica Familiar', 'Acoso escolar / Acoso', 'Otro'];
 
@@ -67,15 +68,35 @@ function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, in
     if (!in_array($entrada['prioridad'], ['Alta', 'Media', 'Baja'], true)) throw new InvalidArgumentException('La prioridad no es válida.');
     $bd->begin_transaction();
     try {
-        $stmt = $bd->prepare('SELECT observaciones, estado FROM derivaciones WHERE id_derivacion = ? AND (? <> 3 OR id_docente = ?) FOR UPDATE');
+        $stmt = $bd->prepare('SELECT d.observaciones,d.estado,m.nombre AS materia
+            FROM derivaciones d LEFT JOIN materias m ON m.id_materia=d.id_materia
+            WHERE d.id_derivacion = ? AND (? <> 3 OR d.id_docente = ?) FOR UPDATE');
         $stmt->bind_param('iii', $id, $rol, $docente); $stmt->execute();
         $actual = $stmt->get_result()->fetch_assoc(); $stmt->close();
         if (!$actual) throw new InvalidArgumentException('La derivación no existe o no tiene permiso para editarla.');
         if ($actual['estado'] !== 'Pendiente') throw new InvalidArgumentException('Solo se pueden editar derivaciones pendientes.');
         $observaciones = derivacion_observaciones($entrada, $actual['observaciones']);
-        $stmt = $bd->prepare('UPDATE derivaciones SET fecha=?, materia=?, motivo=?, observaciones=?, prioridad=? WHERE id_derivacion=? AND (? <> 3 OR id_docente=?) AND estado=\'Pendiente\'');
-        $stmt->bind_param('sssssiii', $entrada['fecha'], $entrada['materia'], $entrada['motivo'], $observaciones, $entrada['prioridad'], $id, $rol, $docente);
+        $idMateria = flujo_fila($bd, "SELECT id_materia FROM materias WHERE nombre=? AND estado='Activo' LIMIT 1", [$entrada['materia']]);
+        if (!$idMateria) throw new InvalidArgumentException('La materia seleccionada no está activa en el catálogo.');
+        $idMateria = (int)$idMateria['id_materia'];
+        $stmt = $bd->prepare('UPDATE derivaciones SET fecha=?, id_materia=?, motivo=?, observaciones=?, prioridad=? WHERE id_derivacion=? AND (? <> 3 OR id_docente=?) AND estado=\'Pendiente\'');
+        $stmt->bind_param('sisssiii', $entrada['fecha'], $idMateria, $entrada['motivo'], $observaciones, $entrada['prioridad'], $id, $rol, $docente);
         $stmt->execute(); $stmt->close();
+        if (($entrada['observaciones_presentes'] ?? '') === '1') {
+            $stmt = $bd->prepare('DELETE FROM derivacion_categorias WHERE id_derivacion=?');
+            $stmt->bind_param('i', $id); $stmt->execute(); $stmt->close();
+            $stmt = $bd->prepare('SELECT id_categoria FROM categorias_derivacion WHERE nombre=? AND estado=\'Activo\' LIMIT 1');
+            $vinculo = $bd->prepare('INSERT INTO derivacion_categorias (id_derivacion,id_categoria) VALUES (?,?)');
+            foreach (array_unique($entrada['categorias'] ?? []) as $categoria) {
+                if (!is_string($categoria)) throw new InvalidArgumentException('Las categorías no son válidas.');
+                $stmt->bind_param('s', $categoria); $stmt->execute();
+                $fila = $stmt->get_result()->fetch_assoc();
+                if (!$fila) throw new InvalidArgumentException('Una categoría seleccionada no está activa en el catálogo.');
+                $idCategoria = (int)$fila['id_categoria'];
+                $vinculo->bind_param('ii', $id, $idCategoria); $vinculo->execute();
+            }
+            $stmt->close(); $vinculo->close();
+        }
         $bd->commit();
     } catch (Throwable $error) {
         $bd->rollback();

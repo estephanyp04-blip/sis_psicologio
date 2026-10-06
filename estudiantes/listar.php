@@ -8,89 +8,6 @@ function e($v):string{
     return htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
 }
 
-function redirigirMensaje(string $mensaje,string $tipo='info'):void{
-    $_SESSION['mensaje']=$mensaje;
-    $_SESSION['tipo_mensaje']=$tipo;
-    header('Location: listar.php');
-    exit;
-}
-
-/* RETIRAR / REACTIVAR */
-if($_SERVER['REQUEST_METHOD']==='POST'&&isset($_POST['accion'])){
-    $accion=trim((string)($_POST['accion']??''));
-    $id=(int)($_POST['id_estudiante']??0);
-
-    if($id<=0){
-        redirigirMensaje('El estudiante seleccionado no es válido.','danger');
-    }
-
-    if(!in_array($accion,['retirar','reactivar'],true)){
-        redirigirMensaje('La acción solicitada no es válida.','danger');
-    }
-
-    $stmt=$conexion->prepare("
-        SELECT nombres,apellidos,estado
-        FROM estudiantes
-        WHERE id_estudiante=?
-        LIMIT 1
-    ");
-
-    if(!$stmt){
-        redirigirMensaje('No se pudo procesar la solicitud.','danger');
-    }
-
-    $stmt->bind_param('i',$id);
-    $stmt->execute();
-    $estudiante=$stmt->get_result()->fetch_assoc();
-    $stmt->close();
-
-    if(!$estudiante){
-        redirigirMensaje('El estudiante no existe.','danger');
-    }
-
-    $nombre=trim(($estudiante['nombres']??'').' '.($estudiante['apellidos']??''));
-    $nuevoEstado=$accion==='retirar'?'Retirado':'Activo';
-
-    if(($estudiante['estado']??'')===$nuevoEstado){
-        $texto=$nuevoEstado==='Retirado'
-            ?'El estudiante ya se encuentra retirado.'
-            :'El estudiante ya se encuentra activo.';
-
-        redirigirMensaje($texto,'info');
-    }
-
-    $stmt=$conexion->prepare("
-        UPDATE estudiantes
-        SET estado=?
-        WHERE id_estudiante=?
-        LIMIT 1
-    ");
-
-    if(!$stmt){
-        redirigirMensaje('No se pudo actualizar el estado del estudiante.','danger');
-    }
-
-    $stmt->bind_param('si',$nuevoEstado,$id);
-    $ok=$stmt->execute();
-    $stmt->close();
-
-    if(!$ok){
-        redirigirMensaje('No se pudo actualizar el estado del estudiante.','danger');
-    }
-
-    if($accion==='retirar'){
-        redirigirMensaje(
-            'El estudiante '.$nombre.' fue retirado correctamente.',
-            'success'
-        );
-    }
-
-    redirigirMensaje(
-        'El estudiante '.$nombre.' fue reactivado correctamente.',
-        'success'
-    );
-}
-
 /* CONSULTAR ESTUDIANTES */
 $sql="
     SELECT
@@ -103,7 +20,7 @@ $sql="
         paralelo,
         turno,
         estado
-    FROM estudiantes
+    FROM vista_estudiantes
     ORDER BY
         CASE estado
             WHEN 'Activo' THEN 1
@@ -543,14 +460,6 @@ include '../includes/navbar.php';
 
                             <div class="d-inline-flex align-items-center gap-1">
 
-                                <a
-                                    href="ver.php?id=<?= (int)$fila['id_estudiante'] ?>"
-                                    class="btn btn-sm btn-outline-secondary"
-                                    title="Ver estudiante"
-                                >
-                                    <i class="bi bi-eye"></i>
-                                </a>
-
                                 <?php if(($fila['estado']??'')==='Activo'):?>
 
                                     <a
@@ -562,6 +471,7 @@ include '../includes/navbar.php';
                                     </a>
 
                                     <form
+                                        action="cambiar_estado.php"
                                         method="POST"
                                         class="d-inline formulario-retirar"
                                     >
@@ -592,6 +502,7 @@ include '../includes/navbar.php';
                                 <?php else:?>
 
                                     <form
+                                        action="cambiar_estado.php"
                                         method="POST"
                                         class="d-inline formulario-reactivar"
                                     >

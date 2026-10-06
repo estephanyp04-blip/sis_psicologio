@@ -66,7 +66,7 @@ function informe_crear(mysqli $conexion, array $datos, int $idUsuario): string
         $stmt->close();
         if (!$existe) throw new InvalidArgumentException('El estudiante no existe o no está activo.');
 
-        $stmt = $conexion->prepare('SELECT id_historia, id_derivacion FROM historias_clinicas WHERE id_estudiante = ? ORDER BY id_historia DESC LIMIT 1');
+        $stmt = $conexion->prepare('SELECT id_historia, id_derivacion_origen FROM historias_clinicas WHERE id_estudiante = ? ORDER BY id_historia DESC LIMIT 1');
         $stmt->bind_param('i', $datos['id_estudiante']);
         $stmt->execute();
         $historia = $stmt->get_result()->fetch_assoc();
@@ -75,7 +75,7 @@ function informe_crear(mysqli $conexion, array $datos, int $idUsuario): string
         if ($datos['id_historia'] > 0 && $datos['id_historia'] !== $idHistoria) {
             throw new InvalidArgumentException('La historia clínica no corresponde al estudiante.');
         }
-        $idDerivacion = (int)($historia['id_derivacion'] ?? 0);
+        $idDerivacion = (int)($historia['id_derivacion_origen'] ?? 0);
         $idSeguimiento = $datos['id_seguimiento'] ?? null;
         if ($idSeguimiento === null && $idHistoria) {
             $ultimo = flujo_fila($conexion,'SELECT id_seguimiento FROM seguimientos WHERE id_historia=? AND fecha<=? ORDER BY fecha DESC,id_seguimiento DESC LIMIT 1',[$idHistoria,$datos['fecha']]);
@@ -100,19 +100,30 @@ function informe_crear(mysqli $conexion, array $datos, int $idUsuario): string
         $conexion->query('UPDATE informes_secuencia SET ultimo = ' . $numero . ' WHERE id = 1');
         $ficha = 'INF-' . str_pad((string)$numero, 4, '0', STR_PAD_LEFT);
         $tipoAtencion = implode(', ', $datos['tipo_atencion']);
-        $stmt = $conexion->prepare("INSERT INTO informes (numero_ficha, fecha, id_estudiante, id_usuario, elaborado_por,
-            titulo, tipo, numero_atenciones, referido_por, id_historia, id_derivacion, tipo_atencion,
-            motivo, diagnostico, aspecto_cognitivo, aspectos_afectivos, diagnostico_acuerdos, recomendaciones, recibido_por, estado)
-            VALUES (?, ?, ?, ?, ?, ?, 'Individual', ?, NULLIF(?, ''), NULLIF(?, 0), NULLIF(?, 0), ?, ?,
-            NULLIF(?, ''), ?, ?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), ?)");
-        $stmt->bind_param('ssiiisisiisssssssss', $ficha, $datos['fecha'], $datos['id_estudiante'], $idUsuario,
-            $idUsuario, $datos['titulo'], $datos['numero_atenciones'], $datos['referido_por'], $idHistoria,
-            $idDerivacion, $tipoAtencion, $datos['motivo'], $datos['diagnostico'], $datos['aspecto_cognitivo'],
-            $datos['aspectos_afectivos'], $datos['diagnostico_acuerdos'], $datos['recomendaciones'], $datos['recibido_por'], $datos['estado']);
+        $descripcion = $datos['motivo'];
+        $conclusiones = $datos['diagnostico'];
+        $stmt = $conexion->prepare("INSERT INTO informes
+            (numero_ficha,id_elaborado_por,tipo,titulo,fecha_inicio,fecha_fin,descripcion,conclusiones,recomendaciones,estado)
+            VALUES (?,?,'Individual',?,?,?,?,?,?,?)");
+        $stmt->bind_param('sisssssss', $ficha, $idUsuario, $datos['titulo'], $datos['fecha'], $datos['fecha'],
+            $descripcion, $conclusiones, $datos['recomendaciones'], $datos['estado']);
         $stmt->execute();
         $idInforme = (int)$stmt->insert_id;
         $stmt->close();
-        flujo_ejecutar($conexion,'UPDATE informes SET id_seguimiento=NULLIF(?,0) WHERE id_informe=?',[$idSeguimiento ?? 0,$idInforme]);
+
+        $idHistoriaDb = $idHistoria ?: null;
+        $idDerivacionDb = $idDerivacion ?: null;
+        $idSeguimientoDb = $idSeguimiento ?: null;
+        $stmt = $conexion->prepare('INSERT INTO informe_individual
+            (id_informe,id_estudiante,id_historia,id_derivacion,id_seguimiento,numero_atenciones,referido_por,
+             tipo_atencion,motivo,diagnostico,aspecto_cognitivo,aspectos_afectivos,diagnostico_acuerdos,recibido_por)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $stmt->bind_param('iiiiiissssssss', $idInforme, $datos['id_estudiante'], $idHistoriaDb, $idDerivacionDb,
+            $idSeguimientoDb, $datos['numero_atenciones'], $datos['referido_por'], $tipoAtencion, $datos['motivo'],
+            $datos['diagnostico'], $datos['aspecto_cognitivo'], $datos['aspectos_afectivos'],
+            $datos['diagnostico_acuerdos'], $datos['recibido_por']);
+        $stmt->execute();
+        $stmt->close();
         flujo_auditar($conexion,$idUsuario,'informes','Crear',$idInforme,'Historia #' . $idHistoria . '; seguimiento #' . ($idSeguimiento ?? 0));
         $conexion->commit();
         return $ficha;
@@ -127,7 +138,9 @@ function informe_actualizar(mysqli $conexion, int $idInforme, array $datos, ?int
     informe_validar($datos);
     $conexion->begin_transaction();
     try {
-        $stmt = $conexion->prepare('SELECT * FROM informes WHERE id_informe = ? AND id_estudiante = ? FOR UPDATE');
+        $stmt = $conexion->prepare('SELECT i.*,d.id_estudiante,d.id_historia,d.id_derivacion,d.id_seguimiento
+            FROM informes i INNER JOIN informe_individual d ON d.id_informe=i.id_informe
+            WHERE i.id_informe = ? AND d.id_estudiante = ? FOR UPDATE');
         $stmt->bind_param('ii', $idInforme, $datos['id_estudiante']);
         $stmt->execute();
         $existe = $stmt->get_result()->fetch_assoc();
@@ -139,16 +152,23 @@ function informe_actualizar(mysqli $conexion, int $idInforme, array $datos, ?int
             if ($seguimiento['fecha'] > $datos['fecha']) throw new InvalidArgumentException('El informe no puede ser anterior a su seguimiento.');
         }
         $tipos = implode(', ', $datos['tipo_atencion']);
+        $descripcion = $datos['motivo'];
+        $conclusiones = $datos['diagnostico'];
         // Autor y relaciones de origen se conservan al editar.
-        $stmt = $conexion->prepare("UPDATE informes SET titulo = ?, fecha = ?, numero_atenciones = ?,
-            referido_por = NULLIF(?, ''), tipo_atencion = ?, motivo = ?, diagnostico = NULLIF(?, ''),
-            aspecto_cognitivo = ?, aspectos_afectivos = ?, diagnostico_acuerdos = NULLIF(?, ''),
-            recomendaciones = NULLIF(?, ''), recibido_por = NULLIF(?, ''), estado = ?, fecha_actualizacion = CURRENT_TIMESTAMP
-            WHERE id_informe = ? AND id_estudiante = ?");
-        $stmt->bind_param('ssissssssssssii', $datos['titulo'], $datos['fecha'], $datos['numero_atenciones'],
-            $datos['referido_por'], $tipos, $datos['motivo'], $datos['diagnostico'], $datos['aspecto_cognitivo'],
-            $datos['aspectos_afectivos'], $datos['diagnostico_acuerdos'], $datos['recomendaciones'], $datos['recibido_por'],
-            $datos['estado'], $idInforme, $datos['id_estudiante']);
+        $stmt = $conexion->prepare("UPDATE informes SET titulo=?,fecha_inicio=?,fecha_fin=?,descripcion=?,
+            conclusiones=?,recomendaciones=?,estado=? WHERE id_informe=?");
+        $stmt->bind_param('sssssssi', $datos['titulo'], $datos['fecha'], $datos['fecha'], $descripcion,
+            $conclusiones, $datos['recomendaciones'], $datos['estado'], $idInforme);
+        $stmt->execute();
+        $stmt->close();
+        $stmt = $conexion->prepare("UPDATE informe_individual SET numero_atenciones=?,referido_por=NULLIF(?,''),
+            tipo_atencion=?,motivo=?,diagnostico=NULLIF(?,''),
+            aspecto_cognitivo=?,aspectos_afectivos=?,diagnostico_acuerdos=NULLIF(?,''),
+            recibido_por=NULLIF(?,'')
+            WHERE id_informe=? AND id_estudiante=?");
+        $stmt->bind_param('issssssssii', $datos['numero_atenciones'], $datos['referido_por'], $tipos,
+            $datos['motivo'], $datos['diagnostico'], $datos['aspecto_cognitivo'], $datos['aspectos_afectivos'],
+            $datos['diagnostico_acuerdos'], $datos['recibido_por'], $idInforme, $datos['id_estudiante']);
         $stmt->execute();
         $stmt->close();
         if ($editor !== null) flujo_auditar($conexion,$editor,'informes','Actualizar',$idInforme,'Edición; se conservan autor y vínculos de origen');

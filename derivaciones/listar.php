@@ -7,7 +7,7 @@ require_once '../config/conexion.php';
 
 /*  CONFIGURACIÓN Y SESIÓN */
 
-$baseUrl = '/proyecto_vercionII';
+$baseUrl = rtrim(login_config()['base_url'], '/');
 
 $rol       = (int) ($_SESSION['id_rol'] ?? 0);
 $idDocente = (int) ($_SESSION['id_docente'] ?? 0);
@@ -48,22 +48,28 @@ $sql = "
         d.id_derivacion,
         d.fecha,
         d.estado,
+        d.prioridad,
+        m.nombre AS materia,
 
         e.nombres,
         e.apellidos,
         e.curso,
         e.paralelo,
 
-        doc.nombres AS docente_nombres,
-        doc.apellidos AS docente_apellidos
+        persona.nombres AS docente_nombres,
+        persona.apellidos AS docente_apellidos
 
     FROM derivaciones d
 
-    LEFT JOIN estudiantes e
+    LEFT JOIN materias m ON m.id_materia = d.id_materia
+
+    LEFT JOIN vista_estudiantes e
         ON e.id_estudiante = d.id_estudiante
 
     LEFT JOIN docentes doc
         ON doc.id_docente = d.id_docente
+    LEFT JOIN personas persona
+        ON persona.id_persona = doc.id_persona
 ";
 
 
@@ -596,6 +602,8 @@ include '../includes/navbar.php';
                                                 Derivación #
                                                 <?= (int) $fila['id_derivacion'] ?>
                                             </small>
+                                            <small><?= e($fila['materia'] ?? 'Materia no registrada') ?></small>
+                                            <small>Prioridad: <?= e($fila['prioridad']) ?></small>
 
                                         </div>
 
@@ -702,6 +710,17 @@ include '../includes/navbar.php';
 
                                             </a>
 
+                                        <?php endif; ?>
+
+                                        <?php if ($esDocente && $fila['estado'] === 'Pendiente'): ?>
+                                            <form action="eliminar.php" method="POST" class="d-inline"
+                                                onsubmit="return confirm('¿Eliminar esta derivación pendiente?');">
+                                                <?= login_campo_csrf() ?>
+                                                <input type="hidden" name="id_derivacion" value="<?= (int)$fila['id_derivacion'] ?>">
+                                                <button type="submit" class="btn-accion" title="Eliminar derivación">
+                                                    <i class="bi bi-trash"></i><span>Eliminar</span>
+                                                </button>
+                                            </form>
                                         <?php endif; ?>
 
                                     </div>

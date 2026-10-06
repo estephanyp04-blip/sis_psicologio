@@ -6,9 +6,9 @@ require_once __DIR__ . '/trazabilidad_datos.php';
 function flujo_panel(mysqli $bd, string $tipo, array $registro): void
 {
     if (!login_puede('historias_clinicas/ver.php')) return;
-    $d = (int)($registro['id_derivacion'] ?? 0);
+    $d = (int)($registro['id_derivacion'] ?? $registro['id_derivacion_origen'] ?? 0);
     $h = (int)($registro['id_historia'] ?? 0);
-    $c = (int)($registro['id_cita'] ?? 0);
+    $c = (int)($registro['id_cita'] ?? $registro['id_cita_origen'] ?? 0);
     $s = (int)($registro['id_seguimiento'] ?? 0);
     $enlaces = [];
     $agregar = static function (string $ruta, string $titulo, int $id) use (&$enlaces): void {
@@ -28,16 +28,16 @@ function flujo_panel(mysqli $bd, string $tipo, array $registro): void
         $consultas = [
             ['SELECT id_cita id FROM citas WHERE id_derivacion=? ORDER BY fecha,id_cita',[$d],'citas/editar.php','Cita'],
             ['SELECT id_historia id FROM historias_clinicas WHERE id_estudiante=?',[$registro['id_estudiante']],'historias_clinicas/ver.php','Historia del estudiante'],
-            ['SELECT s.id_seguimiento id FROM seguimientos s JOIN historias_clinicas h ON h.id_historia=s.id_historia LEFT JOIN citas c ON c.id_cita=s.id_cita WHERE COALESCE(c.id_derivacion,h.id_derivacion)=? ORDER BY s.fecha,s.id_seguimiento',[$d],'seguimientos/ver.php','Seguimiento'],
-            ['SELECT id_informe id FROM informes WHERE id_derivacion=? ORDER BY fecha,id_informe',[$d],'informes/ver.php','Informe']];
+            ['SELECT s.id_seguimiento id FROM seguimientos s JOIN historias_clinicas h ON h.id_historia=s.id_historia LEFT JOIN citas c ON c.id_cita=s.id_cita WHERE COALESCE(c.id_derivacion,h.id_derivacion_origen)=? ORDER BY s.fecha,s.id_seguimiento',[$d],'seguimientos/ver.php','Seguimiento'],
+            ['SELECT i.id_informe id FROM informes i JOIN informe_individual ii ON ii.id_informe=i.id_informe WHERE ii.id_derivacion=? ORDER BY i.fecha_inicio,i.id_informe',[$d],'informes/ver.php','Informe']];
     } elseif ($tipo === 'historia') {
         $consultas = [
             ['SELECT id_seguimiento id FROM seguimientos WHERE id_historia=? ORDER BY fecha,id_seguimiento',[$h],'seguimientos/ver.php','Seguimiento'],
-            ['SELECT id_informe id FROM informes WHERE id_historia=? ORDER BY fecha,id_informe',[$h],'informes/ver.php','Informe']];
+            ['SELECT i.id_informe id FROM informes i JOIN informe_individual ii ON ii.id_informe=i.id_informe WHERE ii.id_historia=? ORDER BY i.fecha_inicio,i.id_informe',[$h],'informes/ver.php','Informe']];
     } elseif ($tipo === 'cita') {
         $consultas = [['SELECT id_seguimiento id FROM seguimientos WHERE id_cita=? ORDER BY fecha,id_seguimiento',[$c],'seguimientos/ver.php','Seguimiento']];
     } elseif ($tipo === 'seguimiento') {
-        $consultas = [['SELECT id_informe id FROM informes WHERE id_seguimiento=? ORDER BY fecha,id_informe',[$s],'informes/ver.php','Informe']];
+        $consultas = [['SELECT i.id_informe id FROM informes i JOIN informe_individual ii ON ii.id_informe=i.id_informe WHERE ii.id_seguimiento=? ORDER BY i.fecha_inicio,i.id_informe',[$s],'informes/ver.php','Informe']];
     }
     foreach ($consultas as [$sql,$valores,$ruta,$titulo]) {
         $stmt=$bd->prepare($sql); $stmt->bind_param('i',...$valores); $stmt->execute();

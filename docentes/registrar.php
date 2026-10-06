@@ -16,20 +16,24 @@ function escapar($valor): string
 $sqlUsuarios = "
     SELECT
         u.id_usuario,
-        u.nombre,
-        u.apellido,
+        p.nombres AS nombre,
+        p.apellidos AS apellido,
         u.usuario,
-        u.correo
+        p.correo
     FROM usuarios u
-    LEFT JOIN docentes d
-        ON d.id_usuario = u.id_usuario
+    INNER JOIN personas p ON p.id_persona=u.id_persona
+    LEFT JOIN docentes d ON d.id_persona=u.id_persona
     WHERE u.id_rol = 3
       AND u.estado = 'Activo'
       AND d.id_docente IS NULL
-    ORDER BY u.apellido ASC, u.nombre ASC
+    ORDER BY p.apellidos ASC,p.nombres ASC
 ";
 
 $resultadoUsuarios = $conexion->query($sqlUsuarios);
+$materias = array_column(
+    $conexion->query("SELECT nombre FROM materias WHERE estado='Activo' ORDER BY nombre")->fetch_all(MYSQLI_ASSOC),
+    'nombre'
+);
 
 if (!$resultadoUsuarios) {
     die('Error al consultar usuarios: ' . $conexion->error);
@@ -243,22 +247,6 @@ include '../includes/navbar.php';
 
                         <div class="row g-3">
                             <?php
-                            $materias = [
-                                'Matemática',
-                                'Lenguaje y Comunicación',
-                                'Ciencias Naturales',
-                                'Ciencias Sociales',
-                                'Biología',
-                                'Física',
-                                'Química',
-                                'Inglés',
-                                'Educación Física',
-                                'Artes Plásticas',
-                                'Música',
-                                'Tecnología',
-                                'Valores',
-                                'Otra'
-                            ];
                             ?>
 
             <?php foreach ($materias as $indice => $materia): ?>

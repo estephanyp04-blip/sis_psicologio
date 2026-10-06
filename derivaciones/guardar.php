@@ -42,12 +42,12 @@ $prioridad = textoDerivacion('prioridad');
 $categorias = isset($_POST['categorias']) && is_array($_POST['categorias']) ? $_POST['categorias'] : [];
 $solicitarCita = isset($_POST['solicitar_cita']) ? 1 : 0;
 $idProfesional = enteroDerivacion($_POST['id_profesional'] ?? 0);
-$categoriasPermitidas = ['Rendimiento Académico', 'Conducta en Aula', 'Social / Emocional', 'Dinámica Familiar', 'Acoso escolar / Acoso', 'Otro'];
+$categoriasDisponibles = $conexion->query("SELECT id_categoria,nombre FROM categorias_derivacion WHERE estado='Activo'")->fetch_all(MYSQLI_ASSOC);
+$categoriasPorNombre = [];
+foreach ($categoriasDisponibles as $categoria) $categoriasPorNombre[$categoria['nombre']] = (int)$categoria['id_categoria'];
 $categoriasLimpias = [];
 foreach ($categorias as $categoria) {
-    if (is_string($categoria) && in_array(trim($categoria), $categoriasPermitidas, true)) {
-        $categoriasLimpias[] = trim($categoria);
-    }
+    if (is_string($categoria) && isset($categoriasPorNombre[trim($categoria)])) $categoriasLimpias[] = trim($categoria);
 }
 $categoriasLimpias = array_values(array_unique($categoriasLimpias));
 $datos = [
@@ -83,10 +83,12 @@ try {
     } elseif ($fecha > date('Y-m-d')) {
         $errores[] = 'La fecha del reporte no puede ser futura.';
     }
-    $materiasPermitidas = ['Matemática', 'Lenguaje y Comunicación', 'Ciencias Naturales', 'Ciencias Sociales', 'Biología', 'Física', 'Química', 'Inglés', 'Educación Física', 'Artes Plásticas', 'Música', 'Tecnología', 'Valores', 'Otra'];
-    if (!in_array($materia, $materiasPermitidas, true)) {
-        $errores[] = 'Debe seleccionar una materia válida.';
-    }
+    $stmtMateria = $conexion->prepare("SELECT id_materia FROM materias WHERE nombre=? AND estado='Activo' LIMIT 1");
+    $stmtMateria->bind_param('s', $materia);
+    $stmtMateria->execute();
+    $idMateria = (int)($stmtMateria->get_result()->fetch_assoc()['id_materia'] ?? 0);
+    $stmtMateria->close();
+    if (!$idMateria) $errores[] = 'Debe seleccionar una materia activa del catálogo.';
     if (!$categoriasLimpias) {
         $errores[] = 'Debe seleccionar al menos una categoría observada válida.';
     }
@@ -118,7 +120,8 @@ try {
     }
     // Un docente solo puede registrar derivaciones a su propio nombre.
     if ($idRol === 3) {
-        $stmtDocente = $conexion->prepare('SELECT id_docente FROM docentes WHERE id_usuario = ? LIMIT 2');
+        $stmtDocente = $conexion->prepare('SELECT d.id_docente FROM docentes d
+            INNER JOIN usuarios u ON u.id_persona=d.id_persona WHERE u.id_usuario = ? LIMIT 2');
         $stmtDocente->bind_param('i', $idUsuario);
         $stmtDocente->execute();
         $resultadoDocente = $stmtDocente->get_result();
@@ -134,7 +137,9 @@ try {
         // El administrador elige al docente; no se asigna uno por defecto.
         $idDocente = $idDocenteElegido;
         if ($idDocente <= 0) {
-            $resultadoDocentes = $conexion->query('SELECT id_docente, nombres, apellidos FROM docentes ORDER BY apellidos, nombres');
+            $resultadoDocentes = $conexion->query('SELECT d.id_docente,p.nombres,p.apellidos
+                FROM docentes d INNER JOIN personas p ON p.id_persona=d.id_persona
+                ORDER BY p.apellidos,p.nombres');
             $docentes = $resultadoDocentes->fetch_all(MYSQLI_ASSOC);
             $resultadoDocentes->free();
             if (!$docentes) {
@@ -192,7 +197,9 @@ try {
     // Profesional solicitado y observaciones, como en el formulario original.
     $nombreProfesional = '';
     if ($solicitarCita === 1 && $idProfesional > 0) {
-        $stmtProfesional = $conexion->prepare("SELECT nombre, apellido FROM usuarios WHERE id_usuario = ? AND id_rol = 2 AND estado = 'Activo' LIMIT 1");
+        $stmtProfesional = $conexion->prepare("SELECT p.nombres AS nombre,p.apellidos AS apellido
+            FROM usuarios u INNER JOIN personas p ON p.id_persona=u.id_persona
+            WHERE u.id_usuario = ? AND u.id_rol = 2 AND u.estado = 'Activo' LIMIT 1");
         $stmtProfesional->bind_param('i', $idProfesional);
         $stmtProfesional->execute();
         $profesional = $stmtProfesional->get_result()->fetch_assoc();
@@ -218,10 +225,22 @@ try {
     }
     // Conservar el vínculo con la psicóloga elegida para la solicitud.
     $idProfesionalGuardar = $solicitarCita === 1 && $idProfesional > 0 ? $idProfesional : null;
-    $stmt = $conexion->prepare('INSERT INTO derivaciones (fecha, id_estudiante, id_docente, materia, motivo, observaciones, prioridad, estado, id_profesional, solicitar_cita) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-    $stmt->bind_param('siisssssii', $fecha, $idEstudiante, $idDocente, $materia, $motivo, $observacionesFinales, $prioridad, $estado, $idProfesionalGuardar, $solicitarCita);
+    $conexion->begin_transaction();
+    $stmt = $conexion->prepare('INSERT INTO derivaciones
+        (fecha,id_estudiante,id_docente,id_materia,motivo,observaciones,prioridad,estado,id_psicologa_solicitada,solicitar_cita)
+        VALUES (?,?,?,?,?,?,?,?,?,?)');
+    $stmt->bind_param('siiissssii', $fecha, $idEstudiante, $idDocente, $idMateria, $motivo, $observacionesFinales, $prioridad, $estado, $idProfesionalGuardar, $solicitarCita);
     $stmt->execute();
+    $idDerivacion = (int)$conexion->insert_id;
     $stmt->close();
+    $stmtCategoria = $conexion->prepare('INSERT INTO derivacion_categorias (id_derivacion,id_categoria) VALUES (?,?)');
+    foreach ($categoriasLimpias as $categoria) {
+        $idCategoria = $categoriasPorNombre[$categoria];
+        $stmtCategoria->bind_param('ii', $idDerivacion, $idCategoria);
+        $stmtCategoria->execute();
+    }
+    $stmtCategoria->close();
+    $conexion->commit();
     unset($_SESSION['datos_derivacion']);
     $_SESSION['mensaje'] = 'La derivación se registró correctamente.';
     $_SESSION['tipo_mensaje'] = 'success';

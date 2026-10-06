@@ -23,16 +23,15 @@ if (!$idDocente || $idDocente <= 0) {
 
 $sqlDocente = "
     SELECT
-        id_docente,
-        id_usuario,
-        nombres,
-        apellidos,
-        telefono,
-        correo,
-        materia
-    FROM docentes
-    WHERE id_docente = ?
-    LIMIT 1
+        d.id_docente,u.id_usuario,d.id_persona,p.nombres,p.apellidos,p.telefono,p.correo,
+        GROUP_CONCAT(DISTINCT m.nombre ORDER BY m.nombre SEPARATOR ', ') AS materia
+    FROM docentes d
+    INNER JOIN personas p ON p.id_persona=d.id_persona
+    LEFT JOIN usuarios u ON u.id_persona=d.id_persona
+    LEFT JOIN docente_materias dm ON dm.id_docente=d.id_docente
+    LEFT JOIN materias m ON m.id_materia=dm.id_materia
+    WHERE d.id_docente=?
+    GROUP BY d.id_docente,u.id_usuario,d.id_persona,p.nombres,p.apellidos,p.telefono,p.correo
 ";
 
 $stmtDocente = $conexion->prepare($sqlDocente);
@@ -62,13 +61,13 @@ if (!$docente) {
 $sqlUsuarios = "
     SELECT
         u.id_usuario,
-        u.nombre,
-        u.apellido,
+        p.nombres AS nombre,
+        p.apellidos AS apellido,
         u.usuario,
-        u.correo
+        p.correo
     FROM usuarios u
-    LEFT JOIN docentes d
-        ON d.id_usuario = u.id_usuario
+    INNER JOIN personas p ON p.id_persona=u.id_persona
+    LEFT JOIN docentes d ON d.id_persona=u.id_persona
     WHERE u.id_rol = 3
       AND (
           u.id_usuario = ?
@@ -77,7 +76,7 @@ $sqlUsuarios = "
               AND d.id_docente IS NULL
           )
       )
-    ORDER BY u.apellido, u.nombre
+    ORDER BY p.apellidos,p.nombres
 ";
 
 $stmtUsuarios = $conexion->prepare($sqlUsuarios);
@@ -96,22 +95,10 @@ $materiasDocente = array_map(
     explode(',', (string) $docente['materia'])
 );
 
-$materiasDisponibles = [
-    'Matemática',
-    'Lenguaje y Comunicación',
-    'Ciencias Naturales',
-    'Ciencias Sociales',
-    'Biología',
-    'Física',
-    'Química',
-    'Inglés',
-    'Educación Física',
-    'Artes Plásticas',
-    'Música',
-    'Tecnología',
-    'Valores',
-    'Otra'
-];
+$materiasDisponibles = array_column(
+    $conexion->query("SELECT nombre FROM materias WHERE estado='Activo' ORDER BY nombre")->fetch_all(MYSQLI_ASSOC),
+    'nombre'
+);
 
 include '../includes/header.php';
 include '../includes/sidebar.php';

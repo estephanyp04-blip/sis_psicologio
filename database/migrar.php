@@ -30,10 +30,27 @@ try {
     }
     if ($instalar) {
         if ($bd->query('SHOW TABLES')->num_rows) throw new RuntimeException('La instalación requiere una base vacía.');
-        $bd->multi_query(file_get_contents(__DIR__ . '/psicologia_db.sql'));
+        $archivoEsquema = __DIR__ . '/psicologia_db.sql';
+        if (!is_file($archivoEsquema)) throw new RuntimeException('No se encontró database/psicologia_db.sql.');
+        $bd->multi_query(file_get_contents($archivoEsquema));
         do {
             if ($resultado = $bd->store_result()) $resultado->free();
         } while ($bd->more_results() && $bd->next_result());
+    }
+    $tablas = array_column($bd->query('SHOW TABLES')->fetch_all(MYSQLI_NUM), 0);
+    if (in_array('personas', $tablas, true) && in_array('informe_individual', $tablas, true)) {
+        $campos = [];
+        foreach (['usuarios', 'docentes', 'historias_clinicas', 'informes'] as $tabla) {
+            $campos[$tabla] = array_column($bd->query("SHOW COLUMNS FROM `$tabla`")->fetch_all(MYSQLI_ASSOC), 'Field');
+        }
+        $normalizado = in_array('id_persona', $campos['usuarios'], true)
+            && in_array('id_persona', $campos['docentes'], true)
+            && in_array('id_derivacion_origen', $campos['historias_clinicas'], true)
+            && in_array('id_elaborado_por', $campos['informes'], true);
+        if ($normalizado) {
+            echo "Esquema normalizado detectado; no se aplican las migraciones heredadas 001/002.\n";
+            exit(0);
+        }
     }
     $planificar = static function (mysqli $bd): array {
         $plan = [];

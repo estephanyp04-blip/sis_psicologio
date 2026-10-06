@@ -27,6 +27,9 @@ if (!$id) {
 $stmt = $conexion->prepare("
     SELECT
         h.*,
+        h.talla_cm AS talla,
+        h.peso_kg AS peso,
+        h.valoracion_fisica AS valoracion,
         e.nombres,
         e.apellidos,
         e.curso,
@@ -34,13 +37,17 @@ $stmt = $conexion->prepare("
         e.fecha_nacimiento,
         e.lugar_nacimiento AS estudiante_lugar_nacimiento,
         e.telefono,
-        e.nombre_tutor,
-        d.materia AS materia_derivacion,
+        (SELECT r.nombres FROM estudiante_responsables er
+            INNER JOIN responsables r ON r.id_responsable=er.id_responsable
+            WHERE er.id_estudiante=e.id_estudiante AND er.parentesco='Tutor'
+            ORDER BY er.es_principal DESC LIMIT 1) AS nombre_tutor,
+        m.nombre AS materia_derivacion,
         d.prioridad AS prioridad_derivacion,
         d.observaciones AS observaciones_derivacion
     FROM historias_clinicas h
-    INNER JOIN estudiantes e ON e.id_estudiante = h.id_estudiante
-    LEFT JOIN derivaciones d ON d.id_derivacion = h.id_derivacion
+    INNER JOIN vista_estudiantes e ON e.id_estudiante = h.id_estudiante
+    LEFT JOIN derivaciones d ON d.id_derivacion = h.id_derivacion_origen
+    LEFT JOIN materias m ON m.id_materia = d.id_materia
     WHERE h.id_historia = ?
     LIMIT 1
 ");
@@ -54,6 +61,9 @@ if (!$historia) {
     header('Location: listar.php');
     exit;
 }
+
+$historia['id_derivacion'] = (int)($historia['id_derivacion_origen'] ?? 0);
+$historia['id_cita'] = (int)($historia['id_cita_origen'] ?? 0);
 
 /* ESTUDIANTE ACTUAL */
 $estudiantes = [[
@@ -83,10 +93,12 @@ foreach ($gruposPermitidos as $grupo) {
 }
 
 $stmt = $conexion->prepare("
-    SELECT grupo, valor
-    FROM historia_opciones
-    WHERE id_historia = ?
-    ORDER BY id_opcion ASC
+    SELECT g.codigo AS grupo,o.descripcion AS valor
+    FROM historia_opciones ho
+    INNER JOIN opciones_historia o ON o.id_opcion=ho.id_opcion
+    INNER JOIN grupos_opciones_historia g ON g.id_grupo=o.id_grupo
+    WHERE ho.id_historia = ?
+    ORDER BY ho.id_opcion ASC
 ");
 
 $stmt->bind_param('i', $id);

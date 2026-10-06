@@ -10,7 +10,9 @@ if(!$id){
     exit;
 }
 
-$stmt=$conexion->prepare("SELECT id_usuario,nombre,apellido,usuario,correo,estado,id_rol FROM usuarios WHERE id_usuario=? LIMIT 1");
+$stmt=$conexion->prepare("SELECT u.id_usuario,p.nombres AS nombre,p.apellidos AS apellido,u.usuario,p.correo,u.estado,u.id_rol
+    FROM usuarios u INNER JOIN personas p ON p.id_persona=u.id_persona
+    WHERE u.id_usuario=? LIMIT 1");
 
 if(!$stmt){
     die('Error al preparar la consulta: '.$conexion->error);

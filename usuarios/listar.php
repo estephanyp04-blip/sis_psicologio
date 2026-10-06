@@ -10,14 +10,15 @@ include '../includes/navbar.php';
 
 $sql="SELECT
         u.id_usuario,
-        u.nombre,
-        u.apellido,
+        p.nombres AS nombre,
+        p.apellidos AS apellido,
         u.usuario,
-        u.correo,
+        p.correo,
         u.estado,
         u.id_rol,
         r.nombre AS rol
       FROM usuarios u
+      INNER JOIN personas p ON p.id_persona = u.id_persona
       LEFT JOIN roles r ON u.id_rol=r.id_rol
       ORDER BY u.id_usuario DESC";
 

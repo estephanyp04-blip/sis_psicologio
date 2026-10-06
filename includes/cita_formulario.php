@@ -2,7 +2,11 @@
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(404); exit; }
 require_once __DIR__ . '/citas_datos.php';
 $id = isset($editarCita) ? (int)filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT) : 0;
-$cita = $id ? flujo_fila($conexion, 'SELECT c.*,CONCAT(u.nombre,\' \',u.apellido) profesional FROM citas c LEFT JOIN usuarios u ON u.id_usuario=c.id_usuario WHERE c.id_cita=?', [$id]) : null;
+$cita = $id ? flujo_fila($conexion, 'SELECT c.*,CONCAT(p.nombres,\' \',p.apellidos) profesional
+    FROM citas c
+    LEFT JOIN usuarios u ON u.id_usuario=c.id_psicologa
+    LEFT JOIN personas p ON p.id_persona=u.id_persona
+    WHERE c.id_cita=?', [$id]) : null;
 if (isset($editarCita) && !$cita) { header('Location: listar.php'); exit; }
 $datos = $cita ?? ['id_estudiante' => 0,'id_derivacion' => 0,'fecha' => date('Y-m-d'),'hora' => '', 'estado' => 'Pendiente','observaciones' => ''];
 if (!$cita) {
@@ -17,8 +21,10 @@ $recuperados = $_SESSION['datos_cita'] ?? [];
 if ((int)($recuperados['id_cita'] ?? 0) === $id) $datos = array_replace($datos, $recuperados);
 $mensaje = $_SESSION['mensaje_cita'] ?? '';
 unset($_SESSION['datos_cita'], $_SESSION['mensaje_cita']);
-$estudiantes = $conexion->query("SELECT id_estudiante,CONCAT(apellidos,', ',nombres) nombre FROM estudiantes ORDER BY apellidos,nombres")->fetch_all(MYSQLI_ASSOC);
-$derivaciones = $conexion->query("SELECT d.id_derivacion,d.id_estudiante,d.estado,CONCAT(e.apellidos,', ',e.nombres) nombre FROM derivaciones d JOIN estudiantes e ON e.id_estudiante=d.id_estudiante ORDER BY d.fecha DESC,d.id_derivacion DESC")->fetch_all(MYSQLI_ASSOC);
+$estudiantes = $conexion->query("SELECT id_estudiante,CONCAT(apellidos,', ',nombres) nombre FROM estudiantes WHERE estado='Activo' ORDER BY apellidos,nombres")->fetch_all(MYSQLI_ASSOC);
+$derivaciones = $conexion->query("SELECT d.id_derivacion,d.id_estudiante,d.estado,CONCAT(e.apellidos,', ',e.nombres) nombre
+    FROM derivaciones d JOIN estudiantes e ON e.id_estudiante=d.id_estudiante
+    ORDER BY d.fecha DESC,d.id_derivacion DESC")->fetch_all(MYSQLI_ASSOC);
 $tituloPagina = $id ? 'Editar cita' : 'Nueva cita';
 include __DIR__ . '/header.php'; include __DIR__ . '/sidebar.php'; include __DIR__ . '/navbar.php';
 ?>

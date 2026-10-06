@@ -17,10 +17,13 @@ try {
     $stmt->close();
     if (!$existe) login_error_json(404, 'El estudiante no existe.');
 
-    $stmt = $conexion->prepare("SELECT d.id_derivacion AS id, d.fecha, d.materia, d.prioridad,
+    $stmt = $conexion->prepare("SELECT d.id_derivacion AS id, d.fecha, m.nombre AS materia, d.prioridad,
         d.motivo, d.observaciones, d.estado,
-        TRIM(CONCAT(COALESCE(doc.nombres, ''), ' ', COALESCE(doc.apellidos, ''))) AS docente
-        FROM derivaciones d LEFT JOIN docentes doc ON doc.id_docente = d.id_docente
+        TRIM(CONCAT(COALESCE(p.nombres, ''), ' ', COALESCE(p.apellidos, ''))) AS docente
+        FROM derivaciones d
+        LEFT JOIN materias m ON m.id_materia=d.id_materia
+        LEFT JOIN docentes doc ON doc.id_docente=d.id_docente
+        LEFT JOIN personas p ON p.id_persona=doc.id_persona
         WHERE d.id_estudiante = ? ORDER BY d.fecha DESC, d.id_derivacion DESC");
     $stmt->bind_param('i', $idEstudiante);
     $stmt->execute();

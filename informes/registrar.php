@@ -40,14 +40,18 @@ $idUsuario=(int)($_SESSION['id_usuario']??0);
 $nombrePsicologa='Psicóloga';
 
 if($idUsuario>0){
-    $stmt=$conexion->prepare("SELECT nombre,apellido FROM usuarios WHERE id_usuario=? LIMIT 1");
+    $stmt=$conexion->prepare("SELECT p.nombres AS nombre,p.apellidos AS apellido
+        FROM usuarios u INNER JOIN personas p ON p.id_persona=u.id_persona
+        WHERE u.id_usuario=? LIMIT 1");
     $stmt->bind_param('i',$idUsuario);
     $stmt->execute();
     $usuario=$stmt->get_result()->fetch_assoc();
     $stmt->close();
     if($usuario)$nombrePsicologa=trim($usuario['nombre'].' '.$usuario['apellido']);
 }else{
-    $stmt=$conexion->prepare("SELECT id_usuario,nombre,apellido FROM usuarios WHERE id_rol=2 AND estado='Activo' ORDER BY id_usuario ASC LIMIT 1");
+    $stmt=$conexion->prepare("SELECT u.id_usuario,p.nombres AS nombre,p.apellidos AS apellido
+        FROM usuarios u INNER JOIN personas p ON p.id_persona=u.id_persona
+        WHERE u.id_rol=2 AND u.estado='Activo' ORDER BY u.id_usuario ASC LIMIT 1");
     $stmt->execute();
     $usuario=$stmt->get_result()->fetch_assoc();
     $stmt->close();
@@ -64,15 +68,16 @@ $numeroFicha = 'Se asignará al guardar';
 $sqlEstudiantes="SELECT e.id_estudiante,e.nombres,e.apellidos,e.curso,e.paralelo,
     h.id_historia,h.motivo_consulta,h.impresion_diagnostica diagnostico,
     s.id_seguimiento,s.recomendaciones,d.id_derivacion,d.motivo motivo_derivacion,
-    CONCAT(doc.nombres,' ',doc.apellidos) docente_referente,
+    CONCAT(doc_persona.nombres,' ',doc_persona.apellidos) docente_referente,
     (SELECT COUNT(*) FROM citas c WHERE c.id_estudiante=e.id_estudiante AND c.estado='Atendida') numero_atenciones
-    FROM estudiantes e LEFT JOIN historias_clinicas h ON h.id_estudiante=e.id_estudiante
+    FROM vista_estudiantes e LEFT JOIN historias_clinicas h ON h.id_estudiante=e.id_estudiante
     LEFT JOIN seguimientos s ON s.id_seguimiento=(SELECT s2.id_seguimiento FROM seguimientos s2 WHERE s2.id_historia=h.id_historia
         ORDER BY (s2.id_seguimiento=$seguimientoSolicitado) DESC,s2.fecha DESC,s2.id_seguimiento DESC LIMIT 1)
     LEFT JOIN citas cs ON cs.id_cita=s.id_cita
-    LEFT JOIN derivaciones d ON d.id_derivacion=COALESCE(cs.id_derivacion,h.id_derivacion,
+    LEFT JOIN derivaciones d ON d.id_derivacion=COALESCE(cs.id_derivacion,h.id_derivacion_origen,
         CASE WHEN h.id_historia IS NULL THEN (SELECT d2.id_derivacion FROM derivaciones d2 WHERE d2.id_estudiante=e.id_estudiante ORDER BY d2.fecha DESC,d2.id_derivacion DESC LIMIT 1) ELSE NULL END)
     LEFT JOIN docentes doc ON doc.id_docente=d.id_docente
+    LEFT JOIN personas doc_persona ON doc_persona.id_persona=doc.id_persona
     WHERE e.estado='Activo' ORDER BY e.apellidos,e.nombres";
 $resultadoEstudiantes=$conexion->query($sqlEstudiantes);
 
