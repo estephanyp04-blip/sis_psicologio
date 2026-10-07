@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('historias_clinicas/guardar.php');
 require_once __DIR__ . '/../config/conexion.php';
-require_once __DIR__ . '/../includes/historias_datos.php';
+require_once __DIR__ . '/datos.php';
 
 try {
     $id = historia_guardar($conexion, $_POST, (int)$_SESSION['id_usuario']);

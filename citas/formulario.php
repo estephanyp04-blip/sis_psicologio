@@ -1,6 +1,6 @@
 <?php
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(404); exit; }
-require_once __DIR__ . '/citas_datos.php';
+require_once __DIR__ . '/datos.php';
 $id = isset($editarCita) ? (int)filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT) : 0;
 $cita = $id ? flujo_fila($conexion, 'SELECT c.*,CONCAT(p.nombres,\' \',p.apellidos) profesional
     FROM citas c
@@ -26,7 +26,7 @@ $derivaciones = $conexion->query("SELECT d.id_derivacion,d.id_estudiante,d.estad
     FROM derivaciones d JOIN estudiantes e ON e.id_estudiante=d.id_estudiante
     ORDER BY d.fecha DESC,d.id_derivacion DESC")->fetch_all(MYSQLI_ASSOC);
 $tituloPagina = $id ? 'Editar cita' : 'Nueva cita';
-include __DIR__ . '/header.php'; include __DIR__ . '/sidebar.php'; include __DIR__ . '/navbar.php';
+include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/sidebar.php'; include __DIR__ . '/../includes/navbar.php';
 ?>
 <main class="main-content"><div class="container-fluid">
 <h1><?= login_html($tituloPagina) ?></h1>
@@ -57,7 +57,7 @@ include __DIR__ . '/header.php'; include __DIR__ . '/sidebar.php'; include __DIR
 </div><div class="mt-3"><button class="btn btn-primary">Guardar cita</button> <a class="btn btn-light" href="listar.php">Volver</a></div>
 </form></div>
 <?php if ($cita):
-    require_once __DIR__ . '/trazabilidad_vista.php';
+    require_once __DIR__ . '/../includes/trazabilidad_vista.php';
     flujo_panel($conexion, 'cita', $cita);
     $historia = flujo_fila($conexion, 'SELECT id_historia FROM historias_clinicas WHERE id_estudiante=?', [$cita['id_estudiante']]);
     if ($cita['estado'] !== 'Cancelada'):
@@ -70,4 +70,4 @@ const origenCita = document.getElementById('derivacion');
 origenCita.addEventListener('change', () => { const estudiante = origenCita.selectedOptions[0].dataset.estudiante; if (estudiante) document.getElementById('estudiante').value = estudiante; });
 document.getElementById('estudiante').addEventListener('change', () => { const estudiante = origenCita.selectedOptions[0].dataset.estudiante; if (estudiante && estudiante !== document.getElementById('estudiante').value) origenCita.value = '0'; });
 </script>
-<?php include __DIR__ . '/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

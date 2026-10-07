@@ -36,17 +36,23 @@ $stmt = $conexion->prepare("
         e.paralelo,
         e.fecha_nacimiento,
         e.lugar_nacimiento AS estudiante_lugar_nacimiento,
+        e.lugar_nacimiento AS lugar_nacimiento,
+        e.telefono AS celular_estudiante,
         e.telefono,
         (SELECT r.nombres FROM estudiante_responsables er
             INNER JOIN responsables r ON r.id_responsable=er.id_responsable
             WHERE er.id_estudiante=e.id_estudiante AND er.parentesco='Tutor'
             ORDER BY er.es_principal DESC LIMIT 1) AS nombre_tutor,
         m.nombre AS materia_derivacion,
+        d.fecha AS fecha_derivacion,
+        TRIM(CONCAT(COALESCE(dp.nombres,''),' ',COALESCE(dp.apellidos,''))) AS derivado_por,
         d.prioridad AS prioridad_derivacion,
         d.observaciones AS observaciones_derivacion
     FROM historias_clinicas h
     INNER JOIN vista_estudiantes e ON e.id_estudiante = h.id_estudiante
     LEFT JOIN derivaciones d ON d.id_derivacion = h.id_derivacion_origen
+    LEFT JOIN docentes doc ON doc.id_docente = d.id_docente
+    LEFT JOIN personas dp ON dp.id_persona = doc.id_persona
     LEFT JOIN materias m ON m.id_materia = d.id_materia
     WHERE h.id_historia = ?
     LIMIT 1
@@ -64,6 +70,7 @@ if (!$historia) {
 
 $historia['id_derivacion'] = (int)($historia['id_derivacion_origen'] ?? 0);
 $historia['id_cita'] = (int)($historia['id_cita_origen'] ?? 0);
+$historia['padre_madre'] = $historia['nombre_tutor'] ?? '';
 
 /* ESTUDIANTE ACTUAL */
 $estudiantes = [[

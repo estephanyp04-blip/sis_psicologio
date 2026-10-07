@@ -3,9 +3,9 @@ require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('derivaciones/editar.php');
 
 require_once '../config/conexion.php';
-require_once __DIR__ . '/../includes/derivaciones_datos.php';
+require_once __DIR__ . '/datos.php';
 
-$baseUrl = '/proyecto_vercionII';
+$baseUrl = rtrim(login_config()['base_url'], '/');
 
 function escapar($valor): string
 {
@@ -37,6 +37,7 @@ $sql = "SELECT
             d.fecha,
             d.id_estudiante,
             d.id_docente,
+            d.id_materia,
             m.nombre AS materia,
             d.motivo,
             d.observaciones,
@@ -120,7 +121,18 @@ $tituloPagina = 'Editar derivación';
 $textoObservaciones = trim((string) ($derivacion['observaciones'] ?? ''));
 
 $desglose = derivacion_desglosar($textoObservaciones);
-$categoriasSeleccionadas = $desglose['categorias'];
+$categoriasSeleccionadas = derivacion_categorias_registradas($conexion, $idDerivacion, $textoObservaciones);
+$catalogoCategorias = derivacion_catalogo_categorias($conexion);
+$categoriasEditar = [];
+foreach (array_unique(array_merge(array_keys($catalogoCategorias), $categoriasSeleccionadas)) as $nombre) {
+    $activa = ($catalogoCategorias[$nombre]['estado'] ?? '') === 'Activo';
+    if (!$activa && !in_array($nombre, $categoriasSeleccionadas, true)) continue;
+    $categoriasEditar[] = ['valor' => $nombre, 'titulo' => $nombre,
+        'detalle' => $activa ? '' : 'Categoría conservada del registro'];
+}
+$stmt = $conexion->prepare("SELECT nombre,estado FROM materias WHERE estado='Activo' OR id_materia=? ORDER BY nombre");
+$stmt->bind_param('i', $derivacion['id_materia']); $stmt->execute();
+$materiasEditar = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
 $observacionAdicional = $desglose['adicionales'];
 $recuperacion = $_SESSION['edicion_derivacion'] ?? [];
 unset($_SESSION['edicion_derivacion']);
@@ -251,13 +263,14 @@ include '../includes/navbar.php';
                                 <span class="text-danger">*</span>
                             </label>
 
-                            <input type="text"
-                                   id="materia"
-                                   name="materia"
-                                   class="form-control"
-                                   maxlength="150"
-                                   value="<?= escapar($derivacion['materia']); ?>"
-                                   required>
+                            <select id="materia" name="materia" class="form-select" required>
+                                <option value="">Seleccione una materia</option>
+                                <?php foreach ($materiasEditar as $materia): ?>
+                                    <option value="<?= escapar($materia['nombre']) ?>" <?= $derivacion['materia'] === $materia['nombre'] ? 'selected' : '' ?>>
+                                        <?= escapar($materia['nombre']) ?><?= $materia['estado'] === 'Activo' ? '' : ' (conservada del registro)' ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
 
                         <div class="col-12">
@@ -284,46 +297,7 @@ include '../includes/navbar.php';
 
                             <div class="row g-3">
 
-                                <?php
-                                $categoriasEditar = [
-                                    [
-                                        'valor' => 'Rendimiento Académico',
-                                        'titulo' => 'Rendimiento Académico',
-                                        'detalle' => 'Baja de notas, falta de atención'
-                                    ],
-                                    [
-                                        'valor' => 'Conducta en Aula',
-                                        'titulo' => 'Conducta en Aula',
-                                        'detalle' => 'Indisciplina, agresividad, interrupciones'
-                                    ],
-                                    [
-                                        'valor' => 'Social / Emocional',
-                                        'titulo' => 'Social / Emocional',
-                                        'detalle' => 'Aislamiento, tristeza, llanto recurrente'
-                                    ],
-                                    [
-                                        'valor' => 'Dinámica Familiar',
-                                        'titulo' => 'Dinámica Familiar',
-                                        'detalle' => 'Problemas en el hogar, negligencia'
-                                    ],
-                                    [
-                                        'valor' => 'Acoso escolar / Acoso',
-                                        'titulo' => 'Acoso escolar / Acoso',
-                                        'detalle' => 'Víctima o agresor, ciberacoso'
-                                    ],
-                                    [
-                                        'valor' => 'Otro',
-                                        'titulo' => 'Otro',
-                                        'detalle' => 'Situación no especificada'
-                                    ]
-                                ];
-                                ?>
-
-                                <?php foreach (array_diff($categoriasSeleccionadas, DERIVACION_CATEGORIAS) as $valorHistorico) {
-    $categoriasEditar[] = ['valor' => $valorHistorico, 'titulo' => $valorHistorico, 'detalle' => 'Categoría conservada del registro'];
-} ?>
-<?php foreach ($categoriasEditar as $indice => $categoria): ?>
-
+                                <?php foreach ($categoriasEditar as $indice => $categoria): ?>
                                     <div class="col-12 col-md-6 col-lg-4">
                                         <div class="form-check categoria-box">
 

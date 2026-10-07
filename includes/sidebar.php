@@ -22,6 +22,7 @@ $gruposMenu = [
     ],
     'Resultados' => [
         ['informes/listar.php', 'Informes', 'bi-file-earmark-bar-graph-fill'],
+        ['estadisticas/index.php', 'Estadísticas', 'bi-bar-chart-line-fill'],
     ],
 ];
 ?>
@@ -53,14 +54,6 @@ $gruposMenu = [
                         </a>
                     </li>
                 <?php endforeach; ?>
-                <?php if ($tituloGrupo === 'Resultados'): ?>
-                    <li class="nav-item">
-                        <span class="nav-link text-muted" aria-disabled="true">
-                            <i class="bi bi-bar-chart-line-fill"></i>
-                            <span>Estadísticas</span>
-                        </span>
-                    </li>
-                <?php endif; ?>
             </ul>
         <?php endforeach; ?>
     </nav>

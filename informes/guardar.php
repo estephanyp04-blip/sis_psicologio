@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('informes/guardar.php');
 require_once __DIR__ . '/../config/conexion.php';
-require_once __DIR__ . '/../includes/informes_datos.php';
+require_once __DIR__ . '/datos.php';
 
 $datos = informe_datos($_POST);
 try {

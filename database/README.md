@@ -30,15 +30,24 @@ Para establecer la contraseña de una cuenta importada:
 
 La herramienta usa la base configurada, solicita la contraseña por terminal y guarda su hash. No crea cuentas.
 
-## Comprobación y migraciones históricas
+## Comprobación y actualización
 
 ```powershell
 & C:\xampp\php\php.exe database\migrar.php --base=psicologia_db --comprobar
 ```
 
-Si detecta las tablas y columnas identificativas del esquema normalizado, el ejecutor termina indicando que omite las migraciones 001/002. Esta detección no comprueba exhaustivamente todas las relaciones ni todos los datos.
+El comando muestra las operaciones pendientes sin aplicarlas. Si detecta el esquema normalizado, usa únicamente [migrations_normalizadas/](migrations_normalizadas/). La migración `001_tutor_historia.php` agrega el campo opcional `historias_clinicas.tutor_curso`; conserva los registros existentes y no vuelve a agregarlo si ya existe. El SQL de instalación ya incluye este campo.
 
-Los archivos de [migrations/](migrations/) corresponden al esquema anterior. Se conservan para las bases antiguas y las pruebas históricas. **No convierten el esquema anterior al normalizado.** Respaldar una base existente antes de aplicar cualquier migración; las operaciones DDL de MariaDB pueden confirmar cambios aunque estén dentro de una transacción.
+Después de respaldar una base existente, aplicar las operaciones pendientes:
+
+```powershell
+& C:\xampp\php\php.exe database\migrar.php --base=psicologia_db --aplicar
+& C:\xampp\php\php.exe database\migrar.php --base=psicologia_db --comprobar
+```
+
+La detección del esquema no comprueba exhaustivamente todas las relaciones ni todos los datos. Las operaciones DDL de MariaDB pueden confirmar cambios aunque estén dentro de una transacción; guardar el respaldo fuera de la carpeta pública de Apache.
+
+Los archivos de [migrations/](migrations/) corresponden al esquema anterior y solo se ejecutan en esa rama del migrador. **No convierten el esquema anterior al normalizado.**
 
 Abrir una página de la aplicación no instala ni modifica el esquema. La conexión está centralizada en `login_bd()`.
 
@@ -57,4 +66,4 @@ Cada fila válida se guarda con su inscripción y responsables dentro de una tra
 
 ## Pruebas
 
-Consultar [tests/README.md](../tests/README.md) para las pruebas vigentes y las pendientes de adaptación. Las pruebas de acceso y edición de informes utilizan datos sintéticos en tablas `TEMPORARY`; no escriben en los registros reales.
+Consultar [tests/README.md](../tests/README.md) para las pruebas vigentes. Las pruebas de acceso y edición de informes usan tablas `TEMPORARY`; las de migración, importación, historias y flujo completo crean bases con nombres aleatorios y datos sintéticos. Ninguna escribe datos de prueba en los registros reales.

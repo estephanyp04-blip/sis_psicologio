@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('informes/registrar.php');
 
 require_once '../config/conexion.php';
-require_once __DIR__ . '/../includes/informes_datos.php';
+require_once __DIR__ . '/datos.php';
 
 $datosInforme = $_SESSION['datos_informe'] ?? [];
 $datosInforme += ['id_estudiante' => (int)filter_var($_GET['id_estudiante'] ?? 0,FILTER_VALIDATE_INT)];

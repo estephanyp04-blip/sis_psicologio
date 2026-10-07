@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('estudiantes/guardar.php');
 require_once __DIR__ . '/../config/conexion.php';
-require_once __DIR__ . '/../includes/estudiantes_datos.php';
+require_once __DIR__ . '/datos.php';
 
 $datos = estudiante_datos($_POST);
 try {

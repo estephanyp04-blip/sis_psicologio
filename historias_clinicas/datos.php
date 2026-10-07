@@ -1,13 +1,13 @@
 <?php
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(404); exit; }
-require_once __DIR__ . '/trazabilidad_datos.php';
+require_once __DIR__ . '/../includes/trazabilidad_datos.php';
 
 const HISTORIA_TEXTOS = [
-    'fecha_apertura' => 10, 'talla_cm' => 10, 'peso_kg' => 10, 'valoracion_fisica' => 255,
+    'fecha_apertura' => 10, 'tutor_curso' => 150, 'talla_cm' => 10, 'peso_kg' => 10, 'valoracion_fisica' => 255,
     'motivo_consulta' => 5000, 'antecedentes' => 5000, 'situacion_escolar' => 50,
     'valoracion_familiar' => 50, 'evaluacion_inicial' => 5000, 'impresion_diagnostica' => 5000,
     'plan_intervencion' => 5000, 'observaciones' => 5000,
-    'enfermedades_actuales' => 5000, 'motivo_consulta' => 5000, 'situacion_escolar' => 50,
+    'enfermedades_actuales' => 5000,
     'cursos_repetidos' => 150, 'dificultad_escolar' => 5000, 'materia_agrada' => 150,
     'materia_desagrada' => 150, 'relacion_escolar' => 5000, 'contexto_familiar' => 5000, 'estado' => 30,
 ];
@@ -198,8 +198,9 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
             foreach ($datos[$grupo] as $valor) {
                 $stmt = $bd->prepare('SELECT o.id_opcion FROM opciones_historia o
                     INNER JOIN grupos_opciones_historia g ON g.id_grupo = o.id_grupo
-                    WHERE g.codigo = ? AND o.descripcion = ? AND o.estado = \'Activo\' LIMIT 1');
-                $stmt->bind_param('ss', $grupo, $valor); $stmt->execute();
+                    WHERE g.codigo = ? AND o.descripcion = ? AND (o.estado = \'Activo\' OR ? = 1) LIMIT 1');
+                $conservada = in_array($valor, $anterior[$grupo] ?? [], true) ? 1 : 0;
+                $stmt->bind_param('ssi', $grupo, $valor, $conservada); $stmt->execute();
                 $opcion = $stmt->get_result()->fetch_assoc(); $stmt->close();
                 if (!$opcion) throw new InvalidArgumentException('Una opción clínica ya no está disponible en el catálogo.');
                 $stmt = $bd->prepare('INSERT INTO historia_opciones (id_historia,id_opcion) VALUES (?,?)');
@@ -231,7 +232,7 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
 function historia_recuperar_entrada(array $entrada): array
 {
     $permitidos = array_merge(array_keys(HISTORIA_TEXTOS), array_keys(HISTORIA_OPCIONES),
-        ['id_historia', 'id_estudiante', 'id_derivacion', 'id_cita', 'familiares', 'opciones_presentes', 'familiares_presentes']);
+        ['talla', 'peso', 'valoracion', 'id_historia', 'id_estudiante', 'id_derivacion', 'id_cita', 'familiares', 'opciones_presentes', 'familiares_presentes']);
     $datos = array_intersect_key($entrada, array_flip($permitidos));
     foreach (array_merge(array_keys(HISTORIA_TEXTOS), ['talla', 'peso', 'valoracion', 'id_historia', 'id_estudiante', 'id_derivacion', 'id_cita']) as $campo) {
         if (array_key_exists($campo, $datos) && !is_scalar($datos[$campo])) unset($datos[$campo]);

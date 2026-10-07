@@ -30,6 +30,6 @@ $tituloPagina = $tituloPagina ?? 'Sistema Psicológico - U.E. Cañada Pailita "B
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
 
     <!-- CSS propio con ruta dinámica -->
-    <link rel="stylesheet" href="/proyecto_vercionII/asset/css/estilos.css?v=6">
+    <link rel="stylesheet" href="<?= login_html(login_url('asset/css/estilos.css?v=7')) ?>">
 </head>
 <body>

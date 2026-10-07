@@ -8,7 +8,7 @@ requerir_acceso('historias_clinicas/ver.php');
  */
 
 require_once '../config/conexion.php';
-require_once __DIR__ . '/../includes/historias_datos.php';
+require_once __DIR__ . '/datos.php';
 
 /* =========================================================
    HELPERS GENERALES
@@ -199,6 +199,8 @@ try {
             h.talla_cm AS talla,
             h.peso_kg AS peso,
             h.valoracion_fisica AS valoracion,
+            d.fecha AS fecha_derivacion,
+            TRIM(CONCAT(COALESCE(dp.nombres,''),' ',COALESCE(dp.apellidos,''))) AS derivado_por,
             e.codigo,
             e.ci,
             e.nombres,
@@ -216,6 +218,9 @@ try {
             p.nombres AS profesional_nombre,
             p.apellidos AS profesional_apellido
         FROM historias_clinicas h
+        LEFT JOIN derivaciones d ON d.id_derivacion = h.id_derivacion_origen
+        LEFT JOIN docentes doc ON doc.id_docente = d.id_docente
+        LEFT JOIN personas dp ON dp.id_persona = doc.id_persona
         INNER JOIN vista_estudiantes e
             ON e.id_estudiante = h.id_estudiante
         LEFT JOIN usuarios u
@@ -445,9 +450,9 @@ include '../includes/navbar.php';
                 <strong><?= escapar(fechaMostrar($h['fecha_derivacion'] ?? null)) ?></strong>
             </div>
 
-            <div><span>Tutor de curso</span><strong><?= mostrarDato($h['tutor_curso'] ?? ($h['tutor'] ?? '')) ?></strong></div>
-            <div><span>Talla</span><strong><?= mostrarDato($h['talla'] ?? '') ?></strong></div>
-            <div><span>Peso</span><strong><?= mostrarDato($h['peso'] ?? '') ?></strong></div>
+            <div><span>Tutor de curso</span><strong><?= mostrarDato($h['tutor_curso'] ?? '') ?></strong></div>
+            <div><span>Talla (cm)</span><strong><?= mostrarDato($h['talla'] ?? '') ?></strong></div>
+            <div><span>Peso (kg)</span><strong><?= mostrarDato($h['peso'] ?? '') ?></strong></div>
             <div><span>Valoración</span><strong><?= mostrarDato($h['valoracion'] ?? '') ?></strong></div>
         </div>
 

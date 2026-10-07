@@ -2,8 +2,9 @@
 /** Punto 5: trazabilidad y permisos, exclusivamente con datos sintéticos. */
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 date_default_timezone_set('America/La_Paz');
-require_once dirname(__DIR__) . '/includes/historias_datos.php';
-require_once dirname(__DIR__) . '/includes/derivaciones_datos.php';
+require_once dirname(__DIR__) . '/historias_clinicas/datos.php';
+require_once dirname(__DIR__) . '/derivaciones/datos.php';
+require_once __DIR__ . '/datos_sinteticos.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $raiz = dirname(__DIR__);
 $config = require $raiz . '/config/login.php';
@@ -95,19 +96,16 @@ function formulario(string $html, string $id): array
     return $datos;
 }
 
-require_once $raiz . '/includes/citas_datos.php';
-require_once $raiz . '/includes/informes_datos.php';
+require_once $raiz . '/citas/datos.php';
+require_once $raiz . '/informes/datos.php';
 try {
     $admin = new mysqli($config['host'],$config['usuario_bd'],$config['clave_bd'],'',$config['puerto']);
     ejecutar([PHP_BINARY,$raiz.'/database/migrar.php','--base='.$base,'--aplicar','--instalar']);
     $bd = new mysqli($config['host'],$config['usuario_bd'],$config['clave_bd'],$base,$config['puerto']);
     $bd->set_charset('utf8mb4');
     $bd->query("SET SESSION sql_mode='STRICT_ALL_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
-    $bd->query("INSERT INTO usuarios (id_usuario,nombre,apellido,usuario,password,id_rol) VALUES
-        (101,'Admin','Prueba','prueba_admin','hash-prueba',1),(102,'Psicóloga','Prueba','prueba_psicologa','hash-prueba',2),
-        (103,'Docente','Prueba','prueba_docente','hash-prueba',3),(104,'Director','Prueba','prueba_director','hash-prueba',4)");
-    $bd->query("INSERT INTO docentes (id_docente,id_usuario,nombres,apellidos) VALUES (201,103,'Docente','Prueba'),(202,NULL,'Otro','Docente')");
-    for ($i=1;$i<=4;$i++) $bd->query("INSERT INTO estudiantes (id_estudiante,codigo,ci,nombres,apellidos,id_curso,id_paralelo,curso,paralelo) VALUES ($i,'FLUJO$i','FLUJO$i','Estudiante','Prueba $i',1,1,'1','A')");
+    prueba_autores($bd);
+    prueba_estudiantes($bd, 4);
     $hoy=date('Y-m-d');
     $bd->query("INSERT INTO derivaciones (id_derivacion,fecha,id_estudiante,id_docente,motivo) VALUES (1,'$hoy',1,201,'Origen primero'),(2,'$hoy',1,201,'Nuevo motivo distinto'),(3,'$hoy',2,202,'Ajena')");
     mkdir($temporal . '/app', 0700); mkdir($temporal . '/sesiones', 0700);
@@ -138,7 +136,7 @@ try {
     $post['hora']='09:00'; $post['id_usuario']=104;
     $r=http('citas/procesar_registrar.php',$post,'prueba_psicologa');
     $c=fila($bd,'SELECT * FROM citas ORDER BY id_cita DESC LIMIT 1'); $idCita=(int)$c['id_cita'];
-    verificar((int)$c['id_usuario']===102 && (int)$c['id_derivacion']===1,'Pierde responsable o acepta autor del POST.');
+    verificar((int)$c['id_psicologa']===102 && (int)$c['id_derivacion']===1,'Pierde responsable o acepta autor del POST.');
     verificar(str_contains($r['cabeceras'],'editar.php?id='.$idCita),'No vuelve al detalle de la cita.');
     $r=http('citas/editar.php?id='.$idCita);
     verificar(str_contains($r['cuerpo'],'historias_clinicas/registrar.php?id_cita='.$idCita),'Falta enlace de cita a historia.');
@@ -148,7 +146,7 @@ try {
     $historia['motivo_consulta']='Atención clínica <privada>';
     $r=http('historias_clinicas/guardar.php',$historia,'prueba_psicologa');
     $h=fila($bd,'SELECT * FROM historias_clinicas WHERE id_estudiante=1'); $idHistoria=(int)$h['id_historia'];
-    verificar((int)$h['id_cita']===$idCita && (int)$h['id_derivacion']===1,'Historia sin origen exacto.');
+    verificar((int)$h['id_cita_origen']===$idCita && (int)$h['id_derivacion_origen']===1,'Historia sin origen exacto.');
     $r=http('seguimientos/registrar.php?id_historia='.$idHistoria.'&id_cita='.$idCita);
     $seguimiento=formulario($r['cuerpo'],'form-seguimiento');
     $seguimiento['descripcion']='Evolución <privada>'; $seguimiento['tecnicas_aplicadas']='Técnica de prueba';
@@ -158,7 +156,7 @@ try {
     $r=http('seguimientos/guardar.php',$seguimiento,'prueba_psicologa');
     $s=fila($bd,'SELECT * FROM seguimientos ORDER BY id_seguimiento DESC LIMIT 1'); $idSeguimiento=(int)$s['id_seguimiento'];
     foreach (['descripcion','tecnicas_aplicadas','acuerdos','recomendaciones','proxima_sesion'] as $campo) verificar($s[$campo]===$seguimiento[$campo],'Seguimiento pierde '.$campo);
-    verificar((int)$s['id_usuario']===102 && (int)$s['id_cita']===$idCita && (int)$s['id_historia']===$idHistoria,'Seguimiento pierde vínculos o autor.');
+    verificar((int)$s['id_psicologa']===102 && (int)$s['id_cita']===$idCita && (int)$s['id_historia']===$idHistoria,'Seguimiento pierde vínculos o autor.');
     verificar(fila($bd,'SELECT estado FROM citas WHERE id_cita='.$idCita)['estado']==='Atendida','Seguimiento no atiende la cita.');
     verificar(fila($bd,'SELECT estado FROM derivaciones WHERE id_derivacion=1')['estado']==='En seguimiento','Seguimiento no actualiza la derivación.');
     verificar(fila($bd,'SELECT estado FROM historias_clinicas WHERE id_historia='.$idHistoria)['estado']==='En seguimiento','Seguimiento no actualiza la historia.');
@@ -170,19 +168,19 @@ try {
     $informe=['id_estudiante'=>1,'id_historia'=>$idHistoria,'id_seguimiento'=>$idSeguimiento,'fecha'=>$hoy,'titulo'=>'Informe del flujo','tipo_atencion'=>['Evaluación'],
         'numero_atenciones'=>1,'motivo'=>'Origen primero','aspecto_cognitivo'=>'Cognitivo','aspectos_afectivos'=>'Afectivo','estado'=>'Borrador','recomendaciones'=>'Recomendación primera'];
     $r=http('informes/guardar.php',$informe+$token,'prueba_psicologa');
-    $i=fila($bd,'SELECT * FROM informes ORDER BY id_informe DESC LIMIT 1'); $idInforme=(int)$i['id_informe'];
+    $i=fila($bd,'SELECT i.*,d.* FROM informes i JOIN informe_individual d ON d.id_informe=i.id_informe ORDER BY i.id_informe DESC LIMIT 1'); $idInforme=(int)$i['id_informe'];
     verificar((int)$i['id_seguimiento']===$idSeguimiento && (int)$i['id_historia']===$idHistoria && (int)$i['id_derivacion']===1,'Informe pierde cadena de origen.');
-    verificar((int)$i['id_usuario']===102,'Informe pierde autor.');
+    verificar((int)$i['id_elaborado_por']===102,'Informe pierde autor.');
 
     // Nuevo episodio en el mismo expediente, sin reemplazar su derivación original.
     $segunda=cita_guardar($bd,['id_estudiante'=>1,'id_derivacion'=>2,'fecha'=>$hoy,'hora'=>'10:00','estado'=>'Pendiente'],101);
     $seguimiento2=seguimiento_guardar($bd,array_replace($seguimiento,['id_cita'=>$segunda,'recomendaciones'=>'Recomendación segunda']),101);
     informe_crear($bd,informe_datos(array_replace($informe,['id_seguimiento'=>$seguimiento2])),101);
-    verificar((int)fila($bd,'SELECT id_derivacion FROM informes ORDER BY id_informe DESC LIMIT 1')['id_derivacion']===2,'Informe del segundo episodio usa la primera derivación.');
-    verificar((int)fila($bd,'SELECT id_derivacion FROM historias_clinicas WHERE id_historia='.$idHistoria)['id_derivacion']===1,'Segundo episodio reemplaza origen del expediente.');
+    verificar((int)fila($bd,'SELECT id_derivacion FROM informe_individual ORDER BY id_informe DESC LIMIT 1')['id_derivacion']===2,'Informe del segundo episodio usa la primera derivación.');
+    verificar((int)fila($bd,'SELECT id_derivacion_origen FROM historias_clinicas WHERE id_historia='.$idHistoria)['id_derivacion_origen']===1,'Segundo episodio reemplaza origen del expediente.');
     $r=http('informes/actualizar.php',array_replace($informe,['id_informe'=>$idInforme,'estado'=>'Finalizado'])+$token);
-    $actual=fila($bd,'SELECT * FROM informes WHERE id_informe='.$idInforme);
-    verificar($actual['estado']==='Finalizado' && (int)$actual['id_seguimiento']===$idSeguimiento && (int)$actual['id_usuario']===102,'Editar informe cambia autor/origen o no guarda estado.');
+    $actual=fila($bd,'SELECT i.*,d.* FROM informes i JOIN informe_individual d ON d.id_informe=i.id_informe WHERE i.id_informe='.$idInforme);
+    verificar($actual['estado']==='Finalizado' && (int)$actual['id_seguimiento']===$idSeguimiento && (int)$actual['id_elaborado_por']===102,'Editar informe cambia autor/origen o no guarda estado.');
     verificar(fila($bd,'SELECT estado FROM derivaciones WHERE id_derivacion=1')['estado']==='En seguimiento','Emitir informe cierra atención implícitamente.');
     rechaza(fn()=>informe_actualizar($bd,$idInforme,informe_datos(array_replace($informe,['id_seguimiento'=>$seguimiento2])),101),'Permite cambiar seguimiento de origen.');
     $r=http('derivaciones/cambiar_estado.php',['id_derivacion'=>1,'estado'=>'Atendido']+$token,'prueba_psicologa');
@@ -218,10 +216,12 @@ try {
     cita_guardar($bd,['estado'=>'Cancelada'],102,$cancelable);
     $reutilizada=cita_guardar($bd,$reserva,101);
     verificar($reutilizada!==$cancelable,'No libera horario de cita cancelada.');
-    rechaza(fn()=>cita_guardar($bd,$reserva,102),'Dos citas ocupan el mismo turno.');
+    rechaza(fn()=>cita_guardar($bd,$reserva,101),'Dos citas ocupan el mismo turno del profesional.');
+    $otroProfesional=cita_guardar($bd,$reserva,102);
+    verificar($otroProfesional!==$reutilizada,'No permite el mismo horario a profesionales distintos.');
     rechaza(fn()=>cita_guardar($bd,['estado'=>'Pendiente'],101,$cancelable),'Reactiva una cita cancelada.');
     // Cuatro procesos y conexiones compiten por un turno, sin serialización HTTP.
-    $codigo='date_default_timezone_set("America/La_Paz"); require '.var_export($raiz.'/includes/citas_datos.php',true).'; mysqli_report(MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT); $c='.var_export($config,true).'; $b=new mysqli($c["host"],$c["usuario_bd"],$c["clave_bd"],'.var_export($base,true).',$c["puerto"]); $b->set_charset("utf8mb4"); try {cita_guardar($b,'.var_export(array_replace($reserva,['hora'=>'14:00']),true).',101); echo "creada";} catch (InvalidArgumentException $e) {echo "ocupada";}';
+    $codigo='date_default_timezone_set("America/La_Paz"); require '.var_export($raiz.'/citas/datos.php',true).'; mysqli_report(MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT); $c='.var_export($config,true).'; $b=new mysqli($c["host"],$c["usuario_bd"],$c["clave_bd"],'.var_export($base,true).',$c["puerto"]); $b->set_charset("utf8mb4"); try {cita_guardar($b,'.var_export(array_replace($reserva,['hora'=>'14:00']),true).',101); echo "creada";} catch (InvalidArgumentException $e) {echo "ocupada";}';
     $trabajadores=[];
     for ($j=0;$j<4;$j++) {
         $proceso=proc_open([PHP_BINARY,'-r',$codigo],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$canales);
@@ -271,7 +271,7 @@ try {
         $doc=new DOMDocument(); @$doc->loadHTML($html);
         $resultado=json_decode($doc->getElementById('resultado')?->textContent ?? '',true);
         verificar(($resultado['ok']??false)===true,'Navegador: '.json_encode($resultado,JSON_UNESCAPED_UNICODE));
-        $cadena=fila($bd,'SELECT i.id_informe FROM informes i JOIN seguimientos s ON s.id_seguimiento=i.id_seguimiento JOIN historias_clinicas h ON h.id_historia=s.id_historia JOIN citas c ON c.id_cita=s.id_cita WHERE i.id_estudiante=3 AND i.id_derivacion=4 AND h.id_derivacion=4 AND h.id_cita=c.id_cita AND c.id_derivacion=4');
+        $cadena=fila($bd,'SELECT i.id_informe FROM informe_individual i JOIN seguimientos s ON s.id_seguimiento=i.id_seguimiento JOIN historias_clinicas h ON h.id_historia=s.id_historia JOIN citas c ON c.id_cita=s.id_cita WHERE i.id_estudiante=3 AND i.id_derivacion=4 AND h.id_derivacion_origen=4 AND h.id_cita_origen=c.id_cita AND c.id_derivacion=4');
         verificar($cadena!==[],'El navegador no conservó toda la cadena al guardar.');
         echo 'Navegador Chrome: '.$resultado['total']." comprobaciones correctas.\n";
     }

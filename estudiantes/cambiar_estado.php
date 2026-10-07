@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('estudiantes/cambiar_estado.php');
 require_once __DIR__ . '/../config/conexion.php';
-require_once __DIR__ . '/../includes/estudiantes_datos.php';
+require_once __DIR__ . '/datos.php';
 
 $id = filter_var($_POST['id_estudiante'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 $accion = is_string($_POST['accion'] ?? null) ? trim($_POST['accion']) : '';

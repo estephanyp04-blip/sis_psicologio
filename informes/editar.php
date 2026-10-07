@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('informes/editar.php');
 
 require_once '../config/conexion.php';
-require_once __DIR__ . '/../includes/informes_datos.php';
+require_once __DIR__ . '/datos.php';
 
 $rolActual = (int)($_SESSION['id_rol'] ?? 0);
 if (!in_array($rolActual, [1, 2], true)) {

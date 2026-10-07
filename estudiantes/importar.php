@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('estudiantes/importar.php');
 require_once __DIR__ . '/../config/conexion.php';
-require_once __DIR__ . '/../includes/estudiantes_csv.php';
+require_once __DIR__ . '/csv.php';
 
 $handle = false;
 try {

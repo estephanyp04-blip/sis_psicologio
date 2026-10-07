@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('citas/cancelar.php');
 require_once __DIR__ . '/../config/conexion.php';
-require_once __DIR__ . '/../includes/citas_datos.php';
+require_once __DIR__ . '/datos.php';
 try {
     $id = flujo_id($_POST['id_cita'] ?? null);
     cita_guardar($conexion, ['estado' => 'Cancelada'], (int)$_SESSION['id_usuario'], $id);

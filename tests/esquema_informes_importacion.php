@@ -1,8 +1,9 @@
 <?php
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 date_default_timezone_set('America/La_Paz');
-require_once dirname(__DIR__) . '/includes/estudiantes_csv.php';
-require_once dirname(__DIR__) . '/includes/informes_datos.php';
+require_once dirname(__DIR__) . '/estudiantes/csv.php';
+require_once dirname(__DIR__) . '/informes/datos.php';
+require_once __DIR__ . '/datos_sinteticos.php';
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $raiz = dirname(__DIR__);
 $config = require $raiz . '/config/login.php';
@@ -89,6 +90,29 @@ function http_prueba(string $ruta, ?array $datos = null, ?string $csv = null, st
     return ['codigo' => (int)$m[1], 'cuerpo' => (string)$cuerpo, 'cabeceras' => implode("\n", $http_response_header)];
 }
 
+function formulario(string $html, string $id): array
+{
+    $doc = new DOMDocument();
+    @$doc->loadHTML('<?xml encoding="UTF-8">' . $html);
+    $xpath = new DOMXPath($doc);
+    $pares = [];
+    foreach ($xpath->query('//form[@id="' . $id . '"]//*[self::input or self::select or self::textarea][@name]') as $campo) {
+        if ($campo->hasAttribute('disabled')) continue;
+        $tipo = $campo->getAttribute('type');
+        if (in_array($tipo, ['checkbox', 'radio'], true) && !$campo->hasAttribute('checked')) continue;
+        $valor = $campo->getAttribute('value');
+        if ($campo->tagName === 'textarea') $valor = $campo->textContent;
+        if ($campo->tagName === 'select') {
+            $opcion = $xpath->query('.//option[@selected]', $campo)->item(0) ?? $xpath->query('.//option', $campo)->item(0);
+            $valor = $opcion ? $opcion->getAttribute('value') : '';
+        }
+        $pares[] = rawurlencode($campo->getAttribute('name')) . '=' . rawurlencode($valor);
+    }
+    parse_str(implode('&', $pares), $datos);
+    verificar($datos !== [], "No se encontró el formulario $id");
+    return $datos;
+}
+
 try {
     $nueva = 'psicologia_test_nueva_' . $sufijo;
     $actualizacion = 'psicologia_test_actualizar_' . $sufijo;
@@ -100,63 +124,50 @@ try {
     ejecutar([PHP_BINARY, $raiz . '/database/migrar.php', '--base=' . $nueva, '--aplicar']);
     verificar($antes === estructura($bd), 'Reaplicar la migración altera el esquema.');
     verificar((int)consultar($bd, 'SELECT COUNT(*) n FROM roles')['n'] === 4, 'Faltan roles al instalar.');
-    verificar((int)consultar($bd, 'SELECT COUNT(*) n FROM paralelos')['n'] === 24, 'Faltan catálogos al instalar.');
+    verificar((int)consultar($bd, 'SELECT COUNT(*) n FROM paralelos')['n'] === 4, 'Faltan catálogos al instalar.');
 
-    // Clona solo DDL de la base configurada. Nunca copia pacientes, usuarios ni contraseñas.
-    $origen = conectar($config['base_datos']);
+    // Ensaya la migración normalizada con datos sintéticos y conserva cada columna previa.
     $bases[] = $actualizacion;
-    $admin->query("CREATE DATABASE `$actualizacion` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    ejecutar([PHP_BINARY, $raiz . '/database/migrar.php', '--base=' . $actualizacion, '--aplicar', '--instalar']);
     $copia = conectar($actualizacion);
-    $copia->query('SET FOREIGN_KEY_CHECKS=0');
-    foreach (estructura($origen) as $tabla => $crear) $copia->query($crear);
-    $copia->query('SET FOREIGN_KEY_CHECKS=1');
-    foreach (['roles', 'cursos', 'paralelos'] as $tabla) {
-        $copia->query("INSERT INTO `$tabla` SELECT * FROM `$nueva`.`$tabla`");
-    }
-    // Mantiene reproducible la prueba después de actualizar la base local.
-    foreach (['historias_clinicas'=>'id_cita','informes'=>'id_seguimiento'] as $tabla=>$campo) {
-        if ($copia->query("SHOW COLUMNS FROM `$tabla` LIKE '$campo'")->num_rows) {
-            $copia->query("ALTER TABLE `$tabla` DROP FOREIGN KEY `fk_{$tabla}_{$campo}_origen`, DROP COLUMN `$campo`");
-        }
-    }
-    if ($copia->query("SHOW COLUMNS FROM citas LIKE 'turno_reservado'")->num_rows) {
-        $copia->query('ALTER TABLE citas ADD UNIQUE KEY uk_cita_profesional_fecha_hora (id_usuario,fecha,hora)');
-        $copia->query('ALTER TABLE citas DROP INDEX uk_citas_horario_vigente, DROP INDEX idx_citas_usuario, DROP COLUMN turno_reservado');
-    }
-    foreach (['informes_secuencia', 'esquema_migraciones'] as $tabla) $copia->query("DROP TABLE IF EXISTS `$tabla`");
-    foreach (['seguimientos' => 'recomendaciones', 'historias_clinicas' => 'evolucion_caso'] as $tabla => $campo) {
-        if ($copia->query("SHOW COLUMNS FROM `$tabla` LIKE '$campo'")->num_rows) $copia->query("ALTER TABLE `$tabla` DROP COLUMN `$campo`");
-    }
-    $copia->query("INSERT INTO usuarios (id_usuario,nombre,apellido,usuario,password,id_rol) VALUES (101,'Autor','Prueba','prueba_admin','hash-prueba',1)");
-    $copia->query("INSERT INTO estudiantes (id_estudiante,codigo,ci,nombres,apellidos,id_curso,id_paralelo,curso,paralelo) VALUES (1,'LEGADO','LEGADO','Legado','Prueba',1,1,'1','A')");
-    $copia->query("INSERT INTO historias_clinicas (id_historia,id_estudiante,id_usuario,fecha_apertura,motivo_consulta,observaciones) VALUES (1,1,101,'2026-01-01','Motivo previo','Conservar observaciones')");
-    $copia->query("INSERT INTO seguimientos (id_historia,id_usuario,fecha,descripcion,acuerdos,proxima_sesion) VALUES (1,101,'2026-01-02','Descripción previa','Acuerdo previo','2026-02-01')");
-    $copia->query("INSERT INTO informes (id_usuario,titulo,numero_ficha,id_estudiante,elaborado_por,id_historia) VALUES (101,'Título anterior','INF-0042',1,101,1)");
+    $copia->query('ALTER TABLE historias_clinicas DROP COLUMN tutor_curso');
+    prueba_autores($copia);
+    prueba_estudiantes($copia, 1);
+    $copia->query("INSERT INTO historias_clinicas (id_historia,id_estudiante,id_psicologa,fecha_apertura,motivo_consulta,observaciones) VALUES (1,1,101,'2026-01-01','Motivo previo','Conservar observaciones')");
+    $copia->query("INSERT INTO seguimientos (id_historia,id_psicologa,fecha,descripcion,acuerdos,proxima_sesion) VALUES (1,101,'2026-01-02','Descripción previa','Acuerdo previo','2026-02-01')");
+    $copia->query("INSERT INTO informes (id_informe,id_elaborado_por,titulo,numero_ficha,tipo) VALUES (1,101,'Título anterior','INF-0042','Individual')");
+    $copia->query('INSERT INTO informe_individual (id_informe,id_estudiante,id_historia) VALUES (1,1,1)');
+    $copia->query('UPDATE informes_secuencia SET ultimo=42 WHERE id=1');
     $filasAntes = [];
-    foreach (['usuarios','estudiantes','historias_clinicas','seguimientos','informes'] as $tabla) $filasAntes[$tabla] = $copia->query("SELECT * FROM `$tabla`")->fetch_all(MYSQLI_ASSOC);
+    foreach (array_keys(estructura($copia)) as $tabla) $filasAntes[$tabla] = $copia->query("SELECT * FROM `$tabla` ORDER BY 1")->fetch_all(MYSQLI_ASSOC);
+    $esquemaAntes = estructura($copia);
+    $simulacion = ejecutar([PHP_BINARY, $raiz . '/database/migrar.php', '--base=' . $actualizacion, '--comprobar']);
+    verificar(str_contains($simulacion, 'ADD COLUMN tutor_curso') && estructura($copia) === $esquemaAntes, 'La simulación altera el esquema o no detecta el tutor pendiente.');
     ejecutar([PHP_BINARY, $raiz . '/database/migrar.php', '--base=' . $actualizacion, '--aplicar']);
     verificar(estructura($bd) === estructura($copia), 'Instalación y actualización no producen el mismo esquema.');
     foreach ($filasAntes as $tabla => $filas) {
-        $despues = $copia->query("SELECT * FROM `$tabla`")->fetch_all(MYSQLI_ASSOC);
+        $despues = $copia->query("SELECT * FROM `$tabla` ORDER BY 1")->fetch_all(MYSQLI_ASSOC);
+        verificar(count($filas) === count($despues), "La migración cambia el número de filas: $tabla");
         foreach ($filas as $i => $fila) verificar($fila === array_intersect_key($despues[$i], $fila), "La migración modificó datos previos: $tabla");
     }
-    verificar((int)consultar($copia, 'SELECT ultimo FROM informes_secuencia WHERE id=1')['ultimo'] === 42, 'La secuencia no respeta las fichas previas.');
-    $planificar = require $raiz . '/database/migrations/001_alinear_esquema.php';
+    verificar((int)consultar($copia, 'SELECT ultimo FROM informes_secuencia WHERE id=1')['ultimo'] === 42, 'La migración altera la secuencia.');
+    $planificar = require $raiz . '/database/migrations_normalizadas/001_tutor_historia.php';
     verificar($planificar($copia) === [], 'La migración no es idempotente.');
     echo "Instalación, actualización, conservación de datos e idempotencia: correctas.\n";
 
-    $bd->query("INSERT INTO usuarios (id_usuario,nombre,apellido,usuario,password,id_rol) VALUES (101,'Admin','Prueba','prueba_admin','hash-prueba',1),(102,'Psicóloga','Prueba','prueba_psicologa','hash-prueba',2)");
+    prueba_autores($bd);
     // IDs diferentes del grado visible: detecta el antiguo fallback numérico.
     $bd->query('UPDATE cursos SET id_curso=71 WHERE id_curso=1');
-    $bd->query("UPDATE paralelos SET estado='Inactivo' WHERE id_curso=2 AND nombre='D'");
+    $bd->query("UPDATE secciones s JOIN paralelos p ON p.id_paralelo=s.id_paralelo SET s.estado='Inactivo' WHERE s.id_curso=2 AND p.nombre='D'");
     $datos = estudiante_datos(['codigo'=>'UNO','ci'=>'CIUNO','nombres'=>'María','apellidos'=>'Prueba','fecha_nacimiento'=>'2010-02-28',
         'genero'=>'Femenino','curso'=>'1','paralelo'=>'D','turno'=>'Mañana','estado'=>'Activo']);
     $academico = estudiante_validar($datos, estudiante_catalogo($bd));
-    verificar((int)$academico['id_curso'] === 71 && (int)$academico['id_paralelo'] === 4, 'No resuelve IDs reales del catálogo.');
+    $seccion = consultar($bd, 'SELECT id_curso,id_paralelo FROM secciones WHERE id_seccion=' . (int)$academico['id_seccion']);
+    verificar((int)$seccion['id_curso'] === 71 && (int)$seccion['id_paralelo'] === 4, 'No resuelve IDs reales del catálogo.');
     estudiante_insertar($bd, $datos, $academico);
-    $idEstudiante = $bd->insert_id;
-    $guardado = consultar($bd, "SELECT * FROM estudiantes WHERE id_estudiante=$idEstudiante");
-    verificar($guardado['curso'] === '1' && (int)$guardado['id_curso'] === 71 && $guardado['sexo'] === 'F', 'No persiste datos coherentes del estudiante.');
+    $idEstudiante = (int)consultar($bd, "SELECT id_estudiante FROM estudiantes WHERE codigo='UNO'")['id_estudiante'];
+    $guardado = consultar($bd, "SELECT * FROM vista_estudiantes WHERE id_estudiante=$idEstudiante");
+    verificar($guardado['curso'] === '1ro de Secundaria' && (int)$guardado['id_curso'] === 71 && $guardado['sexo'] === 'F', 'No persiste datos coherentes del estudiante.');
     foreach ([['curso'=>'99'], ['curso'=>'2','paralelo'=>'D'], ['estado'=>'Baja'], ['estado'=>'En seguimiento'], ['fecha_nacimiento'=>'2010-02-30'], ['codigo'=>str_repeat('x',21)]] as $cambio) {
         rechaza(fn() => estudiante_validar(array_replace($datos,$cambio), estudiante_catalogo($bd)), 'Aceptó datos inválidos del estudiante.');
     }
@@ -168,15 +179,15 @@ try {
     verificar(str_contains(implode(' ', $resultado['errores']), 'Fila 3'), 'El error de duplicado no indica su fila.');
     rechaza(fn() => importar($bd, "$encabezado;codigo\n"), 'Aceptó encabezados duplicados.');
     rechaza(fn() => importar($bd, 'codigo;ci'), 'Aceptó encabezados incompletos.');
-    verificar((int)consultar($bd,"SELECT COUNT(*) n FROM estudiantes e JOIN paralelos p ON e.id_paralelo=p.id_paralelo WHERE p.id_curso<>e.id_curso")['n'] === 0, 'Se importó un paralelo ajeno al curso.');
+    verificar((int)consultar($bd,"SELECT COUNT(*) n FROM inscripciones i LEFT JOIN secciones s ON s.id_seccion=i.id_seccion WHERE s.id_seccion IS NULL")['n'] === 0, 'Se importó un paralelo ajeno al curso.');
     echo "Alta manual, catálogo con IDs no consecutivos e importación parcial: correctos.\n";
 
     $informe = informe_datos(['id_estudiante'=>$idEstudiante,'titulo'=>'Título de prueba','fecha'=>'2026-01-15','tipo_atencion'=>['Evaluación'],
         'motivo'=>'Motivo','aspecto_cognitivo'=>'Cognitivo','aspectos_afectivos'=>'Afectivo','estado'=>'Borrador']);
     verificar(informe_crear($bd,$informe,101) === 'INF-0001', 'Primera ficha incorrecta.');
     $idInforme = (int)consultar($bd,'SELECT MAX(id_informe) id FROM informes')['id'];
-    $filaInforme = consultar($bd,"SELECT * FROM informes WHERE id_informe=$idInforme");
-    verificar((int)$filaInforme['id_usuario']===101 && (int)$filaInforme['elaborado_por']===101 && $filaInforme['tipo']==='Individual' && $filaInforme['titulo']==='Título de prueba', 'No conserva el modelo individual y su autor.');
+    $filaInforme = consultar($bd,"SELECT i.*,d.* FROM informes i JOIN informe_individual d ON d.id_informe=i.id_informe WHERE i.id_informe=$idInforme");
+    verificar((int)$filaInforme['id_elaborado_por']===101 && $filaInforme['tipo']==='Individual' && $filaInforme['titulo']==='Título de prueba', 'No conserva el modelo individual y su autor.');
     verificar($filaInforme['id_historia']===null && $filaInforme['id_derivacion']===null, 'No admite informe sin historia.');
     informe_actualizar($bd,$idInforme,array_replace($informe,['estado'=>'Finalizado','titulo'=>'Título editado']));
     informe_actualizar($bd,$idInforme,array_replace($informe,['estado'=>'Finalizado','titulo'=>'Título editado']));
@@ -189,16 +200,16 @@ try {
     $secuenciaAntes=consultar($bd,'SELECT ultimo FROM informes_secuencia WHERE id=1');
     rechaza(fn()=>informe_crear($bd,$informe,9999),'Aceptó autor inexistente.');
     verificar($secuenciaAntes===consultar($bd,'SELECT ultimo FROM informes_secuencia WHERE id=1'),'No revirtió la numeración tras fallo SQL.');
-    $bd->query("INSERT INTO historias_clinicas (id_estudiante,id_usuario,fecha_apertura,motivo_consulta) VALUES ($idEstudiante,101,'2026-01-01','Motivo historia')");
+    $bd->query("INSERT INTO historias_clinicas (id_estudiante,id_psicologa,fecha_apertura,motivo_consulta) VALUES ($idEstudiante,101,'2026-01-01','Motivo historia')");
     $idHistoria = $bd->insert_id;
-    $bd->query("INSERT INTO seguimientos (id_historia,id_usuario,fecha,descripcion,acuerdos,recomendaciones,proxima_sesion) VALUES ($idHistoria,101,'2026-01-02','Evolución','Acuerdos separados','Recomendación verificable','2026-02-01')");
+    $bd->query("INSERT INTO seguimientos (id_historia,id_psicologa,fecha,descripcion,acuerdos,recomendaciones,proxima_sesion) VALUES ($idHistoria,101,'2026-01-02','Evolución','Acuerdos separados','Recomendación verificable','2026-02-01')");
     $informe['id_historia']=$idHistoria;
     informe_crear($bd,$informe,102);
-    verificar((int)consultar($bd,'SELECT id_historia FROM informes ORDER BY id_informe DESC LIMIT 1')['id_historia']===$idHistoria,'No vincula la historia correcta.');
+    verificar((int)consultar($bd,'SELECT id_historia FROM informe_individual ORDER BY id_informe DESC LIMIT 1')['id_historia']===$idHistoria,'No vincula la historia correcta.');
 
     // Cuatro conexiones independientes compiten por la misma numeración.
     $trabajadores=[];
-    $codigo = 'require ' . var_export($raiz.'/includes/informes_datos.php',true) . '; mysqli_report(MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT); $c=' . var_export($config,true) . '; $b=new mysqli($c["host"],$c["usuario_bd"],$c["clave_bd"],' . var_export($nueva,true) . ',$c["puerto"]); $b->set_charset("utf8mb4"); echo informe_crear($b,' . var_export($informe,true) . ',101);';
+    $codigo = 'require ' . var_export($raiz.'/informes/datos.php',true) . '; mysqli_report(MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT); $c=' . var_export($config,true) . '; $b=new mysqli($c["host"],$c["usuario_bd"],$c["clave_bd"],' . var_export($nueva,true) . ',$c["puerto"]); $b->set_charset("utf8mb4"); echo informe_crear($b,' . var_export($informe,true) . ',101);';
     for($i=0;$i<4;$i++) {
         $p=proc_open([PHP_BINARY,'-r',$codigo],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
         fclose($pipes[0]); $trabajadores[]=[$p,$pipes];
@@ -221,7 +232,7 @@ try {
         if(!is_dir(dirname($destino))) mkdir(dirname($destino),0700,true);
         copy($archivo->getPathname(),$destino);
     }
-    $configPrueba=$config; $configPrueba['base_datos']=$nueva;
+    $configPrueba=$config; $configPrueba['base_datos']=$nueva; $configPrueba['base_url']='';
     file_put_contents($temporal.'/app/config/login.php','<?php return '.var_export($configPrueba,true).';');
     $secreto=bin2hex(random_bytes(32));
     file_put_contents($temporal.'/fixture.php','<?php return '.var_export(['app'=>$temporal.'/app','sesiones'=>$temporal.'/sesiones','secreto'=>$secreto],true).';');
@@ -243,10 +254,10 @@ try {
     verificar(str_contains($r['cuerpo'],'Recuperar &lt;contenido&gt;'),'No recupera/escapa el texto del informe.');
     $r=http_prueba('informes/guardar.php',$informe+$token+['id_usuario'=>9999]);
     verificar($r['codigo']===302 && str_contains($r['cabeceras'],'listar.php'),'Falló el receptor de alta de informes.');
-    verificar((int)consultar($bd,'SELECT id_usuario FROM informes ORDER BY id_informe DESC LIMIT 1')['id_usuario']===101,'Aceptó autor desde POST.');
+    verificar((int)consultar($bd,'SELECT id_elaborado_por FROM informes ORDER BY id_informe DESC LIMIT 1')['id_elaborado_por']===101,'Aceptó autor desde POST.');
     $r=http_prueba('informes/actualizar.php',array_replace($informe,['id_informe'=>$idInforme,'titulo'=>'Edición HTTP','estado'=>'Finalizado'])+$token,null,'prueba_psicologa');
     verificar($r['codigo']===302 && str_contains($r['cabeceras'],'ver.php'),'Falló receptor de edición.');
-    verificar((int)consultar($bd,"SELECT id_usuario FROM informes WHERE id_informe=$idInforme")['id_usuario']===101,'La edición cambia el autor.');
+    verificar((int)consultar($bd,"SELECT id_elaborado_por FROM informes WHERE id_informe=$idInforme")['id_elaborado_por']===101,'La edición cambia el autor.');
     $r=http_prueba('informes/actualizar.php',array_replace($informe,['id_informe'=>$idInforme,'recibido_por'=>str_repeat('x',151),'motivo'=>'Recuperar edición'])+$token);
     verificar(str_contains($r['cabeceras'],'editar.php'),'Edición inválida no redirige.');
     $r=http_prueba('informes/editar.php?id='.$idInforme);
@@ -263,7 +274,46 @@ try {
     $r=http_prueba('estudiantes/listar.php');
     verificar(str_contains($r['cuerpo'],'1 estudiante(s); 1 fila(s) rechazadas'),'No presenta resumen de importación parcial.');
     verificar((int)consultar($bd,"SELECT COUNT(*) n FROM estudiantes WHERE codigo='HTTP'")['n']===1,'El archivo subido no persistió.');
-    echo "Receptores HTTP, carga CSV, formularios y recuperación de errores: correctos.\n";
+    $retirado = (int)consultar($bd, "SELECT id_estudiante FROM estudiantes WHERE codigo='CUATRO'")['id_estudiante'];
+    $r = http_prueba('estudiantes/editar.php?id=' . $retirado);
+    $edicion = formulario($r['cuerpo'], 'formEditarEstudiante');
+    verificar($edicion['curso'] === '3' && $edicion['paralelo'] === 'D' && $edicion['estado'] === 'Retirado', 'Editar retirado pierde curso/paralelo.');
+    $fotoEstudiantes = static fn() => [
+        $bd->query('SELECT * FROM estudiantes ORDER BY id_estudiante')->fetch_all(MYSQLI_ASSOC),
+        $bd->query('SELECT * FROM inscripciones ORDER BY id_inscripcion')->fetch_all(MYSQLI_ASSOC)
+    ];
+    $antesEdicion = $fotoEstudiantes();
+    $r = http_prueba('estudiantes/actualizar.php', array_replace($edicion, ['ci' => 'CIDOS', 'nombres' => 'Recuperar <estudiante>', 'curso' => '5', 'paralelo' => 'B']));
+    verificar(str_contains($r['cabeceras'], 'editar.php?id=' . $retirado) && $fotoEstudiantes() === $antesEdicion, 'CI duplicado altera estudiante o inscripción.');
+    $r = http_prueba('estudiantes/editar.php?id=' . $retirado);
+    $recuperada = formulario($r['cuerpo'], 'formEditarEstudiante');
+    verificar(str_contains($r['cuerpo'], 'El CI ya está registrado.') && str_contains($r['cuerpo'], 'Recuperar &lt;estudiante&gt;'), 'No muestra el error y el nombre escapado.');
+    verificar($recuperada['ci'] === 'CIDOS' && $recuperada['curso'] === '5' && $recuperada['paralelo'] === 'B', 'Error pierde los datos editados.');
+    foreach ([['nombres' => ['Inválido']], ['nombres' => ''], ['ci' => str_repeat('a', 21)], ['estado' => 'Baja'], ['curso' => '99']] as $cambio) {
+        rechaza(fn() => estudiante_actualizar($bd, $retirado, array_replace($edicion, $cambio)), 'Acepta edición de estudiante inválida.');
+        verificar($fotoEstudiantes() === $antesEdicion, 'Validación modifica estudiante o inscripción.');
+    }
+    $bd->query("CREATE TRIGGER fallo_edicion_estudiante BEFORE UPDATE ON inscripciones FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Fallo intencional de edición'");
+    try {
+        rechaza(fn() => estudiante_actualizar($bd, $retirado, array_replace($edicion, ['nombres' => 'Debe revertirse', 'estado' => 'Activo'])), 'No propaga error al guardar inscripción.');
+        verificar($fotoEstudiantes() === $antesEdicion, 'Fallo en inscripción deja el estudiante modificado.');
+    } finally { $bd->query('DROP TRIGGER fallo_edicion_estudiante'); }
+    $inscripcionAntes = consultar($bd, "SELECT s.* FROM inscripciones i JOIN secciones s ON s.id_seccion=i.id_seccion WHERE i.id_estudiante=$retirado ORDER BY i.id_inscripcion DESC LIMIT 1");
+    $r = http_prueba('estudiantes/actualizar.php', array_replace($recuperada, ['ci' => '', 'estado' => 'Activo']), null, 'prueba_psicologa');
+    verificar(str_contains($r['cabeceras'], 'listar.php'), 'No permite corregir el error y guardar.');
+    $estudianteEditado = consultar($bd, "SELECT * FROM estudiantes WHERE id_estudiante=$retirado");
+    $inscripcionEditada = consultar($bd, "SELECT s.*,i.estado AS estado_inscripcion FROM inscripciones i JOIN secciones s ON s.id_seccion=i.id_seccion WHERE i.id_estudiante=$retirado ORDER BY i.id_inscripcion DESC LIMIT 1");
+    verificar($estudianteEditado['ci'] === null && $estudianteEditado['nombres'] === 'Recuperar <estudiante>' && $estudianteEditado['estado'] === 'Activo' && $inscripcionEditada['estado_inscripcion'] === 'Activo', 'Edición no guarda ambos estados y CI opcional.');
+    foreach (['id_institucion', 'gestion', 'turno'] as $campo) verificar($inscripcionAntes[$campo] === $inscripcionEditada[$campo], 'Edición cambia ' . $campo);
+    $r = http_prueba('estudiantes/editar.php?id=' . $retirado);
+    $actual = formulario($r['cuerpo'], 'formEditarEstudiante');
+    verificar($actual['curso'] === '5' && $actual['paralelo'] === 'B' && $actual['ci'] === '', 'No recupera la edición persistida.');
+    $r = http_prueba('estudiantes/actualizar.php', array_replace($actual, ['estado' => 'Baja', 'nombres' => 'No mezclar fichas']));
+    $r = http_prueba('estudiantes/editar.php?id=' . $idEstudiante);
+    verificar(!str_contains($r['cuerpo'], 'No mezclar fichas'), 'La recuperación contamina otro estudiante.');
+    verificar(http_prueba('estudiantes/editar.php?id=999999')['codigo'] === 404, 'Edición inexistente no devuelve 404.');
+    verificar(http_prueba('estudiantes/editar.php?id[]=1')['codigo'] === 302, 'No rechaza identificador como arreglo.');
+    echo "Receptores HTTP, carga CSV, formularios, edición de estudiantes y recuperación de errores: correctos.\n";
     echo "OK: $total comprobaciones. Ninguna escritura de prueba en la base real.\n";
 } catch(Throwable $error) {
     fwrite(STDERR,$error->getMessage()."\n".$error->getTraceAsString()."\n");

@@ -43,23 +43,38 @@ La zona horaria es `America/La_Paz`. La aplicación no carga archivos `.env` aut
 | Carpeta | Responsabilidad |
 |---|---|
 | `config/` | Configuración, conexión y matriz de permisos |
-| `includes/` | Autenticación, operaciones compartidas y componentes de interfaz |
+| `includes/` | Autenticación, cabecera, menú, pie y trazabilidad compartida entre módulos |
 | `estudiantes/`, `docentes/`, `usuarios/` | Gestión de personas y cuentas |
 | `derivaciones/`, `citas/`, `historias_clinicas/`, `seguimientos/`, `informes/` | Atención y documentación psicológica |
+| `estadisticas/` | Consulta de sesiones e historias por estudiante, curso y período |
 | `asset/` | Estilos y JavaScript |
-| `database/` | SQL de instalación y migraciones históricas |
+| `database/` | SQL de instalación, migraciones normalizadas e históricas |
 | `herramientas/` | Administración desde terminal |
 | `tests/` | Pruebas aisladas y documentación de su cobertura |
 
 `estudiantes/cambiar_estado.php` centraliza retirar/reactivar estudiantes y su última inscripción no finalizada. `derivaciones/listar.php` aplica el filtro de propiedad del docente; `mis_derivaciones.php` conserva la ruta anterior utilizando ese mismo listado.
 
+Los archivos específicos viven dentro de su módulo: `datos.php` reúne la validación y persistencia de estudiantes, citas, historias clínicas, derivaciones e informes; `estudiantes/csv.php` procesa la importación. Los formularios compartidos de alta y edición están en `citas/formulario.php` e `historias_clinicas/formulario.php`. Estos archivos internos rechazan el acceso directo por HTTP; las páginas del módulo los incluyen cuando corresponde.
+
 Los roles y métodos HTTP se declaran en [config/permisos.php](config/permisos.php). Las escrituras requieren sesión, permiso y token CSRF.
+
+## Estadísticas de seguimiento
+
+Disponible en el menú **Estadísticas** para administrador y psicóloga. Cada seguimiento guardado cuenta como una sesión; las citas no se suman al conteo. La pantalla muestra sesiones por mes, estado de las historias y detalle por estudiante, con enlaces a la historia y al último seguimiento.
+
+Los filtros de fechas admiten hasta 366 días y comienzan, por defecto, en enero del año actual. Se incluyen historias abiertas hasta la fecha final, aunque no tengan sesiones en el período. El curso corresponde a la última inscripción según gestión, fecha e identificador; el estado de la historia es el actual. Se conservan en la consulta estudiantes retirados o sin inscripción.
+
+La última sesión y el acumulado se calculan hasta la fecha final seleccionada. La próxima fecha es la prevista en ese último seguimiento, no una confirmación de cita. El número de sesiones no determina una mejoría clínica: las observaciones y acuerdos se consultan en la historia. Sin registros se muestran mensajes de ausencia de datos; los errores de consulta se presentan por separado.
 
 ## Verificación
 
 ```powershell
 & C:\xampp\php\php.exe tests\seguridad.php
 & C:\xampp\php\php.exe tests\informes_actualizacion.php
+& C:\xampp\php\php.exe tests\esquema_informes_importacion.php
+& C:\xampp\php\php.exe tests\historias_derivaciones.php --navegador
+& C:\xampp\php\php.exe tests\trazabilidad.php --navegador
+& C:\xampp\php\php.exe tests\estadisticas.php --navegador
 ```
 
-Cobertura, resultados y limitaciones en [tests/README.md](tests/README.md). Las suites anteriores al esquema normalizado se conservan para su adaptación; no deben interpretarse como una certificación actual de todos los módulos.
+Cobertura, resultados y requisitos en [tests/README.md](tests/README.md). Las seis suites usan el esquema normalizado; `--navegador` requiere Chrome instalado. Para una base existente, aplicar también la migración del tutor de curso según [database/README.md](database/README.md).

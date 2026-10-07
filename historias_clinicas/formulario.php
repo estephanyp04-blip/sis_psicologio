@@ -3,7 +3,7 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
     http_response_code(404);
     exit;
 }
-require_once __DIR__ . '/../includes/historias_datos.php';
+require_once __DIR__ . '/datos.php';
 
 $historia = isset($historia) && is_array($historia)
     ? $historia
@@ -298,6 +298,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
                         id="derivado_por"
                         class="form-control"
                         value="<?= escapar(valorHistoria('derivado_por')) ?>"
+                        readonly
                     >
                 </div>
 
@@ -310,6 +311,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
                         id="fecha_derivacion"
                         class="form-control"
                         value="<?= escapar(valorHistoria('fecha_derivacion')) ?>"
+                        readonly
                     >
                 </div>
 
@@ -347,6 +349,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
                     <input
                         type="text"
                         name="tutor_curso"
+                        maxlength="150"
                         class="form-control"
                         value="<?= escapar(valorHistoria('tutor_curso')) ?>"
                     >
@@ -354,25 +357,25 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
 
                 <!-- TALLA -->
                 <div class="col-md-3">
-                    <label class="form-label">Talla</label>
+                    <label class="form-label">Talla (cm)</label>
                     <input
-                        type="text"
+                        type="number" min="0" max="999.99" step="0.01"
                         name="talla"
                         class="form-control"
                         value="<?= escapar(valorHistoria('talla')) ?>"
-                        placeholder="Ej.: 1.55 m"
+                        placeholder="Ej.: 155"
                     >
                 </div>
 
                 <!-- PESO -->
                 <div class="col-md-3">
-                    <label class="form-label">Peso</label>
+                    <label class="form-label">Peso (kg)</label>
                     <input
-                        type="text"
+                        type="number" min="0" max="999.99" step="0.01"
                         name="peso"
                         class="form-control"
                         value="<?= escapar(valorHistoria('peso')) ?>"
-                        placeholder="Ej.: 48 kg"
+                        placeholder="Ej.: 48"
                     >
                 </div>
 
@@ -382,6 +385,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
                     <input
                         type="text"
                         name="valoracion"
+                        maxlength="255"
                         class="form-control"
                         value="<?= escapar(valorHistoria('valoracion')) ?>"
                     >

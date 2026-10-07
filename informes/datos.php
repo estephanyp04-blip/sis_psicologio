@@ -1,6 +1,6 @@
 <?php
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(404); exit; }
-require_once __DIR__ . '/trazabilidad_datos.php';
+require_once __DIR__ . '/../includes/trazabilidad_datos.php';
 
 const INFORME_ESTADOS = ['Borrador', 'Finalizado'];
 const INFORME_ATENCIONES = ['Evaluación', 'Consejería', 'Orientación', 'Terapia', 'Acompañamiento pedagógico'];

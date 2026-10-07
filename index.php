@@ -270,17 +270,17 @@ include 'includes/navbar.php';
                 </div>
 
                 <div class="col-12 col-sm-6 col-xl-3">
-                    <span class="dashboard-module dashboard-module-indigo text-muted"
-                          aria-disabled="true">
+                    <a class="dashboard-module dashboard-module-indigo"
+                       href="<?= login_html(login_url('estadisticas/index.php')) ?>">
                         <span class="dashboard-module-icon">
                             <i class="bi bi-bar-chart-line"></i>
                         </span>
                         <span class="dashboard-module-text">
                             <strong>Estadísticas</strong>
-                            <small>Visualizar indicadores y resultados del sistema.</small>
+                            <small>Consultar las sesiones y el seguimiento de los estudiantes.</small>
                         </span>
                         <i class="bi bi-arrow-up-right dashboard-module-arrow"></i>
-                    </span>
+                    </a>
                 </div>
             </div>
         </section>
@@ -288,4 +288,4 @@ include 'includes/navbar.php';
     </div>
 </main>
 
-<?php include 'includes/footer.php'; ?>s
+<?php include 'includes/footer.php'; ?>

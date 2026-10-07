@@ -1,4 +1,5 @@
 <?php
+// Validación y persistencia compartidas por las operaciones de estudiantes.
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(404); exit; }
 
 const ESTUDIANTE_CAMPOS = ['codigo', 'ci', 'nombres', 'apellidos', 'fecha_nacimiento', 'genero',
@@ -106,6 +107,62 @@ function estudiante_cambiar_estado(mysqli $conexion, int $id, string $accion): b
         }
         $conexion->commit();
         return $cambio;
+    } catch (Throwable $error) {
+        $conexion->rollback();
+        throw $error;
+    }
+}
+
+function estudiante_actualizar(mysqli $conexion, int $id, array $entrada): void
+{
+    if ($id <= 0) throw new InvalidArgumentException('El estudiante seleccionado no es válido.');
+    $datos = [];
+    foreach (['ci' => 20, 'nombres' => 80, 'apellidos' => 80, 'paralelo' => 10, 'estado' => 10] as $campo => $maximo) {
+        $valor = $entrada[$campo] ?? null;
+        if (!is_string($valor) || !mb_check_encoding($valor, 'UTF-8') || mb_strlen(trim($valor)) > $maximo) {
+            throw new InvalidArgumentException("Revise el campo $campo (máximo $maximo caracteres).");
+        }
+        $datos[$campo] = trim($valor);
+    }
+    $curso = filter_var($entrada['curso'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    if (!$curso || $datos['nombres'] === '' || $datos['apellidos'] === '' || $datos['paralelo'] === ''
+        || !in_array($datos['estado'], ['Activo', 'Retirado'], true)) {
+        throw new InvalidArgumentException('Complete nombres, apellidos, curso, paralelo y estado correctamente.');
+    }
+    $conexion->begin_transaction();
+    try {
+        $stmt = $conexion->prepare('SELECT id_estudiante FROM estudiantes WHERE id_estudiante=? FOR UPDATE');
+        $stmt->bind_param('i', $id); $stmt->execute();
+        $existe = $stmt->get_result()->fetch_assoc(); $stmt->close();
+        if (!$existe) throw new InvalidArgumentException('El estudiante no existe.');
+        $stmt = $conexion->prepare("SELECT i.id_inscripcion,s.id_seccion,s.id_institucion,s.turno,s.gestion,c.orden,p.nombre AS paralelo
+            FROM inscripciones i INNER JOIN secciones s ON s.id_seccion=i.id_seccion
+            INNER JOIN cursos c ON c.id_curso=s.id_curso INNER JOIN paralelos p ON p.id_paralelo=s.id_paralelo
+            WHERE i.id_estudiante=? AND i.estado IN ('Activo','Retirado')
+            ORDER BY i.id_inscripcion DESC LIMIT 1 FOR UPDATE");
+        $stmt->bind_param('i', $id); $stmt->execute();
+        $inscripcion = $stmt->get_result()->fetch_assoc(); $stmt->close();
+        if (!$inscripcion) throw new InvalidArgumentException('El estudiante no tiene una inscripción académica que actualizar.');
+        $idSeccion = (int)$inscripcion['id_seccion'];
+        if ($curso !== (int)$inscripcion['orden'] || $datos['paralelo'] !== $inscripcion['paralelo']) {
+            $stmt = $conexion->prepare("SELECT s.id_seccion FROM secciones s
+                INNER JOIN cursos c ON c.id_curso=s.id_curso INNER JOIN paralelos p ON p.id_paralelo=s.id_paralelo
+                INNER JOIN instituciones i ON i.id_institucion=s.id_institucion
+                WHERE c.orden=? AND p.nombre=? AND s.turno=? AND s.gestion=? AND s.id_institucion=?
+                  AND s.estado='Activo' AND c.estado='Activo' AND p.estado='Activo' AND i.estado='Activo' LIMIT 2");
+            $stmt->bind_param('issii', $curso, $datos['paralelo'], $inscripcion['turno'], $inscripcion['gestion'], $inscripcion['id_institucion']);
+            $stmt->execute(); $secciones = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
+            if (count($secciones) !== 1) throw new InvalidArgumentException('El curso y paralelo no están disponibles para la institución, gestión y turno del estudiante.');
+            $idSeccion = (int)$secciones[0]['id_seccion'];
+        }
+        $ci = $datos['ci'] !== '' ? $datos['ci'] : null;
+        $stmt = $conexion->prepare('UPDATE estudiantes SET ci=?,nombres=?,apellidos=?,estado=? WHERE id_estudiante=?');
+        $stmt->bind_param('ssssi', $ci, $datos['nombres'], $datos['apellidos'], $datos['estado'], $id);
+        $stmt->execute(); $stmt->close();
+        $stmt = $conexion->prepare('UPDATE inscripciones SET id_seccion=?,estado=? WHERE id_inscripcion=?');
+        $stmt->bind_param('isi', $idSeccion, $datos['estado'], $inscripcion['id_inscripcion']);
+        $stmt->execute(); $stmt->close();
+        $conexion->commit();
     } catch (Throwable $error) {
         $conexion->rollback();
         throw $error;

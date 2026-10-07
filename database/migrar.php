@@ -38,6 +38,7 @@ try {
         } while ($bd->more_results() && $bd->next_result());
     }
     $tablas = array_column($bd->query('SHOW TABLES')->fetch_all(MYSQLI_NUM), 0);
+    $normalizado = false;
     if (in_array('personas', $tablas, true) && in_array('informe_individual', $tablas, true)) {
         $campos = [];
         foreach (['usuarios', 'docentes', 'historias_clinicas', 'informes'] as $tabla) {
@@ -47,14 +48,11 @@ try {
             && in_array('id_persona', $campos['docentes'], true)
             && in_array('id_derivacion_origen', $campos['historias_clinicas'], true)
             && in_array('id_elaborado_por', $campos['informes'], true);
-        if ($normalizado) {
-            echo "Esquema normalizado detectado; no se aplican las migraciones heredadas 001/002.\n";
-            exit(0);
-        }
     }
-    $planificar = static function (mysqli $bd): array {
+    $directorioMigraciones = $normalizado ? '/migrations_normalizadas/*.php' : '/migrations/*.php';
+    $planificar = static function (mysqli $bd) use ($directorioMigraciones): array {
         $plan = [];
-        foreach (glob(__DIR__ . '/migrations/*.php') as $archivo) {
+        foreach (glob(__DIR__ . $directorioMigraciones) as $archivo) {
             $planificador = require $archivo;
             $plan = array_merge($plan, $planificador($bd));
         }
@@ -68,6 +66,10 @@ try {
     }
     foreach ($plan as $sql) $bd->query($sql);
     if ($planificar($bd)) throw new RuntimeException('La comprobación posterior detectó operaciones pendientes.');
+    if ($normalizado) {
+        echo "Esquema normalizado verificado.\n";
+        exit(0);
+    }
     $bd->query('CREATE TABLE IF NOT EXISTS esquema_migraciones (version VARCHAR(80) NOT NULL PRIMARY KEY,
         aplicada_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
     $bd->query("INSERT IGNORE INTO esquema_migraciones (version) VALUES ('001_alinear_esquema')");

@@ -20,6 +20,11 @@ if (!hash_equals($fixture['secreto'], $_SERVER['HTTP_X_PRUEBA_SECRETO'] ?? '')) 
 $ruta = ltrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
 $archivo = realpath($fixture['app'] . '/' . $ruta);
 if (!$archivo || !str_starts_with($archivo, realpath($fixture['app']) . DIRECTORY_SEPARATOR)) { http_response_code(404); exit; }
+if (str_starts_with($ruta, 'asset/') && in_array(pathinfo($archivo, PATHINFO_EXTENSION), ['css','js'], true)) {
+    header('Content-Type: ' . (str_ends_with($archivo, '.css') ? 'text/css' : 'application/javascript') . '; charset=utf-8');
+    readfile($archivo);
+    exit;
+}
 $_SERVER['SCRIPT_FILENAME'] = $archivo;
 ini_set('session.save_path', $fixture['sesiones']);
 require $fixture['app'] . '/includes/autenticacion.php';

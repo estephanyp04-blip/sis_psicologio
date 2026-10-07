@@ -8,6 +8,7 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
 // Las rutas no declaradas se rechazan. Toda petición POST exige CSRF.
 return [
     'index.php' => ['roles' => [1, 2], 'metodos' => ['GET', 'HEAD']],
+    'estadisticas/index.php' => ['roles' => [1, 2], 'metodos' => ['GET', 'HEAD']],
     'usuarios/listar.php' => ['roles' => [1], 'metodos' => ['GET', 'HEAD']],
     'usuarios/ver.php' => ['roles' => [1], 'metodos' => ['GET', 'HEAD']],
     'usuarios/registrar.php' => ['roles' => [1], 'metodos' => ['GET', 'HEAD']],

@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('citas/procesar_editar.php');
 require_once __DIR__ . '/../config/conexion.php';
-require_once __DIR__ . '/../includes/citas_datos.php';
+require_once __DIR__ . '/datos.php';
 $id = (int)filter_var($_POST['id_cita'] ?? null, FILTER_VALIDATE_INT);
 try {
     if ($id <= 0) throw new InvalidArgumentException('La cita no es válida.');

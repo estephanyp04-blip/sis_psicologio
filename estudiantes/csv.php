@@ -1,6 +1,6 @@
 <?php
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(404); exit; }
-require_once __DIR__ . '/estudiantes_datos.php';
+require_once __DIR__ . '/datos.php';
 
 /** Importación parcial: cada INSERT válido se confirma, cada fila rechazada se informa. */
 function estudiantes_importar_csv(mysqli $conexion, $handle): array

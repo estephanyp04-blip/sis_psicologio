@@ -22,8 +22,8 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
     const enviar = () => new Promise(resolve => { app.onload = resolve; campo('formHistoriaClinica').requestSubmit(); });
     try {
         await abrir('/historias_clinicas/editar.php?id=1');
-        comprobar(campo('lugar_nacimiento').value === 'Lugar clínico', 'JS sobrescribe lugar clínico.');
-        comprobar(campo('celular_estudiante').value === '222' && campo('padre_madre').value === 'Tutor clínico', 'JS sobrescribe contacto clínico.');
+        comprobar(campo('lugar_nacimiento').value === 'Lugar de ficha', 'JS pierde lugar de la ficha.');
+        comprobar(campo('celular_estudiante').value === '111' && campo('padre_madre').value === 'Tutor de ficha', 'JS pierde contacto de la ficha.');
         comprobar(campo('input_id_derivacion').value === '1', 'JS cambia vínculo al editar.');
         campo('motivo_consulta').value = 'Edición real de navegador';
         await enviar();

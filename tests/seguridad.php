@@ -5,6 +5,11 @@ date_default_timezone_set('America/La_Paz');
 $raiz = dirname(__DIR__);
 $permisos = require $raiz . '/config/permisos.php';
 $soloAcceso = in_array('--solo-acceso', $argv, true);
+$internosModulo = [
+    'estudiantes/datos.php', 'estudiantes/csv.php', 'derivaciones/datos.php',
+    'citas/datos.php', 'citas/formulario.php', 'historias_clinicas/datos.php',
+    'historias_clinicas/formulario.php', 'informes/datos.php', 'estadisticas/datos.php',
+];
 $temporal = sys_get_temp_dir() . '/psicologia-seguridad-' . bin2hex(random_bytes(8));
 mkdir($temporal, 0700, true);
 mkdir($temporal . '/app', 0700);
@@ -69,7 +74,7 @@ if (!empty($GLOBALS['prueba_negocio'])) {
 PHP
     );
     $secreto = bin2hex(random_bytes(32));
-    $config = ['app' => $temporal . '/app', 'sesiones' => $temporal . '/sesiones', 'secreto' => $secreto];
+    $config = ['app' => $temporal . '/app', 'sesiones' => $temporal . '/sesiones', 'secreto' => $secreto, 'internos_modulo' => $internosModulo];
     file_put_contents($temporal . '/fixture.php', '<?php return ' . var_export($config, true) . ';');
     copy(__DIR__ . '/seguridad_router.php', $temporal . '/router.php');
     $socket = stream_socket_server('tcp://127.0.0.1:0', $errno, $error);
@@ -128,6 +133,7 @@ PHP
         ['usuarios/guardar.php', 'POST', 2], ['usuarios/actualizar.php', 'POST', 3],
         ['docentes/listar.php', 'GET', 3], ['estudiantes/listar.php', 'GET', 3],
         ['historias_clinicas/ver.php', 'GET', 4], ['citas/cancelar.php', 'POST', 4],
+        ['estadisticas/index.php', 'GET', 3], ['estadisticas/index.php', 'GET', 4],
         ['derivaciones/editar.php', 'GET', 2], ['informes/guardar.php', 'POST', 4],
     ] as [$ruta, $metodo, $rol]) {
         $r = peticion($ruta, $metodo, ['rol' => $rol], ['csrf' => $token]);
@@ -144,10 +150,12 @@ PHP
         $r = peticion('derivaciones/listar.php', 'GET', ['rol' => 3, 'sesion' => $sesion]);
         comprobar($r['codigo'] === 303, "Vínculo docente inválido aceptado: $sesion");
     }
-    foreach (array_merge(glob($raiz . '/config/*.php'), glob($raiz . '/includes/*.php'), [$raiz . '/historias_clinicas/formulario.php']) as $archivo) {
+    foreach (array_merge(glob($raiz . '/config/*.php'), glob($raiz . '/includes/*.php'), array_map(static fn($ruta) => $raiz . '/' . $ruta, $internosModulo)) as $archivo) {
         $ruta = str_replace('\\', '/', substr($archivo, strlen($raiz) + 1));
-        $r = peticion($ruta);
-        comprobar($r['codigo'] === 404, "Archivo interno accesible: $ruta");
+        foreach (['GET', 'POST'] as $metodo) {
+            $r = peticion($ruta, $metodo);
+            comprobar($r['codigo'] === 404, "Archivo interno accesible por $metodo: $ruta");
+        }
     }
     echo "Sesiones vencidas/revocadas y archivos internos: correctos.\n";
 
@@ -262,11 +270,11 @@ PHP
         echo "Formularios renderizados, menú por rol y cierre de sesión: correctos.\n";
     }
 
-    // Cobertura: cada PHP de módulo debe estar en la política o ser el parcial interno.
-    foreach (['usuarios', 'docentes', 'estudiantes', 'derivaciones', 'citas', 'historias_clinicas', 'seguimientos', 'informes'] as $modulo) {
+    // Cada PHP de módulo debe tener política o figurar entre los internos probados por HTTP.
+    foreach (['usuarios', 'docentes', 'estudiantes', 'derivaciones', 'citas', 'historias_clinicas', 'seguimientos', 'informes', 'estadisticas'] as $modulo) {
         foreach (glob($raiz . '/' . $modulo . '/*.php') as $archivo) {
             $ruta = $modulo . '/' . basename($archivo);
-            if ($ruta === 'historias_clinicas/formulario.php') continue;
+            if (in_array($ruta, $internosModulo, true)) continue;
             comprobar(isset($permisos[$ruta]), "Ruta sin política: $ruta");
             $fuente = file_get_contents($archivo);
             comprobar(str_starts_with($fuente, '<?php'), "Hay salida o BOM antes de la protección: $ruta");

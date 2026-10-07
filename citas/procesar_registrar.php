@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('citas/procesar_registrar.php');
 require_once __DIR__ . '/../config/conexion.php';
-require_once __DIR__ . '/../includes/citas_datos.php';
+require_once __DIR__ . '/datos.php';
 try {
     $id = cita_guardar($conexion, $_POST, (int)$_SESSION['id_usuario']);
     unset($_SESSION['datos_cita']);

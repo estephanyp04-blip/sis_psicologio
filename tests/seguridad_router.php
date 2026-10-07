@@ -14,7 +14,7 @@ if (!$archivo || !str_starts_with($archivo, realpath($fixture['app']) . DIRECTOR
     exit;
 }
 $_SERVER['SCRIPT_FILENAME'] = $archivo;
-if (str_starts_with($ruta, 'config/') || str_starts_with($ruta, 'includes/') || $ruta === 'historias_clinicas/formulario.php') {
+if (str_starts_with($ruta, 'config/') || str_starts_with($ruta, 'includes/') || in_array($ruta, $fixture['internos_modulo'], true)) {
     require $archivo;
     exit;
 }

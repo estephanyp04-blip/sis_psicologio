@@ -267,6 +267,7 @@ CREATE TABLE `historias_clinicas` (
   `materia_desagrada` varchar(150) DEFAULT NULL,
   `relacion_escolar` text DEFAULT NULL,
   `contexto_familiar` text DEFAULT NULL,
+  `tutor_curso` varchar(150) DEFAULT NULL,
   `estado` enum('Activa','En seguimiento','Cerrada') NOT NULL DEFAULT 'Activa',
   `fecha_registro` timestamp NOT NULL DEFAULT current_timestamp(),
   `fecha_actualizacion` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()

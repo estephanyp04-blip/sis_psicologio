@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('informes/actualizar.php');
 require_once __DIR__ . '/../config/conexion.php';
-require_once __DIR__ . '/../includes/informes_datos.php';
+require_once __DIR__ . '/datos.php';
 
 $idInforme = filter_var($_POST['id_informe'] ?? 0, FILTER_VALIDATE_INT) ?: 0;
 if ($idInforme <= 0) { header('Location: listar.php'); exit; }

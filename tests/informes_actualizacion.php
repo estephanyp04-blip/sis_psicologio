@@ -2,7 +2,7 @@
 // Regresión del guardado de informes normalizados, solo con tablas TEMPORARY.
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 require_once dirname(__DIR__) . '/config/conexion_login.php';
-require_once dirname(__DIR__) . '/includes/informes_datos.php';
+require_once dirname(__DIR__) . '/informes/datos.php';
 
 $total = 0;
 $fallo = false;
