@@ -7,14 +7,14 @@ require_once __DIR__ . '/datos.php';
 $id = filter_var($_POST['id_derivacion'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 if (!$id) { header('Location: listar.php'); exit; }
 try {
-    derivacion_actualizar($conexion, $id, $_POST, (int)$_SESSION['id_rol'], (int)($_SESSION['id_docente'] ?? 0));
+    derivacion_actualizar($conexion, $id, $_POST, (int)$_SESSION['id_rol'], (int)($_SESSION['id_docente'] ?? 0), $_FILES['imagen'] ?? null);
     unset($_SESSION['edicion_derivacion']);
     $_SESSION['mensaje'] = 'La derivación fue actualizada correctamente.';
     $_SESSION['tipo_mensaje'] = 'success';
     header('Location: listar.php');
 } catch (Throwable $error) {
     $datos = [];
-    foreach (['fecha', 'materia', 'motivo', 'prioridad', 'observaciones_adicionales'] as $campo) {
+    foreach (['fecha', 'materia', 'motivo', 'prioridad', 'observaciones_adicionales', 'descripcion_imagen'] as $campo) {
         if (isset($_POST[$campo]) && is_string($_POST[$campo])) $datos[$campo] = $_POST[$campo];
     }
     if (isset($_POST['categorias']) && is_array($_POST['categorias'])) $datos['categorias'] = array_values(array_filter($_POST['categorias'], 'is_string'));

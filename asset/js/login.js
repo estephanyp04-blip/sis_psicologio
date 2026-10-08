@@ -5,7 +5,7 @@ if (boton && campo) {
     boton.addEventListener('click', () => {
         const visible = campo.type === 'password';
         campo.type = visible ? 'text' : 'password';
-        boton.textContent = visible ? 'Ocultar' : 'Mostrar';
         boton.setAttribute('aria-pressed', String(visible));
+        boton.setAttribute('aria-label', visible ? 'Ocultar contraseña' : 'Mostrar contraseña');
     });
 }

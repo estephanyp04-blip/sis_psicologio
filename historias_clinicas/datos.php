@@ -12,10 +12,12 @@ const HISTORIA_TEXTOS = [
     'materia_desagrada' => 150, 'relacion_escolar' => 5000, 'contexto_familiar' => 5000, 'estado' => 30,
 ];
 const HISTORIA_OPCIONES = [
-    'atencion_distraccion' => ['Se distrae mirando a cualquier lado', 'Se olvida sus carpetas o tareas', 'Habla constantemente'],
+    'conductas_riesgo' => ['Conducta delictiva', 'Pandillaje', 'Sospecha de consumo de alcohol/drogas', 'Problema sexual'],
+    'atencion_distraccion' => ['Se distrae mirando a cualquier lado', 'Se olvida sus carpetas o tareas', 'Habla constantemente', 'Se equivoca por descuido', 'No termina de hacer tareas, se atrasa', 'Lenguaje inapropiado / conducta obscena'],
     'actividad_motora' => ['Se mueve constantemente en su asiento', 'Se para y se sienta constantemente'],
-    'dificultades_socioemocionales' => ['Falta de interés por aprender', 'No participa en las actividades'],
-    'estrategias_previas' => ['Conversación con el tutor/a a cargo', 'Mayor supervisión', 'Ninguna'],
+    'adaptacion_normas' => ['No obedece el reglamento del Colegio', 'Le es difícil seguir indicaciones - protesta', 'No cumple normas establecidas', 'Propicia el desorden', 'Miente', 'Agrede de manera verbal', 'Agrede de manera física', 'Llama por apodos / Bullying', 'Sus compañeros lo rechazan'],
+    'dificultades_socioemocionales' => ['Falta de interés por aprender', 'Se le observa triste, deprimido, desganado', 'Cambia de humor frecuentemente', 'Prefiere estar solo(a)', 'No participa en las actividades', 'Se calla y aguanta si lo molestan', 'Tartamudea / habla nerviosamente', 'Se muerde / come las uñas', 'Duda al expresar su opinión', 'Se mantiene callado'],
+    'estrategias_previas' => ['Conversación con él/ella', 'Llamadas de atención', 'Conversación con el tutor/a a cargo', 'Premios y sanciones', 'Mayor supervisión', 'Ninguna'],
 ];
 
 function historia_texto($valor, string $campo, int $maximo): string

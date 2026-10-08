@@ -505,15 +505,25 @@ include '../includes/navbar.php';
         </div>
     </section>
 
-    <!-- =====================================================
-         4. CONDUCTAS DE RIESGO
-         ===================================================== -->
-    <!-- =====================================================
-         5. CONDUCTAS PROBLEMA
-         ===================================================== -->
     <section class="expediente-seccion">
         <div class="expediente-seccion-titulo">
             <span>4</span>
+            <div><h2>Conductas de riesgo</h2></div>
+        </div>
+
+        <div class="opciones-registradas">
+            <?php if (!empty($opciones['conductas_riesgo'])): ?>
+                <?php foreach ($opciones['conductas_riesgo'] as $valor): ?>
+                    <span><i class="bi bi-check2"></i><?= escapar($valor) ?></span>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <span class="sin-dato">Sin opciones marcadas.</span>
+            <?php endif; ?>
+        </div>
+    </section>
+    <section class="expediente-seccion">
+        <div class="expediente-seccion-titulo">
+            <span>5</span>
             <div><h2>Conducta(s) problema(s)</h2></div>
         </div>
 
@@ -521,8 +531,9 @@ include '../includes/navbar.php';
         $grupos = [
             'atencion_distraccion'          => 'A. Atención / distracción',
             'actividad_motora'              => 'B. Actividad motora en exceso',
-            'dificultades_socioemocionales' => 'C. Dificultades socioemocionales',
-            'estrategias_previas'           => 'D. Estrategias de intervención antes de la derivación',
+            'adaptacion_normas'             => 'C. Adaptación a normas',
+            'dificultades_socioemocionales' => 'D. Dificultades socioemocionales',
+            'estrategias_previas'           => 'E. Estrategias de intervención antes de la derivación',
         ];
         ?>
 
@@ -548,7 +559,7 @@ include '../includes/navbar.php';
          ===================================================== -->
     <section class="expediente-seccion">
         <div class="expediente-seccion-titulo">
-            <span>5</span>
+            <span>6</span>
             <div><h2>Contexto familiar</h2></div>
         </div>
 
@@ -618,7 +629,7 @@ include '../includes/navbar.php';
          ===================================================== -->
     <section class="expediente-seccion">
         <div class="expediente-seccion-titulo">
-            <span>6</span>
+            <span>7</span>
             <div>
                 <h2>Resultados del diagnóstico psicológico</h2>
                 <p>Intelectual, emocional, organicidad y personalidad</p>
@@ -641,7 +652,7 @@ include '../includes/navbar.php';
          ===================================================== -->
     <section class="expediente-seccion">
         <div class="expediente-seccion-titulo">
-            <span>7</span>
+            <span>8</span>
             <div><h2>Acuerdos con estudiante y/o Padre-Madre</h2></div>
         </div>
 
@@ -657,7 +668,7 @@ include '../includes/navbar.php';
          ===================================================== -->
     <section class="expediente-seccion">
         <div class="expediente-seccion-titulo">
-            <span>8</span>
+            <span>9</span>
             <div>
                 <h2>Evolución del caso</h2>
                 <p>Registro cronológico del seguimiento</p>

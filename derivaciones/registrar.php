@@ -80,6 +80,7 @@ $rsProfesionales->free();
 
 // Valores anteriores
 $idEstudianteAnt   = (int) ($d['id_estudiante'] ?? 0);
+$idDocenteAnt      = (int) ($d['id_docente'] ?? 0);
 $fechaAnt          = $d['fecha'] ?? date('Y-m-d');
 $materiaAnt        = $d['materia'] ?? '';
 $motivoAnt         = $d['motivo'] ?? '';
@@ -88,6 +89,14 @@ $prioridadAnt      = $d['prioridad'] ?? 'Media';
 $categoriasAnt     = is_array($d['categorias'] ?? null) ? $d['categorias'] : [];
 $solicitarCitaAnt  = !array_key_exists('solicitar_cita', $d) || (int) $d['solicitar_cita'] === 1;
 $idProfesionalAnt  = (int) ($d['id_profesional'] ?? 0);
+$descripcionImagenAnt = is_string($d['descripcion_imagen'] ?? null) ? $d['descripcion_imagen'] : '';
+$rolActual = (int)($_SESSION['id_rol'] ?? 0);
+$docentesDisponibles = [];
+if ($rolActual === 1) {
+    $docentesDisponibles = $conexion->query("SELECT d.id_docente,p.nombres,p.apellidos
+        FROM docentes d INNER JOIN personas p ON p.id_persona=d.id_persona
+        WHERE d.estado='Activo' ORDER BY p.apellidos,p.nombres")->fetch_all(MYSQLI_ASSOC);
+}
 // Preseleccionar la cuenta indicada sin reemplazar una elección anterior.
 if (!array_key_exists('id_profesional', $d)) {
     $coincidenciasMaria = array_filter($profesionales, static function (array $profesional): bool {
@@ -99,8 +108,19 @@ if (!array_key_exists('id_profesional', $d)) {
     }
 }
 
+$descripcionesCategorias = [
+    'Rendimiento Académico' => 'Baja de notas, falta de atención',
+    'Conducta en Aula' => 'Indisciplina, agresividad, interrupciones.',
+    'Social / Emocional' => 'Aislamiento, tristeza, llanto recurrente.',
+    'Dinámica Familiar' => 'Problemas en el hogar, negligencia',
+    'Acoso escolar / Acoso' => 'Víctima o agresor, ciberacoso',
+    'Otro' => 'Situación no especificada arriba',
+];
 $categorias = array_map(
-    static fn(array $categoria): array => [$categoria['nombre'], ''],
+    static fn(array $categoria): array => [
+        $categoria['nombre'],
+        $descripcionesCategorias[$categoria['nombre']] ?? '',
+    ],
     $conexion->query("SELECT nombre FROM categorias_derivacion WHERE estado='Activo' ORDER BY nombre")->fetch_all(MYSQLI_ASSOC)
 );
 $materias = array_column(
@@ -135,7 +155,7 @@ $materias = array_column(
     <div class="card shadow-sm">
         <div class="card-body p-4 p-md-5">
             <form action="registrar.php" method="GET" id="formBuscarEstudiante"></form>
-            <form action="guardar.php" method="POST" id="formDerivacion">
+            <form action="guardar.php" method="POST" id="formDerivacion" enctype="multipart/form-data">
                 <?= login_campo_csrf() ?>
 
                 <!-- 1. DATOS DEL ESTUDIANTE -->
@@ -217,6 +237,22 @@ $materias = array_column(
                                 <?php endforeach; ?>
                             </datalist>
                         </div>
+                        <?php if ($rolActual === 1): ?>
+                            <div class="col-md-6">
+                                <label for="id_docente" class="form-label">Docente que realiza la derivación <span class="text-danger">*</span></label>
+                                <select name="id_docente" id="id_docente" class="form-select" required>
+                                    <option value="">Seleccione un docente...</option>
+                                    <?php foreach ($docentesDisponibles as $docente): ?>
+                                        <option value="<?= (int)$docente['id_docente'] ?>" <?= $idDocenteAnt === (int)$docente['id_docente'] ? 'selected' : '' ?>>
+                                            <?= escapar(trim($docente['apellidos'] . ' ' . $docente['nombres'])) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <?php if (!$docentesDisponibles): ?>
+                                    <div class="form-text text-danger">No hay docentes activos disponibles.</div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -252,6 +288,16 @@ $materias = array_column(
                                   placeholder="Describa la situación observada del estudiante..."
                                   aria-describedby="contadorMotivo" required><?= escapar($motivoAnt) ?></textarea>
                         <div id="contadorMotivo" class="form-text text-end">0 / 2000 caracteres</div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <label for="imagen" class="form-label">Imagen de referencia <span class="text-muted">(opcional)</span></label>
+                            <input type="file" name="imagen" id="imagen" class="form-control"
+                                   accept="image/jpeg,image/png,image/webp">
+                            <div class="form-text">JPG, PNG o WebP. Tamaño máximo: 5 MB.</div>
+                        </div>
+
                     </div>
 
                     <div class="row g-4">
@@ -337,6 +383,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const errorCategorias = document.getElementById('errorCategorias');
     const solicitarCita = document.getElementById('solicitar_cita');
     const profesional = document.getElementById('id_profesional');
+    const imagen = document.getElementById('imagen');
+    const descripcionImagen = document.getElementById('descripcion_imagen');
 
     function actualizarContador(campoId, contadorId) {
         const campo = document.getElementById(campoId);
@@ -356,6 +404,10 @@ document.addEventListener('DOMContentLoaded', function () {
         profesional.disabled = !solicitarCita.checked;
     }
 
+    function actualizarDescripcionImagen() {
+        descripcionImagen.required = imagen.files.length > 0;
+    }
+
     ['motivo', 'observaciones'].forEach(function (campoId) {
         const contadorId = campoId === 'motivo' ? 'contadorMotivo' : 'contadorObservaciones';
         document.getElementById(campoId).addEventListener('input', function () {
@@ -368,7 +420,9 @@ document.addEventListener('DOMContentLoaded', function () {
         categoria.addEventListener('change', actualizarCategorias);
     });
     solicitarCita.addEventListener('change', actualizarProfesional);
+    imagen.addEventListener('change', actualizarDescripcionImagen);
     actualizarProfesional();
+    actualizarDescripcionImagen();
 
     form.addEventListener('submit', function (event) {
         form.classList.add('was-validated');

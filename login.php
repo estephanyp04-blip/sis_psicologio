@@ -31,21 +31,16 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Iniciar sesión | Sistema Psicológico</title>
-    <link href="<?= login_html(login_url('asset/css/login.css?v=2')) ?>" rel="stylesheet">
+    <link href="<?= login_html(login_url('asset/css/login.css?v=3')) ?>" rel="stylesheet">
 </head>
 <body class="login-page">
-<main class="login-card">
-
-    <section class="login-identidad" aria-labelledby="institucion">
+<main class="login-card" aria-labelledby="titulo-login">
+    <header class="login-cabecera">
         <span class="login-simbolo" aria-hidden="true">Ψ</span>
-        <p class="login-etiqueta">DEPARTAMENTO DE PSICOLOGÍA</p>
-        <h1 id="institucion">U.E. Cañada<br>Pailita «B»</h1>
-        <p>Registro de citas y seguimiento de historias clínicas psicológicas de estudiantes.</p>
-        <div class="login-nota">Un espacio para acompañar el bienestar estudiantil.</div>
-    </section>
-    <section class="login-formulario" aria-labelledby="titulo-login">
-        <p class="login-etiqueta">ACCESO AL SISTEMA</p>
-        <h2 id="titulo-login">Iniciar sesión</h2>
+        <h1 id="titulo-login"><span aria-hidden="true">Ψ</span> Sistema Psicológico <span aria-hidden="true">Ψ</span></h1>
+
+    </header>
+    <section class="login-formulario" aria-label="Acceso al sistema">
         <p class="login-ayuda">Ingresa con tu usuario y contraseña.</p>
         <?php if ($error): ?>
             <div class="alert alert-danger login-error" role="alert"><?= login_html($error) ?></div>
@@ -55,20 +50,28 @@ try {
         <?php endif; ?>
         <form action="<?= login_html(login_url('login.php')) ?>" method="post">
             <input type="hidden" name="csrf" value="<?= login_html(login_token()) ?>">
-            <div class="mb-4">
-                <label class="form-label" for="usuario">Usuario</label>
-                <input class="form-control" id="usuario" name="usuario" type="text" maxlength="100" autocomplete="username" autocapitalize="none" spellcheck="false" value="<?= login_html($nombreUsuario) ?>" required autofocus>
+            <div class="login-campo">
+                <label class="visually-hidden" for="usuario">Usuario</label>
+                <span class="login-icono" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.5-3.5 3.1-5.5 7-5.5s6.5 2 7 5.5"/></svg>
+                </span>
+                <input class="form-control" id="usuario" name="usuario" type="text" maxlength="100" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Usuario" value="<?= login_html($nombreUsuario) ?>" required autofocus>
             </div>
-            <div class="mb-4">
-                <label class="form-label" for="password">Contraseña</label>
+            <div class="login-campo">
+                <label class="visually-hidden" for="password">Contraseña</label>
+                <span class="login-icono" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2"/></svg>
+                </span>
                 <div class="login-password">
-                    <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required>
-                    <button type="button" id="ver-password" aria-controls="password" aria-pressed="false" hidden>Mostrar</button>
+                    <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" placeholder="Contraseña" required>
+                    <button type="button" id="ver-password" aria-label="Mostrar contraseña" aria-controls="password" aria-pressed="false" hidden>
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12s3.3-6 9.5-6 9.5 6 9.5 6-3.3 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/><path class="login-ojo-cubierto" d="m4 4 16 16"/></svg>
+                    </button>
                 </div>
             </div>
-            <button class="btn login-boton w-100" type="submit">Ingresar</button>
+            <button class="login-boton" type="submit">Iniciar sesión</button>
         </form>
-        <p class="login-soporte">Si no recuerdas tu contraseña, solicita ayuda al administrador.</p>
+        <p class="login-soporte"><span>¿Olvidaste tu contraseña?</span><br>Solicita ayuda al administrador.</p>
     </section>
 </main>
 <script src="<?= login_html(login_url('asset/js/login.js')) ?>" defer></script>

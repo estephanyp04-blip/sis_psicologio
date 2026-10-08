@@ -120,6 +120,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
         <a href="#seccion-datos">Datos</a>
         <a href="#seccion-motivo">Motivo</a>
         <a href="#seccion-escolar">Situación escolar</a>
+        <a href="#seccion-riesgo">Conductas de riesgo</a>
         <a href="#seccion-conductas">Conductas problema</a>
         <a href="#seccion-familia">Familia</a>
         <a href="#seccion-diagnostico">Diagnóstico</a>
@@ -248,6 +249,16 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
                 <div class="col-md-3">
                     <label class="form-label">Fecha de nacimiento</label>
                     <input type="text" id="fecha_nacimiento_estudiante" class="form-control" readonly>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Edad</label>
+                    <input type="text" id="edad_estudiante" class="form-control" readonly>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Curso</label>
+                    <input type="text" id="curso_estudiante" class="form-control" readonly>
                 </div>
 
                 <!-- LUGAR NACIMIENTO -->
@@ -498,14 +509,41 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
     </section>
 
     <!-- =====================================================
+         4. CONDUCTAS DE RIESGO
+         ===================================================== -->
+    <section class="historia-bloque" id="seccion-riesgo">
+        <button type="button" class="historia-bloque-titulo" data-historia-toggle>
+            <span class="historia-numero">4</span>
+            <span>
+                <strong>Conductas de riesgo</strong>
+                <small>Marque las situaciones identificadas o referidas</small>
+            </span>
+            <i class="bi bi-chevron-up"></i>
+        </button>
+
+        <div class="historia-bloque-contenido">
+            <div class="opciones-check-grid">
+                <?php foreach (opcionesHistoria('conductas_riesgo') as $opcion): ?>
+                    <label class="opcion-check">
+                        <input type="checkbox" name="conductas_riesgo[]"
+                            value="<?= escapar($opcion) ?>"
+                            <?= marcado('conductas_riesgo', $opcion) ?>>
+                        <span><?= escapar($opcion) ?></span>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+
+    <!-- =====================================================
          5. CONDUCTAS PROBLEMA
          ===================================================== -->
     <section class="historia-bloque" id="seccion-conductas">
         <button type="button" class="historia-bloque-titulo" data-historia-toggle>
-            <span class="historia-numero">4</span>
+            <span class="historia-numero">5</span>
             <span>
                 <strong>Conducta(s) problema(s)</strong>
-                <small>Atención, actividad motora y comportamiento socioemocional</small>
+                <small>Atención, actividad motora, adaptación a normas y aspectos socioemocionales</small>
             </span>
             <i class="bi bi-chevron-up"></i>
         </button>
@@ -541,9 +579,23 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
                 </div>
             </div>
 
+            <div class="subseccion-clinica">
+                <h3>C. Adaptación a normas</h3>
+                <div class="opciones-check-grid">
+                    <?php foreach (opcionesHistoria('adaptacion_normas') as $opcion): ?>
+                        <label class="opcion-check">
+                            <input type="checkbox" name="adaptacion_normas[]"
+                                value="<?= escapar($opcion) ?>"
+                                <?= marcado('adaptacion_normas', $opcion) ?>>
+                            <span><?= escapar($opcion) ?></span>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
             <!-- D. SOCIOEMOCIONALES -->
             <div class="subseccion-clinica">
-                <h3>Dificultades socioemocionales</h3>
+                <h3>D. Dificultades socioemocionales</h3>
                 <div class="opciones-check-grid">
                     <?php foreach (opcionesHistoria('dificultades_socioemocionales') as $opcion): ?>
                         <label class="opcion-check">
@@ -558,7 +610,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
 
             <!-- E. ESTRATEGIAS -->
             <div class="subseccion-clinica">
-                <h3>Estrategias de intervención antes de la derivación</h3>
+                <h3>E. Estrategias de intervención antes de la derivación</h3>
                 <div class="opciones-check-grid">
                     <?php foreach (opcionesHistoria('estrategias_previas') as $opcion): ?>
                         <label class="opcion-check">
@@ -578,7 +630,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
          ===================================================== -->
     <section class="historia-bloque" id="seccion-familia">
         <button type="button" class="historia-bloque-titulo" data-historia-toggle>
-            <span class="historia-numero">5</span>
+            <span class="historia-numero">6</span>
             <span>
                 <strong>Contexto familiar</strong>
                 <small>Antecedentes y composición familiar</small>
@@ -674,7 +726,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
          ===================================================== -->
     <section class="historia-bloque" id="seccion-diagnostico">
         <button type="button" class="historia-bloque-titulo" data-historia-toggle>
-            <span class="historia-numero">6</span>
+            <span class="historia-numero">7</span>
             <span>
                 <strong>Resultados del diagnóstico psicológico</strong>
                 <small>Intelectual, emocional, organicidad y personalidad</small>
@@ -697,7 +749,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
          ===================================================== -->
     <section class="historia-bloque" id="seccion-acuerdos">
         <button type="button" class="historia-bloque-titulo" data-historia-toggle>
-            <span class="historia-numero">7</span>
+            <span class="historia-numero">8</span>
             <span>
                 <strong>Acuerdos con estudiante y/o Padre-Madre</strong>
                 <small>Compromisos acordados durante la atención</small>
@@ -717,7 +769,7 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
          ===================================================== -->
     <section class="historia-bloque" id="seccion-evolucion">
         <button type="button" class="historia-bloque-titulo" data-historia-toggle>
-            <span class="historia-numero">8</span>
+            <span class="historia-numero">9</span>
             <span>
                 <strong>Evolución del caso</strong>
                 <small>Evaluación general del progreso del estudiante</small>
@@ -787,6 +839,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const estudianteSelect = document.getElementById('id_estudiante');
     const nombreCompleto = document.getElementById('nombre_completo');
     const fechaNacimiento = document.getElementById('fecha_nacimiento_estudiante');
+    const edadEstudiante = document.getElementById('edad_estudiante');
+    const cursoEstudiante = document.getElementById('curso_estudiante');
     const lugarNacimiento = document.getElementById('lugar_nacimiento');
     const celularEstudiante = document.getElementById('celular_estudiante');
     const padreMadre = document.getElementById('padre_madre');
@@ -797,7 +851,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const opcion = estudianteSelect.options[estudianteSelect.selectedIndex];
 
         if (!opcion || !opcion.value) {
-            [nombreCompleto, fechaNacimiento].forEach(campo => {
+            [nombreCompleto, fechaNacimiento, edadEstudiante, cursoEstudiante].forEach(campo => {
                 if (campo) campo.value = '';
             });
             if (copiarFicha) [lugarNacimiento, celularEstudiante, padreMadre].forEach(campo => { if (campo) campo.value = ''; });
@@ -811,6 +865,24 @@ document.addEventListener('DOMContentLoaded', function () {
             fechaNacimiento.value = fecha
                 ? fecha.split('-').reverse().join('/')
                 : '';
+        }
+
+        if (edadEstudiante) {
+            const partes = (opcion.dataset.fechaNacimiento || '').split('-').map(Number);
+            if (partes.length === 3 && partes.every(Number.isFinite) && partes[0] > 0) {
+                const hoy = new Date();
+                let edad = hoy.getFullYear() - partes[0];
+                if (hoy.getMonth() + 1 < partes[1] || (hoy.getMonth() + 1 === partes[1] && hoy.getDate() < partes[2])) edad--;
+                edadEstudiante.value = edad >= 0 ? `${edad} años` : '';
+            } else {
+                edadEstudiante.value = '';
+            }
+        }
+
+        if (cursoEstudiante) {
+            const curso = opcion.dataset.curso || '';
+            const paralelo = opcion.dataset.paralelo || '';
+            cursoEstudiante.value = [curso, paralelo].filter(Boolean).join(' - ');
         }
 
         if (copiarFicha) {

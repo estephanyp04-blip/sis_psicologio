@@ -1,27 +1,225 @@
-.login-page{margin:0;min-height:100vh;display:grid;place-items:center;padding:32px 18px;background:#f8f3f1;color:#302b2d;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-.login-page *{box-sizing:border-box}
-.login-card{display:grid;grid-template-columns:1fr 1fr;width:min(940px,100%);overflow:hidden;border-radius:22px;background:#fff;box-shadow:0 18px 70px #533c3712;border:1px solid #ece1dd}
-.login-identidad{padding:52px 42px;background:#8d4546;color:#fff;display:flex;flex-direction:column;align-items:flex-start}
-.login-simbolo{font-family:Georgia,serif;display:grid;place-items:center;font-size:45px;width:76px;height:76px;background:#ffffff16;border:1px solid #ffffff4a;border-radius:20px;margin-bottom:38px}
-.login-etiqueta{font-size:11px;font-weight:700;letter-spacing:1.6px;margin:0 0 14px}
-.login-identidad h1{font-size:37px;line-height:1.16;font-weight:650;margin:0 0 22px}
-.login-identidad p:not(.login-etiqueta){font-size:15px;line-height:1.7;max-width:310px;color:#ffeded}
-.login-nota{border-top:1px solid #ffffff38;margin-top:auto;padding-top:26px;font-size:13px;line-height:1.6;color:#ffeded}
-.login-formulario{padding:66px 42px 44px;min-width:0}
-.login-formulario>.login-etiqueta{color:#8d4546}
-.login-formulario h2{font-size:29px;margin:0 0 12px;font-weight:650}
-.login-ayuda{color:#6d6467;font-size:14px;margin-bottom:30px}
-.login-page .form-label{display:block;font-size:14px;font-weight:600;margin-bottom:9px}
-.login-page .mb-4{margin-bottom:24px}
-.login-page .form-control{width:100%;height:48px;border:1px solid #d5cacb;border-radius:8px;padding:10px 12px;font:inherit;background:#fffcfb;color:#302b2d}
-.login-page .form-control:focus{outline:2px solid #8d4546;outline-offset:2px;box-shadow:none}
-.login-password{position:relative}
-.login-password input{padding-right:83px!important}
-.login-password button{position:absolute;right:9px;top:9px;min-height:30px;background:transparent;color:#793638;border:0;font-size:12px;font-weight:600;cursor:pointer}
-.login-page .login-boton{display:block;width:100%;min-height:48px;border:1px solid #8d4546;background:#8d4546;color:#fff;border-radius:8px;font:inherit;font-weight:600;cursor:pointer}
-.login-page .login-boton:hover{background:#75393a;color:#fff}
-.login-page button:focus-visible{outline:3px solid #302b2d;outline-offset:3px}
-.login-soporte{font-size:12px;line-height:1.6;color:#6d6467;margin:25px 0 0}
-.login-error{padding:13px;border-radius:8px;background:#fff0f0;color:#802727;border:1px solid #ecc8c8;font-size:13px;line-height:1.5;margin-bottom:22px}
-.login-aviso{font-size:13px;color:#256239}
-@media(max-width:700px){.login-page{padding:18px 12px}.login-card{grid-template-columns:1fr;max-width:450px}.login-identidad{padding:28px}.login-simbolo{width:48px;height:48px;font-size:30px;margin-bottom:18px}.login-identidad h1{font-size:27px;margin-bottom:12px}.login-identidad h1 br{display:none}.login-identidad p:not(.login-etiqueta){margin-bottom:0;font-size:13px}.login-nota{display:none}.login-formulario{padding:30px 28px}.login-formulario h2{font-size:26px}}
+:root {
+    --login-navy: #0f172a;
+    --login-navy-light: #172554;
+    --login-blue: #2563eb;
+    --login-blue-hover: #1d4ed8;
+}
+
+.login-page {
+    min-height: 100vh;
+    margin: 0;
+    padding: 24px 16px;
+    display: grid;
+    place-items: center;
+    color: #f8fafc;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(59, 130, 246, .18), transparent 48%),
+        #f5f7fb;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+.login-page * { box-sizing: border-box; }
+
+.login-card {
+    width: min(100%, 430px);
+    padding: 32px 34px 28px;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, .22);
+    border-radius: 20px;
+    background: linear-gradient(155deg, var(--login-navy) 0%, #172033 100%);
+    box-shadow: 0 22px 60px rgba(15, 23, 42, .24), 0 4px 12px rgba(15, 23, 42, .08);
+}
+
+.login-cabecera { text-align: center; }
+
+.login-simbolo {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 15px;
+    place-items: center;
+    border: 1px solid rgba(147, 197, 253, .28);
+    border-radius: 14px;
+    color: #bfdbfe;
+    background: rgba(37, 99, 235, .15);
+    font-family: Georgia, serif;
+    font-size: 30px;
+    line-height: 1;
+}
+
+.login-cabecera h1 {
+    margin: 0;
+    color: #f8fafc;
+    font-size: clamp(22px, 5vw, 27px);
+    font-weight: 650;
+    letter-spacing: -.035em;
+    line-height: 1.25;
+}
+
+.login-cabecera h1 span { color: #93c5fd; }
+
+.login-institucion {
+    margin: 9px 0 0;
+    color: #a8b5cc;
+    font-size: 13px;
+    letter-spacing: .025em;
+}
+
+.login-formulario { margin-top: 28px; }
+
+.login-ayuda {
+    margin: 0 0 18px;
+    color: #cbd5e1;
+    font-size: 14px;
+    text-align: center;
+}
+
+.login-formulario form { display: grid; gap: 12px; }
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.login-campo {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.login-icono {
+    position: absolute;
+    z-index: 1;
+    left: 13px;
+    display: grid;
+    width: 18px;
+    height: 18px;
+    place-items: center;
+    color: #a7b5ca;
+    pointer-events: none;
+}
+
+.login-icono svg,
+.login-password button svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
+}
+
+.login-page .form-control {
+    width: 100%;
+    height: 46px;
+    padding: 10px 42px;
+    border: 1px solid rgba(148, 163, 184, .24);
+    border-radius: 9px;
+    outline: 0;
+    color: #f8fafc;
+    background: rgba(71, 85, 105, .46);
+    font: inherit;
+    font-size: 14px;
+    transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+
+.login-page .form-control::placeholder { color: #aab6c8; opacity: 1; }
+
+.login-page .form-control:focus {
+    border-color: #60a5fa;
+    background: rgba(71, 85, 105, .62);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .24);
+}
+
+.login-password { position: relative; flex: 1; min-width: 0; }
+.login-password input { padding-right: 44px !important; }
+
+.login-password button {
+    position: absolute;
+    top: 0;
+    right: 3px;
+    display: grid;
+    width: 40px;
+    height: 46px;
+    padding: 0;
+    place-items: center;
+    border: 0;
+    color: #a7b5ca;
+    background: transparent;
+    cursor: pointer;
+}
+
+.login-password button:hover { color: #fff; }
+.login-password button[aria-pressed="true"] .login-ojo-cubierto { display: none; }
+.login-password button[hidden] { display: none !important; }
+
+.login-boton {
+    width: 100%;
+    min-height: 46px;
+    margin-top: 3px;
+    padding: 10px 16px;
+    border: 1px solid var(--login-blue);
+    border-radius: 9px;
+    color: #fff;
+    background: var(--login-blue);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+.login-boton:hover { border-color: var(--login-blue-hover); background: var(--login-blue-hover); }
+.login-boton:active { transform: translateY(1px); }
+
+.login-page button:focus-visible {
+    outline: 3px solid #93c5fd;
+    outline-offset: 3px;
+}
+
+.login-soporte {
+    margin: 17px 0 0;
+    color: #a8b5cc;
+    font-size: 12px;
+    line-height: 1.65;
+    text-align: center;
+}
+
+.login-soporte span { color: #bfdbfe; font-weight: 600; }
+
+.login-error {
+    margin: 0 0 14px;
+    padding: 11px 13px;
+    border: 1px solid rgba(252, 165, 165, .35);
+    border-radius: 8px;
+    color: #fee2e2;
+    background: rgba(127, 29, 29, .36);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.login-aviso {
+    margin: 0 0 14px;
+    color: #bfdbfe;
+    font-size: 13px;
+    text-align: center;
+}
+
+@media (max-width: 480px) {
+    .login-page { padding: 18px 14px; }
+    .login-card { padding: 28px 22px 24px; border-radius: 17px; }
+    .login-formulario { margin-top: 25px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .login-page *, .login-page *::before, .login-page *::after { transition-duration: .01ms !important; }
+}

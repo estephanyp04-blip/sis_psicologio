@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('derivaciones/guardar.php');
 
 require_once '../config/conexion.php';
+require_once __DIR__ . '/evidencias.php';
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: registrar.php');
     exit;
@@ -38,6 +39,7 @@ $fecha = textoDerivacion('fecha');
 $materia = textoDerivacion('materia');
 $motivo = textoDerivacion('motivo');
 $observaciones = textoDerivacion('observaciones');
+$descripcionImagen = textoDerivacion('descripcion_imagen');
 $prioridad = textoDerivacion('prioridad');
 $categorias = isset($_POST['categorias']) && is_array($_POST['categorias']) ? $_POST['categorias'] : [];
 $solicitarCita = isset($_POST['solicitar_cita']) ? 1 : 0;
@@ -54,6 +56,7 @@ $datos = [
     'id_estudiante' => $idEstudiante, 'id_docente' => $idDocenteElegido,
     'fecha' => $fecha, 'materia' => $materia, 'motivo' => $motivo,
     'observaciones' => $observaciones, 'prioridad' => $prioridad,
+    'descripcion_imagen' => $descripcionImagen,
     'categorias' => $categoriasLimpias, 'solicitar_cita' => $solicitarCita,
     'id_profesional' => $idProfesional
 ];
@@ -71,6 +74,11 @@ try {
     $idRol = (int) ($usuarioActual['id_rol'] ?? 0);
     if (!in_array($idRol, [1, 3], true)) {
         errorDerivacion('Su cuenta no tiene permiso para registrar derivaciones.');
+    }
+    $descripcionImagen = derivacion_imagen_descripcion($descripcionImagen);
+    $subidaImagen = derivacion_imagen_validar($_FILES['imagen'] ?? null, $descripcionImagen);
+    if ($subidaImagen === null && $descripcionImagen !== '') {
+        throw new InvalidArgumentException('Adjunte una imagen para guardar su descripción.');
     }
     // Validaciones del reporte.
     $errores = [];
@@ -134,12 +142,15 @@ try {
         $stmtDocente->close();
         $_SESSION['id_docente'] = $idDocente;
     } else {
+        if ($subidaImagen !== null && $idDocenteElegido <= 0) {
+            errorDerivacion('Seleccione el docente responsable antes de adjuntar la imagen.');
+        }
         // El administrador elige al docente; no se asigna uno por defecto.
         $idDocente = $idDocenteElegido;
         if ($idDocente <= 0) {
-            $resultadoDocentes = $conexion->query('SELECT d.id_docente,p.nombres,p.apellidos
+            $resultadoDocentes = $conexion->query("SELECT d.id_docente,p.nombres,p.apellidos
                 FROM docentes d INNER JOIN personas p ON p.id_persona=d.id_persona
-                ORDER BY p.apellidos,p.nombres');
+                WHERE d.estado='Activo' ORDER BY p.apellidos,p.nombres");
             $docentes = $resultadoDocentes->fetch_all(MYSQLI_ASSOC);
             $resultadoDocentes->free();
             if (!$docentes) {
@@ -185,7 +196,7 @@ try {
             <?php
             exit;
         }
-        $stmtDocente = $conexion->prepare('SELECT id_docente FROM docentes WHERE id_docente = ? LIMIT 1');
+        $stmtDocente = $conexion->prepare("SELECT id_docente FROM docentes WHERE id_docente = ? AND estado='Activo' LIMIT 1");
         $stmtDocente->bind_param('i', $idDocente);
         $stmtDocente->execute();
         $existeDocente = $stmtDocente->get_result()->num_rows === 1;
@@ -225,28 +236,40 @@ try {
     }
     // Conservar el vínculo con la psicóloga elegida para la solicitud.
     $idProfesionalGuardar = $solicitarCita === 1 && $idProfesional > 0 ? $idProfesional : null;
+    $archivoGuardado = null;
     $conexion->begin_transaction();
-    $stmt = $conexion->prepare('INSERT INTO derivaciones
-        (fecha,id_estudiante,id_docente,id_materia,motivo,observaciones,prioridad,estado,id_psicologa_solicitada,solicitar_cita)
-        VALUES (?,?,?,?,?,?,?,?,?,?)');
-    $stmt->bind_param('siiissssii', $fecha, $idEstudiante, $idDocente, $idMateria, $motivo, $observacionesFinales, $prioridad, $estado, $idProfesionalGuardar, $solicitarCita);
-    $stmt->execute();
-    $idDerivacion = (int)$conexion->insert_id;
-    $stmt->close();
-    $stmtCategoria = $conexion->prepare('INSERT INTO derivacion_categorias (id_derivacion,id_categoria) VALUES (?,?)');
-    foreach ($categoriasLimpias as $categoria) {
-        $idCategoria = $categoriasPorNombre[$categoria];
-        $stmtCategoria->bind_param('ii', $idDerivacion, $idCategoria);
-        $stmtCategoria->execute();
+    try {
+        $stmt = $conexion->prepare('INSERT INTO derivaciones
+            (fecha,id_estudiante,id_docente,id_materia,motivo,observaciones,prioridad,estado,id_psicologa_solicitada,solicitar_cita)
+            VALUES (?,?,?,?,?,?,?,?,?,?)');
+        $stmt->bind_param('siiissssii', $fecha, $idEstudiante, $idDocente, $idMateria, $motivo, $observacionesFinales, $prioridad, $estado, $idProfesionalGuardar, $solicitarCita);
+        $stmt->execute();
+        $idDerivacion = (int)$conexion->insert_id;
+        $stmt->close();
+        $stmtCategoria = $conexion->prepare('INSERT INTO derivacion_categorias (id_derivacion,id_categoria) VALUES (?,?)');
+        foreach ($categoriasLimpias as $categoria) {
+            $idCategoria = $categoriasPorNombre[$categoria];
+            $stmtCategoria->bind_param('ii', $idDerivacion, $idCategoria);
+            $stmtCategoria->execute();
+        }
+        $stmtCategoria->close();
+        if ($subidaImagen !== null) {
+            $archivoGuardado = derivacion_imagen_guardar($conexion, $idDerivacion, $subidaImagen);
+        }
+        $conexion->commit();
+    } catch (Throwable $error) {
+        $conexion->rollback();
+        if ($archivoGuardado !== null) @unlink($archivoGuardado['local']);
+        throw $error;
     }
-    $stmtCategoria->close();
-    $conexion->commit();
     unset($_SESSION['datos_derivacion']);
     $_SESSION['mensaje'] = 'La derivación se registró correctamente.';
     $_SESSION['tipo_mensaje'] = 'success';
     header('Location: listar.php');
     exit;
-} catch (mysqli_sql_exception $error) {
+} catch (InvalidArgumentException $error) {
+    errorDerivacion($error->getMessage());
+} catch (Throwable $error) {
     error_log('Error en derivaciones/guardar.php: ' . $error->getMessage());
     errorDerivacion('No se pudo guardar la derivación. Los datos del formulario se conservaron. Inténtelo de nuevo o comuníquese con el administrador.');
 }

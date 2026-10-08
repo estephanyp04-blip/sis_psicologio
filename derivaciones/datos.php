@@ -1,6 +1,7 @@
 <?php
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(404); exit; }
 require_once __DIR__ . '/../includes/trazabilidad_datos.php';
+require_once __DIR__ . '/evidencias.php';
 
 function derivacion_catalogo_categorias(mysqli $bd): array
 {
@@ -67,9 +68,12 @@ function derivacion_observaciones(array $entrada, ?string $original, array $perm
     return implode("\n\n", array_merge($partes, $previo['metadatos']));
 }
 
-function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, int $docente): void
+function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, int $docente, ?array $archivo = null): void
 {
     if (!in_array($rol, [1, 3], true)) throw new InvalidArgumentException('No tiene permiso para editar derivaciones.');
+    $descripcionImagenPresente = array_key_exists('descripcion_imagen', $entrada);
+    $descripcionImagen = derivacion_imagen_descripcion($entrada['descripcion_imagen'] ?? '');
+    $subidaImagen = derivacion_imagen_validar($archivo, $descripcionImagen);
     foreach (['fecha' => 10, 'materia' => 150, 'motivo' => 2000, 'prioridad' => 10] as $campo => $maximo) {
         $valor = $entrada[$campo] ?? null;
         if (!is_string($valor) || trim($valor) === '' || !mb_check_encoding($valor, 'UTF-8') || mb_strlen($valor) > $maximo) {
@@ -80,6 +84,8 @@ function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, in
     $fecha = DateTimeImmutable::createFromFormat('!Y-m-d', $entrada['fecha']);
     if (!$fecha || $fecha->format('Y-m-d') !== $entrada['fecha'] || $entrada['fecha'] > date('Y-m-d')) throw new InvalidArgumentException('La fecha no es válida.');
     if (!in_array($entrada['prioridad'], ['Alta', 'Media', 'Baja'], true)) throw new InvalidArgumentException('La prioridad no es válida.');
+    $archivoNuevo = null;
+    $rutaAnterior = null;
     $bd->begin_transaction();
     try {
         $stmt = $bd->prepare('SELECT d.observaciones,d.estado,d.id_materia,m.nombre AS materia
@@ -89,6 +95,15 @@ function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, in
         $actual = $stmt->get_result()->fetch_assoc(); $stmt->close();
         if (!$actual) throw new InvalidArgumentException('La derivación no existe o no tiene permiso para editarla.');
         if ($actual['estado'] !== 'Pendiente') throw new InvalidArgumentException('Solo se pueden editar derivaciones pendientes.');
+        $stmt = $bd->prepare('SELECT id_evidencia,ruta,descripcion FROM derivacion_evidencias
+            WHERE id_derivacion=? ORDER BY id_evidencia DESC LIMIT 1 FOR UPDATE');
+        $stmt->bind_param('i', $id); $stmt->execute();
+        $evidencia = $stmt->get_result()->fetch_assoc() ?: null; $stmt->close();
+        $descripcionImagenFinal = $descripcionImagenPresente
+            ? $descripcionImagen : (string)($evidencia['descripcion'] ?? '');
+        if (!$evidencia && $subidaImagen === null && $descripcionImagenFinal !== '') {
+            throw new InvalidArgumentException('Adjunte una imagen para guardar su descripción.');
+        }
         $catalogo = derivacion_catalogo_categorias($bd);
         $activas = array_keys(array_filter($catalogo, static fn($c) => $c['estado'] === 'Activo'));
         $registradas = derivacion_categorias_registradas($bd, $id, $actual['observaciones'] ?? '');
@@ -111,9 +126,26 @@ function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, in
             }
             $vinculo->close();
         }
+        if ($subidaImagen !== null) {
+            $subidaImagen['descripcion'] = $descripcionImagen;
+            if ($evidencia) $rutaAnterior = (string)$evidencia['ruta'];
+            $archivoNuevo = derivacion_imagen_guardar(
+                $bd,
+                $id,
+                $subidaImagen,
+                $evidencia ? (int)$evidencia['id_evidencia'] : null
+            );
+        } elseif ($evidencia && $descripcionImagenPresente) {
+            $stmt = $bd->prepare('UPDATE derivacion_evidencias SET descripcion=? WHERE id_evidencia=? AND id_derivacion=?');
+            $idEvidencia = (int)$evidencia['id_evidencia'];
+            $stmt->bind_param('sii', $descripcionImagen, $idEvidencia, $id);
+            $stmt->execute(); $stmt->close();
+        }
         $bd->commit();
+        if ($rutaAnterior !== null) derivacion_imagen_eliminar($rutaAnterior);
     } catch (Throwable $error) {
         $bd->rollback();
+        if ($archivoNuevo !== null) @unlink($archivoNuevo['local']);
         throw $error;
     }
 }

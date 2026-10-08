@@ -147,6 +147,13 @@ $puedeEditar =
         ($rolActual === 3 && $esPropietario)
     );
 
+$stmt = $conexion->prepare('SELECT id_evidencia,nombre_original,descripcion FROM derivacion_evidencias
+    WHERE id_derivacion=? ORDER BY id_evidencia DESC LIMIT 1');
+$stmt->bind_param('i', $idDerivacion);
+$stmt->execute();
+$evidencia = $stmt->get_result()->fetch_assoc() ?: null;
+$stmt->close();
+
 /* Preparar información */
 $nombreEstudiante = trim(
     ($derivacion['estudiante_apellidos'] ?? '') .
@@ -440,6 +447,21 @@ include '../includes/navbar.php';
                             No se registró un motivo.
                         </p>
 
+                    <?php endif; ?>
+
+                    <?php if ($evidencia): ?>
+                        <div class="mt-4">
+                            <h6>Imagen adjunta</h6>
+                            <a href="<?= $baseUrl ?>/derivaciones/evidencia.php?id=<?= (int)$evidencia['id_evidencia'] ?>"
+                               target="_blank" rel="noopener">
+                                <img src="<?= $baseUrl ?>/derivaciones/evidencia.php?id=<?= (int)$evidencia['id_evidencia'] ?>"
+                                     class="img-fluid rounded border" style="max-height: 420px"
+                                     alt="<?= escapar($evidencia['descripcion'] ?: 'Imagen de referencia') ?>">
+                            </a>
+                            <?php if (trim((string)($evidencia['descripcion'] ?? '')) !== ''): ?>
+                                <p class="mt-2 mb-0"><strong>Qué se desea destacar:</strong><br><?= nl2br(escapar($evidencia['descripcion'])) ?></p>
+                            <?php endif; ?>
+                        </div>
                     <?php endif; ?>
                 </div>
 

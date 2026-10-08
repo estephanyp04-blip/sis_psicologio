@@ -57,7 +57,10 @@ CREATE TABLE `categorias_derivacion` (
 INSERT INTO `categorias_derivacion` (`id_categoria`, `nombre`, `estado`) VALUES
 (1, 'Rendimiento Académico', 'Activo'),
 (2, 'Acoso escolar / Acoso', 'Activo'),
-(3, 'Conducta en Aula', 'Activo');
+(3, 'Conducta en Aula', 'Activo'),
+(4, 'Dinámica Familiar', 'Activo'),
+(5, 'Social / Emocional', 'Activo'),
+(6, 'Otro', 'Activo');
 
 -- --------------------------------------------------------
 
@@ -149,6 +152,7 @@ CREATE TABLE `derivacion_evidencias` (
   `id_evidencia` int(10) UNSIGNED NOT NULL,
   `id_derivacion` int(10) UNSIGNED NOT NULL,
   `nombre_original` varchar(255) NOT NULL,
+  `descripcion` text DEFAULT NULL,
   `ruta` varchar(500) NOT NULL,
   `tipo_mime` varchar(100) NOT NULL,
   `fecha_registro` datetime NOT NULL DEFAULT current_timestamp()
@@ -234,7 +238,9 @@ INSERT INTO `grupos_opciones_historia` (`id_grupo`, `codigo`, `nombre`) VALUES
 (1, 'atencion_distraccion', 'Atención y distracción'),
 (2, 'actividad_motora', 'Actividad motora'),
 (3, 'dificultades_socioemocionales', 'Dificultades socioemocionales'),
-(4, 'estrategias_previas', 'Estrategias previas');
+(4, 'estrategias_previas', 'Estrategias previas'),
+(5, 'conductas_riesgo', 'Conductas de riesgo'),
+(6, 'adaptacion_normas', 'Adaptación a normas');
 
 -- --------------------------------------------------------
 
@@ -501,7 +507,34 @@ INSERT INTO `opciones_historia` (`id_opcion`, `id_grupo`, `descripcion`, `estado
 (7, 4, 'Mayor supervisión', 'Activo'),
 (8, 2, 'Se para y se sienta constantemente', 'Activo'),
 (9, 4, 'Ninguna', 'Activo'),
-(10, 3, 'No participa en las actividades', 'Activo');
+(10, 3, 'No participa en las actividades', 'Activo'),
+(11, 1, 'Se equivoca por descuido', 'Activo'),
+(12, 1, 'No termina de hacer tareas, se atrasa', 'Activo'),
+(13, 1, 'Lenguaje inapropiado / conducta obscena', 'Activo'),
+(14, 3, 'Se le observa triste, deprimido, desganado', 'Activo'),
+(15, 3, 'Cambia de humor frecuentemente', 'Activo'),
+(16, 3, 'Prefiere estar solo(a)', 'Activo'),
+(17, 3, 'Se calla y aguanta si lo molestan', 'Activo'),
+(18, 3, 'Tartamudea / habla nerviosamente', 'Activo'),
+(19, 3, 'Se muerde / come las uñas', 'Activo'),
+(20, 3, 'Duda al expresar su opinión', 'Activo'),
+(21, 3, 'Se mantiene callado', 'Activo'),
+(22, 4, 'Conversación con él/ella', 'Activo'),
+(23, 4, 'Llamadas de atención', 'Activo'),
+(24, 4, 'Premios y sanciones', 'Activo'),
+(25, 5, 'Conducta delictiva', 'Activo'),
+(26, 5, 'Pandillaje', 'Activo'),
+(27, 5, 'Sospecha de consumo de alcohol/drogas', 'Activo'),
+(28, 5, 'Problema sexual', 'Activo'),
+(29, 6, 'No obedece el reglamento del Colegio', 'Activo'),
+(30, 6, 'Le es difícil seguir indicaciones - protesta', 'Activo'),
+(31, 6, 'No cumple normas establecidas', 'Activo'),
+(32, 6, 'Propicia el desorden', 'Activo'),
+(33, 6, 'Miente', 'Activo'),
+(34, 6, 'Agrede de manera verbal', 'Activo'),
+(35, 6, 'Agrede de manera física', 'Activo'),
+(36, 6, 'Llama por apodos / Bullying', 'Activo'),
+(37, 6, 'Sus compañeros lo rechazan', 'Activo');
 
 -- --------------------------------------------------------
 
@@ -1117,7 +1150,7 @@ ALTER TABLE `auditoria`
 -- AUTO_INCREMENT de la tabla `categorias_derivacion`
 --
 ALTER TABLE `categorias_derivacion`
-  MODIFY `id_categoria` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_categoria` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT de la tabla `citas`
@@ -1159,7 +1192,7 @@ ALTER TABLE `estudiantes`
 -- AUTO_INCREMENT de la tabla `grupos_opciones_historia`
 --
 ALTER TABLE `grupos_opciones_historia`
-  MODIFY `id_grupo` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id_grupo` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT de la tabla `historias_clinicas`
@@ -1207,7 +1240,7 @@ ALTER TABLE `modulos`
 -- AUTO_INCREMENT de la tabla `opciones_historia`
 --
 ALTER TABLE `opciones_historia`
-  MODIFY `id_opcion` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id_opcion` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
 
 --
 -- AUTO_INCREMENT de la tabla `paralelos`

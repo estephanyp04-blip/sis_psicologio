@@ -31,6 +31,7 @@ return [
     'estudiantes/importar.php' => ['roles' => [1, 2], 'metodos' => ['POST']],
     'derivaciones/listar.php' => ['roles' => [1, 2, 3], 'metodos' => ['GET', 'HEAD']],
     'derivaciones/ver.php' => ['roles' => [1, 2, 3], 'metodos' => ['GET', 'HEAD']],
+    'derivaciones/evidencia.php' => ['roles' => [1, 2, 3], 'metodos' => ['GET', 'HEAD']],
     'derivaciones/mis_derivaciones.php' => ['roles' => [3], 'metodos' => ['GET', 'HEAD']],
     'derivaciones/registrar.php' => ['roles' => [1, 3], 'metodos' => ['GET', 'HEAD']],
     'derivaciones/editar.php' => ['roles' => [1, 3], 'metodos' => ['GET', 'HEAD']],

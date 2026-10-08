@@ -40,6 +40,12 @@ El comando muestra las operaciones pendientes sin aplicarlas. Si detecta el esqu
 
 La migración `002_materias_docentes.php` incorpora Física, Química, Tecnología y Religión cuando faltan. Conserva los identificadores y estados de materias existentes, incluso si el nombre está escrito sin acento; no duplica registros al repetirse. El SQL de instalación también incluye las diez materias. Cada docente puede tener varias asignaciones en `docente_materias`.
 
+La migración `003_opciones_historia_clinica.php` agrega las opciones de conductas de riesgo y adaptación a normas, y completa las listas de atención, dificultades socioemocionales y estrategias previas. El SQL de instalación incluye los mismos catálogos.
+
+La migración `004_descripcion_evidencia_derivacion.php` agrega la descripción asociada a las imágenes adjuntas en una derivación.
+
+La migración `005_categorias_derivacion_completas.php` incorpora Dinámica Familiar, Social / Emocional y Otro únicamente si no existen. Las descripciones de apoyo de las seis categorías se muestran en el formulario de registro.
+
 Después de respaldar una base existente, aplicar las operaciones pendientes:
 
 ```powershell

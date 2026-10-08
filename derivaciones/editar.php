@@ -90,6 +90,13 @@ if ($derivacion['estado'] !== 'Pendiente') {
     exit;
 }
 
+$stmt = $conexion->prepare('SELECT id_evidencia,nombre_original,descripcion FROM derivacion_evidencias
+    WHERE id_derivacion=? ORDER BY id_evidencia DESC LIMIT 1');
+$stmt->bind_param('i', $idDerivacion);
+$stmt->execute();
+$evidenciaActual = $stmt->get_result()->fetch_assoc() ?: null;
+$stmt->close();
+
 $nombreEstudiante = trim(
     ($derivacion['estudiante_apellidos'] ?? '') . ' ' .
     ($derivacion['estudiante_nombres'] ?? '')
@@ -134,6 +141,7 @@ $stmt = $conexion->prepare("SELECT nombre,estado FROM materias WHERE estado='Act
 $stmt->bind_param('i', $derivacion['id_materia']); $stmt->execute();
 $materiasEditar = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
 $observacionAdicional = $desglose['adicionales'];
+$descripcionImagenEdit = (string)($evidenciaActual['descripcion'] ?? '');
 $recuperacion = $_SESSION['edicion_derivacion'] ?? [];
 unset($_SESSION['edicion_derivacion']);
 if (($recuperacion['id'] ?? 0) === $idDerivacion) {
@@ -143,6 +151,8 @@ if (($recuperacion['id'] ?? 0) === $idDerivacion) {
     }
     $categoriasSeleccionadas = $datos['categorias'] ?? $categoriasSeleccionadas;
     $observacionAdicional = $datos['observaciones_adicionales'] ?? $observacionAdicional;
+    $descripcionImagenEdit = is_string($datos['descripcion_imagen'] ?? null)
+        ? $datos['descripcion_imagen'] : $descripcionImagenEdit;
 }
 $mensaje = $_SESSION['mensaje'] ?? '';
 unset($_SESSION['mensaje'], $_SESSION['tipo_mensaje']);
@@ -192,7 +202,7 @@ include '../includes/navbar.php';
         <section class="card shadow-sm">
             <div class="card-body p-4">
                 <form id="formEditarDerivacion" action="<?= $baseUrl; ?>/derivaciones/actualizar.php"
-                      method="POST">
+                      method="POST" enctype="multipart/form-data">
                     <?= login_campo_csrf() ?>
 
                     <input type="hidden"
@@ -290,6 +300,28 @@ include '../includes/navbar.php';
                         </div>
 
                         <div class="col-12">
+                            <?php if ($evidenciaActual): ?>
+                                <div class="mb-3">
+                                    <p class="form-label mb-2">Imagen adjunta actual</p>
+                                    <img src="<?= $baseUrl ?>/derivaciones/evidencia.php?id=<?= (int)$evidenciaActual['id_evidencia'] ?>"
+                                         class="img-fluid rounded border" style="max-height: 280px"
+                                         alt="<?= escapar($descripcionImagenEdit ?: 'Imagen adjunta a la derivación') ?>">
+                                </div>
+                            <?php endif; ?>
+                            <label for="imagen" class="form-label">Imagen de referencia <span class="text-muted">(opcional; si selecciona otra, reemplazará la actual)</span></label>
+                            <input type="file" name="imagen" id="imagen" class="form-control"
+                                   accept="image/jpeg,image/png,image/webp">
+                            <div class="form-text">JPG, PNG o WebP. Tamaño máximo: 5 MB.</div>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="descripcion_imagen" class="form-label">¿Qué desea destacar en la imagen?</label>
+                            <textarea id="descripcion_imagen" name="descripcion_imagen" class="form-control"
+                                      rows="3" maxlength="1000"
+                                      placeholder="Explique qué detalle de la imagen desea resaltar..."><?= escapar($descripcionImagenEdit) ?></textarea>
+                        </div>
+
+                        <div class="col-12">
                             <label class="form-label d-block">
                                 Categorías observadas
                                 <span class="text-danger">*</span>
@@ -376,5 +408,14 @@ include '../includes/navbar.php';
     </div>
 </main>
 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const imagen = document.getElementById('imagen');
+    const descripcion = document.getElementById('descripcion_imagen');
+    imagen.addEventListener('change', function () {
+        descripcion.required = imagen.files.length > 0;
+    });
+});
+</script>
 
 <?php include '../includes/footer.php'; ?>
