@@ -439,7 +439,11 @@ INSERT INTO `materias` (`id_materia`, `nombre`, `estado`) VALUES
 (3, 'Biología', 'Activo'),
 (4, 'Inglés', 'Activo'),
 (5, 'Lenguaje', 'Activo'),
-(6, 'Educación Física', 'Activo');
+(6, 'Educación Física', 'Activo'),
+(7, 'Física', 'Activo'),
+(8, 'Química', 'Activo'),
+(9, 'Tecnología', 'Activo'),
+(10, 'Religión', 'Activo');
 
 -- --------------------------------------------------------
 
@@ -1191,7 +1195,7 @@ ALTER TABLE `instituciones`
 -- AUTO_INCREMENT de la tabla `materias`
 --
 ALTER TABLE `materias`
-  MODIFY `id_materia` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_materia` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT de la tabla `modulos`

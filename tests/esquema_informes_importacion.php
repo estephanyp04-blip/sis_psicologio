@@ -30,13 +30,20 @@ function rechaza(callable $accion, string $mensaje): void
 }
 function ejecutar(array $argumentos): string
 {
-    $p = proc_open($argumentos, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+    global $temporal;
+    $p = proc_open($argumentos, [0 => ['pipe', 'r'], 1 => ['file', $temporal . '/proceso.out', 'w'], 2 => ['file', $temporal . '/proceso.err', 'w']], $pipes);
     if (!is_resource($p)) throw new RuntimeException('No se pudo iniciar PHP.');
     fclose($pipes[0]);
-    $salida = stream_get_contents($pipes[1]); fclose($pipes[1]);
-    $error = stream_get_contents($pipes[2]); fclose($pipes[2]);
-    if (proc_close($p) !== 0) throw new RuntimeException($salida . $error);
-    return $salida;
+    $limite = microtime(true) + 45;
+    do {
+        $estado = proc_get_status($p);
+        if (!$estado['running']) break;
+        usleep(100000);
+    } while (microtime(true) < $limite);
+    if ($estado['running']) proc_terminate($p);
+    proc_close($p);
+    if ($estado['running'] || $estado['exitcode'] !== 0) throw new RuntimeException(file_get_contents($temporal . '/proceso.out') . file_get_contents($temporal . '/proceso.err'));
+    return file_get_contents($temporal . '/proceso.out');
 }
 function conectar(string $base): mysqli
 {
@@ -153,6 +160,16 @@ try {
     verificar((int)consultar($copia, 'SELECT ultimo FROM informes_secuencia WHERE id=1')['ultimo'] === 42, 'La migración altera la secuencia.');
     $planificar = require $raiz . '/database/migrations_normalizadas/001_tutor_historia.php';
     verificar($planificar($copia) === [], 'La migración no es idempotente.');
+    $copia->query('DELETE FROM materias WHERE id_materia BETWEEN 7 AND 10');
+    $copia->query("INSERT INTO materias (id_materia,nombre,estado) VALUES (77,'Fisica','Inactivo')");
+    $catalogoAntes = $copia->query('SELECT * FROM materias ORDER BY id_materia')->fetch_all(MYSQLI_ASSOC);
+    $planMaterias = require $raiz . '/database/migrations_normalizadas/002_materias_docentes.php';
+    verificar(count($planMaterias($copia)) === 3, 'Duplica Física por su acento o no detecta materias faltantes.');
+    ejecutar([PHP_BINARY,$raiz.'/database/migrar.php','--base='.$actualizacion,'--comprobar']);
+    verificar($catalogoAntes === $copia->query('SELECT * FROM materias ORDER BY id_materia')->fetch_all(MYSQLI_ASSOC), 'Comprobar modifica el catálogo.');
+    ejecutar([PHP_BINARY,$raiz.'/database/migrar.php','--base='.$actualizacion,'--aplicar']);
+    foreach ($catalogoAntes as $materia) verificar($materia === consultar($copia,'SELECT * FROM materias WHERE id_materia='.(int)$materia['id_materia']), 'La migración cambia una materia existente.');
+    verificar($planMaterias($copia) === [] && (int)consultar($copia,'SELECT COUNT(*) n FROM materias')['n'] === 10, 'Catálogo incompleto o migración no idempotente.');
     echo "Instalación, actualización, conservación de datos e idempotencia: correctas.\n";
 
     prueba_autores($bd);
@@ -225,7 +242,7 @@ try {
 
     mkdir($temporal.'/app',0700); mkdir($temporal.'/sesiones',0700);
     foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($raiz,FilesystemIterator::SKIP_DOTS)) as $archivo) {
-        if($archivo->getExtension()!=='php') continue;
+        if(!in_array($archivo->getExtension(),['php','css','js'],true)) continue;
         $relativa=substr($archivo->getPathname(),strlen($raiz)+1);
         if(str_starts_with($relativa,'tests'.DIRECTORY_SEPARATOR)) continue;
         $destino=$temporal.'/app/'.$relativa;
@@ -314,6 +331,98 @@ try {
     verificar(http_prueba('estudiantes/editar.php?id=999999')['codigo'] === 404, 'Edición inexistente no devuelve 404.');
     verificar(http_prueba('estudiantes/editar.php?id[]=1')['codigo'] === 302, 'No rechaza identificador como arreglo.');
     echo "Receptores HTTP, carga CSV, formularios, edición de estudiantes y recuperación de errores: correctos.\n";
+
+    $bd->query("INSERT INTO personas (id_persona,nombres,apellidos,telefono,correo) VALUES
+        (1006,'Ana','Prueba','70000000','ana@example.test'),(1007,'Bruno','Prueba',NULL,NULL),
+        (1008,'Inactivo','Prueba',NULL,NULL),(1010,'María','D''Ávila','71111111','maria@example.test'),(1011,'Luis','Prueba',NULL,NULL)");
+    $bd->query("INSERT INTO usuarios (id_usuario,id_persona,usuario,password,id_rol,estado) VALUES
+        (105,1006,'docente_alta','hash-prueba',3,'Activo'),(106,1007,'docente_otro','hash-prueba',3,'Activo'),
+        (107,1008,'docente_inactivo','hash-prueba',3,'Inactivo'),(109,1010,'docente_navegador','hash-prueba',3,'Activo'),
+        (110,1011,'docente_sin_contacto','hash-prueba',3,'Activo')");
+    $r = http_prueba('docentes/registrar.php');
+    verificar($r['codigo'] === 200 && str_contains($r['cuerpo'],'data-telefono="70000000"'), 'No ofrece el contacto de la cuenta.');
+    $dom = new DOMDocument(); @$dom->loadHTML('<?xml encoding="UTF-8">'.$r['cuerpo']); $xpath = new DOMXPath($dom);
+    $opciones = array_map(static fn($n)=>(int)$n->getAttribute('value'), iterator_to_array($xpath->query('//select[@id="id_usuario"]/option[@value!=""]')));
+    verificar(in_array(105,$opciones,true) && !array_intersect([101,103,104,107],$opciones), 'Ofrece cuentas asignadas, inactivas o de otro rol.');
+    $alta = ['id_usuario'=>105,'nombres'=>'Ana','apellidos'=>'Prueba','telefono'=>'70000000','correo'=>'ana@example.test','materias'=>['Física','Química','Tecnología','Religión']] + $token;
+    foreach ([[],['Materia inventada'],[['Física']]] as $invalidas) {
+        $r = http_prueba('docentes/guardar.php',array_replace($alta,['materias'=>$invalidas]));
+        verificar(str_contains($r['cabeceras'],'registrar.php') && !consultar($bd,'SELECT id_docente FROM docentes WHERE id_persona=1006'), 'Guarda materias inválidas o incompletas.');
+    }
+    $r = http_prueba('docentes/guardar.php',array_replace($alta,['id_usuario'=>107]));
+    verificar(!consultar($bd,'SELECT id_docente FROM docentes WHERE id_persona=1008'), 'Registra una cuenta inactiva.');
+    $r = http_prueba('docentes/guardar.php',array_replace($alta,['materias'=>[...$alta['materias'],'Física']]));
+    $idDocente = (int)(consultar($bd,'SELECT id_docente FROM docentes WHERE id_persona=1006')['id_docente'] ?? 0);
+    verificar($r['codigo'] === 302 && $idDocente > 0, 'No registra el docente con varias materias.');
+    $asignadas = static fn() => array_column($bd->query("SELECT m.nombre FROM docente_materias dm JOIN materias m ON m.id_materia=dm.id_materia WHERE dm.id_docente=$idDocente ORDER BY m.nombre")->fetch_all(MYSQLI_ASSOC),'nombre');
+    verificar($asignadas() === ['Física','Química','Religión','Tecnología'], 'Pierde o duplica materias al guardar.');
+    $r = http_prueba('docentes/editar.php?id='.$idDocente);
+    $editarDocente = formulario($r['cuerpo'],'formDocente');
+    verificar($editarDocente['materias'] === $asignadas(), 'Editar no recupera todas las casillas seleccionadas.');
+    $r = http_prueba('docentes/actualizar.php',array_replace($editarDocente,['materias'=>['Matemática','Religión']]));
+    verificar(str_contains($r['cabeceras'],'ver.php') && $asignadas() === ['Matemática','Religión'], 'No permite cambiar varias materias.');
+    $r = http_prueba('docentes/listar.php?buscar='.rawurlencode('Matemática'));
+    verificar(str_contains($r['cuerpo'],'Matemática, Religión'), 'Buscar por materia oculta las otras asignaciones.');
+    $personaAntes = consultar($bd,'SELECT * FROM personas WHERE id_persona=1006');
+    $bd->query("CREATE TRIGGER fallo_materias BEFORE INSERT ON docente_materias FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Fallo intencional de materias'");
+    try {
+        http_prueba('docentes/actualizar.php',array_replace($editarDocente,['nombres'=>'Revertir','materias'=>['Física','Química']]));
+        verificar($asignadas() === ['Matemática','Religión'] && $personaAntes === consultar($bd,'SELECT * FROM personas WHERE id_persona=1006'), 'Un fallo en materias deja cambios parciales.');
+    } finally { $bd->query('DROP TRIGGER fallo_materias'); }
+    echo "Docentes: cuentas disponibles, materias múltiples, edición, búsqueda y rollback correctos.\n";
+
+    if (in_array('--navegador',$argv,true)) {
+        $chrome = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+        if (!is_file($chrome)) throw new RuntimeException('No se encontró Chrome.');
+        file_put_contents($temporal.'/fixture.php','<?php return '.var_export(['app'=>$temporal.'/app','sesiones'=>$temporal.'/sesiones','secreto'=>$secreto,'navegador'=>true],true).';');
+        file_put_contents($temporal.'/navegador.html', <<<'HTML'
+<!doctype html><html lang="es"><meta charset="utf-8"><title>Prueba de docentes</title>
+<body><pre id="resultado">PENDIENTE</pre><iframe id="app"></iframe><script>
+(async()=>{
+    const app=document.getElementById('app'); let total=0;
+    const comprobar=(ok,m)=>{if(!ok)throw new Error(m);total++;};
+    const abrir=url=>new Promise(resolve=>{app.onload=resolve;app.src=url;});
+    const campo=id=>app.contentDocument.getElementById(id);
+    const cambiar=valor=>{campo('id_usuario').value=valor;campo('id_usuario').dispatchEvent(new app.contentWindow.Event('change'));};
+    const casillas=()=>Array.from(app.contentDocument.querySelectorAll('.materia-check'));
+    const elegir=nombres=>casillas().forEach(c=>{c.checked=nombres.includes(c.value);c.dispatchEvent(new app.contentWindow.Event('change'));});
+    const enviar=()=>new Promise(resolve=>{app.onload=resolve;campo('formDocente').requestSubmit();});
+    try {
+        await abrir('/docentes/registrar.php');
+        cambiar('109');
+        comprobar(campo('nombres').value==='María' && campo('apellidos').value==="D'Ávila",'No completa nombres con acentos y comillas.');
+        comprobar(campo('telefono').value==='71111111' && campo('correo').value==='maria@example.test','No completa contactos.');
+        campo('nombres').value='Nombre corregido'; cambiar('110');
+        comprobar(campo('nombres').value==='Luis' && campo('telefono').value==='' && campo('correo').value==='','Cambiar cuenta arrastra datos de otra persona.');
+        cambiar('');
+        comprobar(['nombres','apellidos','telefono','correo'].every(id=>campo(id).value===''),'Vaciar la cuenta conserva datos ajenos.');
+        cambiar('109');
+        const evento=new app.contentWindow.Event('submit',{cancelable:true});
+        comprobar(!campo('formDocente').dispatchEvent(evento) && !campo('errorMaterias').classList.contains('d-none'),'No exige al menos una materia.');
+        elegir(['Física','Química','Tecnología','Religión']);
+        comprobar(casillas().filter(c=>c.checked).length===4,'No permite marcar cuatro materias.');
+        campo('nombres').value='María Elena';
+        await enviar();
+        comprobar(app.contentWindow.location.pathname==='/docentes/listar.php','El formulario no guarda.');
+        const fila=Array.from(app.contentDocument.querySelectorAll('tbody tr')).find(f=>f.textContent.includes('docente_navegador'));
+        comprobar(fila && ['Física','Química','Tecnología','Religión','María Elena'].every(t=>fila.textContent.includes(t)),'No muestra lo guardado.');
+        await abrir(fila.querySelector('a[href^="editar.php"]').href);
+        comprobar(campo('nombres').value==='María Elena' && casillas().filter(c=>c.checked).length===4,'Editar sobrescribe los datos o desmarca materias.');
+        elegir(['Física','Religión']); await enviar();
+        comprobar(app.contentWindow.location.pathname==='/docentes/ver.php' && app.contentDocument.body.textContent.includes('Física, Religión'),'No persiste cambio de materias.');
+        document.getElementById('resultado').textContent=JSON.stringify({ok:true,total});
+    }catch(e){document.getElementById('resultado').textContent=JSON.stringify({ok:false,total,error:e.message});}
+})();
+</script></body></html>
+HTML);
+        $html = ejecutar([$chrome,'--headless','--disable-gpu','--no-first-run','--no-default-browser-check','--disable-background-networking',
+            '--user-data-dir='.$temporal.'/chrome','--dump-dom','--virtual-time-budget=20000','http://127.0.0.1:'.$puerto.'/__prueba_navegador?secreto='.$secreto]);
+        $dom = new DOMDocument(); @$dom->loadHTML($html);
+        $resultado = json_decode($dom->getElementById('resultado')?->textContent ?? '',true);
+        verificar(($resultado['ok']??false)===true,'Navegador docentes: '.json_encode($resultado,JSON_UNESCAPED_UNICODE));
+        verificar((int)consultar($bd,'SELECT COUNT(*) n FROM docente_materias dm JOIN docentes d ON d.id_docente=dm.id_docente WHERE d.id_persona=1010')['n']===2,'Navegador no persistió ambas materias.');
+        echo 'Chrome: '.$resultado['total']." comprobaciones de autocompletado y materias correctas.\n";
+    }
     echo "OK: $total comprobaciones. Ninguna escritura de prueba en la base real.\n";
 } catch(Throwable $error) {
     fwrite(STDERR,$error->getMessage()."\n".$error->getTraceAsString()."\n");

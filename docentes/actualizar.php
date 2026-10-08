@@ -69,8 +69,8 @@ if ($apellidos === '') {
 
 /* PROCESAR MATERIAS */
 
-if (!is_array($materiasRecibidas)) {
-    $materiasRecibidas = [];
+if (!is_array($materiasRecibidas) || count(array_filter($materiasRecibidas, 'is_string')) !== count($materiasRecibidas)) {
+    regresarConError('Seleccione las materias usando las casillas del formulario.', $idDocente);
 }
 
 $materiasRecibidas = array_map(

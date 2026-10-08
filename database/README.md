@@ -38,6 +38,8 @@ La herramienta usa la base configurada, solicita la contraseña por terminal y g
 
 El comando muestra las operaciones pendientes sin aplicarlas. Si detecta el esquema normalizado, usa únicamente [migrations_normalizadas/](migrations_normalizadas/). La migración `001_tutor_historia.php` agrega el campo opcional `historias_clinicas.tutor_curso`; conserva los registros existentes y no vuelve a agregarlo si ya existe. El SQL de instalación ya incluye este campo.
 
+La migración `002_materias_docentes.php` incorpora Física, Química, Tecnología y Religión cuando faltan. Conserva los identificadores y estados de materias existentes, incluso si el nombre está escrito sin acento; no duplica registros al repetirse. El SQL de instalación también incluye las diez materias. Cada docente puede tener varias asignaciones en `docente_materias`.
+
 Después de respaldar una base existente, aplicar las operaciones pendientes:
 
 ```powershell

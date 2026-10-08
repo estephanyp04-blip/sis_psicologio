@@ -37,7 +37,11 @@ if ($busqueda !== '') {
         OR p.apellidos LIKE ?
         OR p.telefono LIKE ?
         OR p.correo LIKE ?
-        OR m.nombre LIKE ?
+        OR EXISTS (
+            SELECT 1 FROM docente_materias dm_busqueda
+            INNER JOIN materias m_busqueda ON m_busqueda.id_materia=dm_busqueda.id_materia
+            WHERE dm_busqueda.id_docente=d.id_docente AND m_busqueda.nombre LIKE ?
+        )
         OR u.usuario LIKE ?
     ";
 
@@ -168,7 +172,7 @@ include '../includes/navbar.php';
                     <thead>
                         <tr>
                             <th>Docente</th>
-                            <th>Materia</th>
+                            <th>Materias</th>
                             <th>Teléfono</th>
                             <th>Correo</th>
                             <th>Usuario</th>

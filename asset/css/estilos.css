@@ -1519,6 +1519,65 @@ textarea.form-control {
     padding-bottom: 48px;
 }
 
+/* Panel principal: resumen, atención prioritaria y agenda. */
+.panel-cabecera { display:flex; align-items:center; justify-content:space-between; gap:20px; margin:8px 0 28px; }
+.panel-cabecera h1 { margin:4px 0; font-size:1.8rem; }
+.panel-cabecera p { margin:0; color:var(--color-muted); }
+.panel-cabecera .panel-etiqueta { font-size:.7rem; letter-spacing:.1em; color:var(--color-primary); font-weight:700; }
+.panel-cabecera > time { white-space:nowrap; padding:10px 16px; background:#fff; border:1px solid var(--color-border); border-radius:9px; }
+.panel-resumen { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:20px; margin-bottom:28px; }
+.panel-tarjeta { display:flex; flex-direction:column; min-width:0; padding:24px; background:#fff; border:1px solid var(--color-border); border-radius:10px; color:var(--color-title); }
+.panel-tarjeta:hover { color:var(--color-title); border-color:#93b4ed; box-shadow:var(--shadow-sm); }
+.panel-tarjeta-titulo { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; min-height:66px; }
+.panel-tarjeta h2 { margin:0; font-size:.98rem; line-height:1.5; font-weight:500; color:var(--color-muted); }
+.panel-icono { display:grid; place-items:center; flex-shrink:0; width:44px; height:44px; border-radius:8px; background:#f59e0b; color:#172b4d; }
+.panel-icono svg { width:23px; height:23px; }
+.panel-red .panel-icono { background:#dc2626; color:white; }
+.panel-green .panel-icono { background:#16a34a; color:white; }
+.panel-tarjeta > strong { display:block; margin:10px 0 18px; font-size:2.35rem; line-height:1.2; color:#102a4c; }
+.panel-tarjeta > p { margin:auto 0 0; font-size:.8rem; color:var(--color-muted); }
+.panel-green > p { color:#15803d; }
+.panel-contenido { display:grid; grid-template-columns:minmax(0,2fr) minmax(290px,1fr); align-items:start; gap:24px; }
+.panel-bloque { min-width:0; overflow:hidden; background:#fff; border:1px solid var(--color-border); border-radius:10px; }
+.panel-bloque-cabecera { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:22px 24px; border-bottom:1px solid var(--color-border); }
+.panel-bloque h2 { margin:0; font-size:1.05rem; }
+.panel-bloque a { color:var(--color-primary); }
+.panel-bloque-cabecera > a { font-size:.8rem; text-align:right; }
+.panel-contexto { margin:0; padding:14px 24px; color:var(--color-muted); font-size:.78rem; line-height:1.6; }
+.panel-tabla-scroll { overflow-x:auto; }
+.panel-tabla { width:100%; min-width:650px; border-collapse:collapse; text-align:left; font-size:.85rem; }
+.panel-tabla thead { background:#f1f5f9; color:var(--color-muted); font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; }
+.panel-tabla th,.panel-tabla td { padding:20px 16px; border-bottom:1px solid var(--color-border); vertical-align:middle; }
+.panel-tabla tbody th { font-weight:500; color:#102a4c; }
+.panel-tabla th:first-child { padding-left:24px; }
+.panel-persona { display:flex; align-items:center; gap:12px; min-width:160px; }
+.panel-persona small { display:block; font-size:.72rem; color:var(--color-muted); margin-top:3px; }
+.panel-avatar { flex:0 0 34px; display:grid; place-items:center; width:34px; height:34px; border-radius:50%; background:#e8eef9; color:#34568b; font-size:.72rem; font-weight:700; }
+.panel-prioridad { display:inline-block; padding:3px 12px; border-radius:20px; font-size:.74rem; font-weight:600; }
+.panel-prioridad-alta { background:#dc2626; color:white; }
+.panel-prioridad-media { background:#f59e0b; color:#172b4d; }
+.panel-prioridad-baja { background:#e0f2fe; color:#075985; }
+.panel-abrir { display:inline-flex; align-items:center; gap:8px; white-space:nowrap; padding:4px 10px; border:1px solid var(--color-border); border-radius:7px; }
+.panel-historia { display:block; font-size:.72rem; margin-top:5px; }
+.panel-pie { margin:0; padding:14px 24px; font-size:.75rem; color:var(--color-muted); }
+.panel-vacio { margin:0; padding:32px 24px; color:var(--color-muted); font-size:.87rem; }
+.panel-agenda { list-style:none; margin:0; padding:0; max-height:670px; overflow-y:auto; }
+.panel-agenda li { display:flex; align-items:flex-start; gap:18px; padding:22px 24px; border-top:1px solid var(--color-border); }
+.panel-agenda time { font-size:.95rem; font-weight:600; color:#102a4c; font-variant-numeric:tabular-nums; }
+.panel-cita { padding-left:16px; border-left:3px solid #3b82f6; min-width:0; }
+.panel-cita-reprogramada { border-color:#f59e0b; }
+.panel-cita-atendida { border-color:#16a34a; }
+.panel-cita > a { display:block; font-size:.9rem; font-weight:600; color:#102a4c; overflow-wrap:anywhere; }
+.panel-cita > a:hover { color:var(--color-primary); text-decoration:underline; }
+.panel-cita > span,.panel-cita > small { display:block; color:var(--color-muted); font-size:.76rem; margin-top:3px; overflow-wrap:anywhere; }
+.panel-definiciones { color:var(--color-muted); font-size:.75rem; margin:14px 0 30px; }
+.panel-accesos { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+.panel-accesos .dashboard-module { min-height:130px; padding:20px; gap:12px; }
+.panel-accesos .dashboard-module-icon { width:38px; height:38px; font-size:1.2rem; }
+.dashboard-page a:focus-visible,.panel-tabla-scroll:focus-visible { outline:3px solid #2563eb; outline-offset:3px; }
+@media (max-width:1250px) { .panel-resumen,.panel-accesos { grid-template-columns:repeat(2,minmax(0,1fr)); } .panel-contenido { grid-template-columns:1fr; } }
+@media (max-width:600px) { .panel-cabecera { align-items:flex-start; flex-direction:column; } .panel-resumen,.panel-accesos { grid-template-columns:1fr; gap:14px; } .panel-tarjeta-titulo { min-height:44px; } .panel-bloque-cabecera { padding:18px; } .panel-contexto { padding:12px 18px; } .panel-agenda li { padding:20px 18px; } }
+
 .dashboard-welcome {
     position: relative;
     display: flex;

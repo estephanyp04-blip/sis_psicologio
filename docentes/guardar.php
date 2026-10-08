@@ -35,8 +35,8 @@ $materiasRecibidas = $_POST['materias'] ?? [];
 
 /* VALIDAR QUE MATERIAS SEA UN ARREGLO */
 
-if (!is_array($materiasRecibidas)) {
-    $materiasRecibidas = [];
+if (!is_array($materiasRecibidas) || count(array_filter($materiasRecibidas, 'is_string')) !== count($materiasRecibidas)) {
+    regresarConError('Seleccione las materias usando las casillas del formulario.');
 }
 
 /* LIMPIAR MATERIAS */

@@ -7,22 +7,22 @@ Ejecutar desde la raíz del proyecto, con MySQL iniciado y la conexión de `conf
 ```powershell
 & C:\xampp\php\php.exe tests\seguridad.php
 & C:\xampp\php\php.exe tests\informes_actualizacion.php
-& C:\xampp\php\php.exe tests\esquema_informes_importacion.php
+& C:\xampp\php\php.exe tests\esquema_informes_importacion.php --navegador
 & C:\xampp\php\php.exe tests\historias_derivaciones.php --navegador
 & C:\xampp\php\php.exe tests\trazabilidad.php --navegador
 & C:\xampp\php\php.exe tests\estadisticas.php --navegador
 ```
 
-Últimos resultados con el esquema normalizado: seguridad y estadísticas, 7 de octubre de 2026; las demás suites, 6 de octubre de 2026.
+Últimos resultados con el esquema normalizado: seguridad, estadísticas y esquema/importación, 7 de octubre de 2026; las demás suites, 6 de octubre de 2026.
 
 | Suite | Comprobaciones |
 |---|---:|
 | Seguridad y flujos | 927 |
 | Actualización de informes | 31 |
-| Esquema, importación y edición de estudiantes | 287 |
+| Esquema, importación, estudiantes y docentes, con `--navegador` | 326 + 10 verificaciones dentro de Chrome |
 | Historias y derivaciones, con `--navegador` | 183 + 14 verificaciones dentro de Chrome |
 | Trazabilidad, con `--navegador` | 120 + 11 verificaciones dentro de Chrome |
-| Estadísticas, con `--navegador` | 58 + 12 verificaciones en Chrome a 1440 px y 12 a 390 px |
+| Estadísticas y panel, con `--navegador` | 74 + 19 verificaciones en Chrome a 1440 px y 19 a 390 px |
 
 Las dos primeras usan tablas MySQL `TEMPORARY`. Las otras cuatro crean y eliminan bases `psicologia_test_*` con sufijo aleatorio, usando solo datos sintéticos. La cuenta necesita permisos para crear tablas temporales, bases, vistas y triggers, aplicar el esquema y eliminar las bases de prueba. No se copian pacientes ni cuentas de la base real.
 
@@ -58,7 +58,7 @@ Para ejecutar únicamente los controles de acceso, sin los casos de negocio:
 
 | Archivo | Cobertura |
 |---|---|
-| `esquema_informes_importacion.php` | Instalación, migración del tutor, conservación de datos, CSV parcial, informes concurrentes y edición de estudiantes |
+| `esquema_informes_importacion.php` | Instalación, migraciones de tutor y materias, conservación de datos, CSV parcial, informes concurrentes, estudiantes y docentes |
 | `historias_derivaciones.php` | Persistencia clínica, tutor, medidas, recuperación de errores, categorías de catálogo y conservación de valores históricos |
 | `trazabilidad.php` | Citas, historias, seguimientos e informes; episodios distintos, permisos, rollback y reserva concurrente por profesional |
 | `estadisticas.php` | Conteos por historia, curso y fechas; inscripciones múltiples, paginación, permisos, estados vacíos y filtros en Chrome |
@@ -70,13 +70,17 @@ La migración se ensaya sobre una instalación sintética sin la columna del tut
 
 La edición de estudiantes cubre CI duplicado, recuperación de entradas escapadas, fichas retiradas, CI opcional, consistencia con la inscripción y rollback ante un fallo SQL. Los datos recuperados quedan asociados al estudiante correspondiente. Las categorías y materias inactivas pueden conservarse si ya estaban vinculadas; no se aceptan como nuevas selecciones.
 
+La cobertura de docentes comprueba cuentas disponibles, rechazo de materias inválidas, guardado de cuatro materias sin duplicados, recuperación de casillas al editar, cambio de asignaciones, búsqueda sin ocultar las otras materias y rollback. Con `--navegador` se verifica el autocompletado de nombres y contactos, cambio o limpieza de cuenta sin arrastrar datos ajenos, campos editables y persistencia real de varias materias. La migración del catálogo también se ensaya con una materia existente sin acento e inactiva, conservando su identificador y estado.
+
 Estas pruebas no sustituyen una revisión de los datos reales ni prueban la conversión desde el esquema anterior al normalizado. Detalles en [database/README.md](../database/README.md).
 
 ### Estadísticas
 
 La fixture contiene historias sin sesiones, estudiantes retirados o sin inscripción, cambios de curso, sesiones en los límites del período y dos seguimientos con la misma fecha. Comprueba que las citas no inflen los totales, que los filtros afecten al resumen, gráfico y detalle, y que el último seguimiento no recupere una próxima fecha obsoleta. Los errores SQL o de filtros no se muestran como ceros. Se verifica el escape de nombres y que no se expongan notas clínicas en el resumen.
 
-`--navegador` prueba filtros, restablecimiento, paginación, apertura de la historia, barras visibles y ausencia de desbordamiento a 1440 y 390 px. Para conservar capturas, establecer `CAPTURAS_ESTADISTICAS` con una carpeta existente fuera del proyecto.
+El panel principal se prueba con derivaciones repetidas por estudiante, estudiantes retirados o sin historia, prioridades y estados distintos, sesiones futuras, límites de 7/30 días y citas atendidas, canceladas y reprogramadas. Se verifican el orden de prioridad, la agenda, el límite de cinco estudiantes y los accesos según el rol.
+
+`--navegador` prueba filtros, restablecimiento, paginación, apertura de la historia, barras visibles y ausencia de desbordamiento a 1440 y 390 px. También comprueba las tarjetas del panel y abre sus enlaces a derivaciones, citas y estadísticas. Para conservar capturas del panel, establecer `CAPTURAS_ESTADISTICAS` con una carpeta existente fuera del proyecto.
 
 ## Matriz de permisos
 

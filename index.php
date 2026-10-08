@@ -1,291 +1,116 @@
 <?php
 require_once __DIR__ . '/includes/autenticacion.php';
 requerir_acceso('index.php');
+require_once __DIR__ . '/config/conexion.php';
+require_once __DIR__ . '/estadisticas/datos.php';
 
-
-require_once 'config/conexion.php';
-
-date_default_timezone_set('America/La_Paz');
-
-
-function obtenerTotalDashboard(mysqli $conexion, string $sql): int
-{
-    try {
-        $resultado = $conexion->query($sql);
-
-        if (!$resultado) {
-            return 0;
-        }
-
-        $fila = $resultado->fetch_assoc();
-
-        return (int) ($fila['total'] ?? 0);
-    } catch (mysqli_sql_exception $e) {
-        error_log('Dashboard: ' . $e->getMessage());
-        return 0;
-    }
+$tituloPagina = 'Panel principal';
+$panel = null;
+try {
+    $panel = estadisticas_panel($conexion);
+} catch (Throwable $error) {
+    http_response_code(503);
+    error_log('Panel principal: ' . $error->getMessage());
 }
-
-$totalEstudiantes = obtenerTotalDashboard(
-    $conexion,
-    "SELECT COUNT(*) AS total
-     FROM estudiantes
-     WHERE estado = 'Activo'"
-);
-
-$derivacionesPendientes = obtenerTotalDashboard(
-    $conexion,
-    "SELECT COUNT(*) AS total
-     FROM derivaciones
-     WHERE estado = 'Pendiente'"
-);
-
-$citasHoy = obtenerTotalDashboard(
-    $conexion,
-    "SELECT COUNT(*) AS total
-     FROM citas
-     WHERE fecha = CURDATE()
-       AND estado <> 'Cancelada'"
-);
-
-$totalHistorias = obtenerTotalDashboard(
-    $conexion,
-    "SELECT COUNT(*) AS total
-     FROM historias_clinicas"
-);
-
-$nombreUsuario = trim((string) ($_SESSION['nombre'] ?? ''));
-$fechaActual = date('d/m/Y');
-
-include 'includes/header.php';
-include 'includes/sidebar.php';
-include 'includes/navbar.php';
+$fechaVisible = static fn(string $fecha): string => date('d/m/Y', strtotime($fecha));
+$nombreUsuario = trim((string)($_SESSION['nombre'] ?? ''));
+$accesos = [
+    ['estudiantes/listar.php','Estudiantes','Registrar y consultar estudiantes.','blue','bi-people'],
+    ['derivaciones/listar.php','Derivaciones','Consultar solicitudes de atención.','orange','bi-send'],
+    ['citas/listar.php','Citas','Programar y consultar citas.','green','bi-calendar2-week'],
+    ['historias_clinicas/listar.php','Historias clínicas','Revisar historias y seguimientos.','purple','bi-file-earmark-medical'],
+    ['docentes/listar.php','Docentes','Administrar docentes y materias.','cyan','bi-person-badge'],
+    ['informes/listar.php','Informes','Preparar y consultar informes.','red','bi-file-earmark-bar-graph'],
+    ['estadisticas/index.php','Estadísticas','Explorar sesiones por estudiante.','indigo','bi-bar-chart-line'],
+];
+include __DIR__ . '/includes/header.php';
+include __DIR__ . '/includes/sidebar.php';
+include __DIR__ . '/includes/navbar.php';
 ?>
-
 <main class="main-content dashboard-page">
     <div class="container-fluid">
+        <header class="panel-cabecera">
+            <div><p class="panel-etiqueta">ATENCIÓN PSICOLÓGICA ESTUDIANTIL</p><h1>Panel principal</h1>
+                <p><?= login_html($nombreUsuario) ?> · Resumen de atención y próximas actividades.</p></div>
+            <time datetime="<?= date('Y-m-d') ?>"><?= date('d/m/Y') ?></time>
+        </header>
 
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item active" aria-current="page">
-                    Inicio
-                </li>
-            </ol>
-        </nav>
+        <?php if ($panel === null): ?>
+            <div class="alert alert-danger" role="alert">No se pudo cargar el resumen. Intente nuevamente.</div>
+        <?php else: ?>
+            <?php $r = $panel['resumen'];
+            $tarjetas = [
+                ['en_seguimiento','Estudiantes en seguimiento',$r['en_seguimiento'],'Estudiantes activos con historia en seguimiento','orange','historias_clinicas/listar.php',
+                    '<circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M19 21v-3a6 6 0 0 0-2-4"/>'],
+                ['prioridad_alta','Estudiantes con prioridad alta',$r['prioridad_alta'],'Derivaciones pendientes o en seguimiento','red','derivaciones/listar.php',
+                    '<path d="m8 2 8 0 6 6v8l-6 6H8l-6-6V8Z M12 7v6M12 17h.01"/>'],
+                ['citas_pendientes','Citas pendientes',$r['citas_pendientes'],'Próximos 7 días · '.$fechaVisible($panel['hoy']).' al '.$fechaVisible($panel['fin_agenda']),'orange','citas/listar.php',
+                    '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 11h18M12 14v3l2 1"/>'],
+                ['sesiones','Sesiones realizadas',$r['sesiones'],$r['sesiones_recientes'].' en los últimos 30 días','green','estadisticas/index.php',
+                    '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>'],
+            ]; ?>
+            <section class="panel-resumen" aria-label="Resumen de atención">
+                <?php foreach ($tarjetas as [$clave,$etiqueta,$valor,$detalle,$color,$ruta,$icono]): ?>
+                    <a class="panel-tarjeta panel-<?= $color ?>" href="<?= login_html(login_url($ruta)) ?>">
+                        <div class="panel-tarjeta-titulo"><h2><?= login_html($etiqueta) ?></h2>
+                            <span class="panel-icono" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><?= $icono ?></svg></span></div>
+                        <strong id="panel-<?= $clave ?>" data-valor="<?= $valor ?>"><?= number_format($valor,0,',','.') ?></strong>
+                        <p><?= login_html($detalle) ?></p>
+                    </a>
+                <?php endforeach; ?>
+            </section>
 
-        <section class="dashboard-welcome">
-            <div>
-                <span class="dashboard-welcome-label">
-                    <i class="bi bi-grid-1x2-fill"></i>
-                    Panel principal
-                </span>
+            <div class="panel-contenido">
+                <section class="panel-bloque" aria-labelledby="titulo-prioritarios">
+                    <header class="panel-bloque-cabecera"><h2 id="titulo-prioritarios">Seguimiento prioritario</h2>
+                        <a href="<?= login_html(login_url('derivaciones/listar.php')) ?>">Ver derivaciones <span aria-hidden="true">↗</span></a></header>
+                    <p class="panel-contexto">Estudiantes activos con derivaciones abiertas. Primero la prioridad más alta y quienes llevan más tiempo sin sesión. La prioridad corresponde a la derivación.</p>
+                    <?php if (!$panel['prioritarios']): ?>
+                        <p class="panel-vacio" role="status">No hay estudiantes con derivaciones pendientes o en seguimiento.</p>
+                    <?php else: ?>
+                        <div class="panel-tabla-scroll" tabindex="0" role="region" aria-label="Estudiantes con atención prioritaria">
+                            <table class="panel-tabla">
+                                <thead><tr><th scope="col">Estudiante</th><th scope="col">Curso actual</th><th scope="col">Prioridad</th><th scope="col">Última sesión</th><th scope="col">Consultar</th></tr></thead>
+                                <tbody><?php foreach ($panel['prioritarios'] as $fila):
+                                    $nombre = trim($fila['nombres'].' '.$fila['apellidos']); ?>
+                                    <tr data-estudiante="<?= (int)$fila['id_estudiante'] ?>">
+                                        <th scope="row"><div class="panel-persona"><span class="panel-avatar" aria-hidden="true"><?= login_html(mb_strtoupper(mb_substr($fila['nombres'],0,1).mb_substr($fila['apellidos'],0,1))) ?></span>
+                                            <span><?= login_html($nombre) ?><small>Código: <?= login_html($fila['codigo']) ?></small></span></div></th>
+                                        <td><?= login_html(trim(($fila['curso'] ?? 'Sin curso registrado').' '.($fila['paralelo'] ?? ''))) ?></td>
+                                        <td><span class="panel-prioridad panel-prioridad-<?= strtolower($fila['prioridad']) ?>"><?= login_html($fila['prioridad']) ?></span></td>
+                                        <td><?= $fila['ultima_sesion'] ? $fechaVisible($fila['ultima_sesion']) : 'Sin sesiones' ?></td>
+                                        <td><a class="panel-abrir" aria-label="Ver derivación de <?= login_html($nombre) ?>" href="<?= login_html(login_url('derivaciones/ver.php?id='.(int)$fila['id_derivacion'])) ?>">Ver <span aria-hidden="true">›</span></a>
+                                            <?php if ($fila['id_historia']): ?><a class="panel-historia" href="<?= login_html(login_url('historias_clinicas/ver.php?id='.(int)$fila['id_historia'])) ?>">Historia</a><?php endif; ?></td>
+                                    </tr>
+                                <?php endforeach; ?></tbody>
+                            </table>
+                        </div>
+                        <p class="panel-pie">Mostrando <?= count($panel['prioritarios']) ?> de <?= $r['por_atender'] ?> estudiantes con derivaciones abiertas.</p>
+                    <?php endif; ?>
+                </section>
 
-                <h1>
-                    <?= $nombreUsuario !== ''
-                        ? 'Bienvenida, ' . htmlspecialchars($nombreUsuario)
-                        : 'Sistema Psicológico Estudiantil'; ?>
-                </h1>
-
-                <p>
-                    Administre estudiantes, derivaciones, citas e historias
-                    clínicas desde un solo lugar.
-                </p>
+                <section class="panel-bloque" aria-labelledby="titulo-agenda">
+                    <header class="panel-bloque-cabecera"><h2 id="titulo-agenda">Agenda de hoy</h2>
+                        <a href="<?= login_html(login_url('citas/listar.php')) ?>">Ver todas las citas <span aria-hidden="true">↗</span></a></header>
+                    <p class="panel-contexto"><?= $fechaVisible($panel['hoy']) ?> · <?= count($panel['agenda']) ?> citas, sin canceladas.</p>
+                    <?php if (!$panel['agenda']): ?>
+                        <p class="panel-vacio" role="status">No hay citas programadas para hoy.</p>
+                    <?php else: ?>
+                        <ol class="panel-agenda">
+                            <?php foreach ($panel['agenda'] as $cita): ?>
+                                <li data-cita="<?= (int)$cita['id_cita'] ?>">
+                                    <time datetime="<?= login_html($panel['hoy'].'T'.$cita['hora']) ?>"><?= substr($cita['hora'],0,5) ?></time>
+                                    <div class="panel-cita panel-cita-<?= strtolower($cita['estado']) ?>">
+                                        <a href="<?= login_html(login_url('citas/editar.php?id='.(int)$cita['id_cita'])) ?>"><?= login_html($cita['nombres'].' '.$cita['apellidos']) ?></a>
+                                        <span><?= login_html($cita['estado']) ?></span><small>Profesional: <?= login_html($cita['profesional']) ?></small>
+                                    </div>
+                                </li>
+                            <?php endforeach; ?>
+                        </ol>
+                    <?php endif; ?>
+                </section>
             </div>
+            <p class="panel-definiciones">Cada seguimiento guardado cuenta como una sesión. Las citas pendientes incluyen las reprogramadas. Los datos se actualizan al abrir o recargar el panel.</p>
+        <?php endif; ?>
 
-            <div class="dashboard-date">
-                <i class="bi bi-calendar3"></i>
-                <div>
-                    <small>Fecha actual</small>
-                    <strong><?= htmlspecialchars($fechaActual); ?></strong>
-                </div>
-            </div>
-        </section>
-
-        <section aria-labelledby="titulo-resumen" class="mb-5">
-            <div class="dashboard-section-heading">
-                <div>
-                    <h2 id="titulo-resumen">Resumen general</h2>
-                    <p>Información actual del sistema.</p>
-                </div>
-            </div>
-
-            <div class="row g-4">
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <article class="dashboard-stat dashboard-stat-blue">
-                        <div class="dashboard-stat-icon">
-                            <i class="bi bi-people-fill"></i>
-                        </div>
-                        <div class="dashboard-stat-content">
-                            <span>Estudiantes activos</span>
-                            <strong><?= number_format($totalEstudiantes); ?></strong>
-                            <a href="estudiantes/listar.php">
-                                Ver estudiantes
-                                <i class="bi bi-arrow-right"></i>
-                            </a>
-                        </div>
-                    </article>
-                </div>
-
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <article class="dashboard-stat dashboard-stat-orange">
-                        <div class="dashboard-stat-icon">
-                            <i class="bi bi-exclamation-circle-fill"></i>
-                        </div>
-                        <div class="dashboard-stat-content">
-                            <span>Derivaciones pendientes</span>
-                            <strong><?= number_format($derivacionesPendientes); ?></strong>
-                            <a href="derivaciones/listar.php">
-                                Ver derivaciones
-                                <i class="bi bi-arrow-right"></i>
-                            </a>
-                        </div>
-                    </article>
-                </div>
-
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <article class="dashboard-stat dashboard-stat-green">
-                        <div class="dashboard-stat-icon">
-                            <i class="bi bi-calendar-check-fill"></i>
-                        </div>
-                        <div class="dashboard-stat-content">
-                            <span>Citas de hoy</span>
-                            <strong><?= number_format($citasHoy); ?></strong>
-                            <a href="citas/listar.php">
-                                Ver citas
-                                <i class="bi bi-arrow-right"></i>
-                            </a>
-                        </div>
-                    </article>
-                </div>
-
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <article class="dashboard-stat dashboard-stat-purple">
-                        <div class="dashboard-stat-icon">
-                            <i class="bi bi-file-earmark-medical-fill"></i>
-                        </div>
-                        <div class="dashboard-stat-content">
-                            <span>Historias clínicas</span>
-                            <strong><?= number_format($totalHistorias); ?></strong>
-                            <a href="historias_clinicas/listar.php">
-                                Ver historias
-                                <i class="bi bi-arrow-right"></i>
-                            </a>
-                        </div>
-                    </article>
-                </div>
-            </div>
-        </section>
-
-        <section aria-labelledby="titulo-accesos">
-            <div class="dashboard-section-heading">
-                <div>
-                    <h2 id="titulo-accesos">Accesos principales</h2>
-                    <p>Seleccione la función que desea utilizar.</p>
-                </div>
-            </div>
-
-            <div class="row g-4 dashboard-modules">
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <a class="dashboard-module dashboard-module-blue"
-                       href="estudiantes/listar.php">
-                        <span class="dashboard-module-icon">
-                            <i class="bi bi-people"></i>
-                        </span>
-                        <span class="dashboard-module-text">
-                            <strong>Estudiantes</strong>
-                            <small>Registrar, consultar y actualizar estudiantes.</small>
-                        </span>
-                        <i class="bi bi-arrow-up-right dashboard-module-arrow"></i>
-                    </a>
-                </div>
-
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <a class="dashboard-module dashboard-module-orange"
-                       href="derivaciones/listar.php">
-                        <span class="dashboard-module-icon">
-                            <i class="bi bi-send"></i>
-                        </span>
-                        <span class="dashboard-module-text">
-                            <strong>Derivaciones</strong>
-                            <small>Registrar derivaciones y revisar su estado.</small>
-                        </span>
-                        <i class="bi bi-arrow-up-right dashboard-module-arrow"></i>
-                    </a>
-                </div>
-
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <a class="dashboard-module dashboard-module-green"
-                       href="citas/listar.php">
-                        <span class="dashboard-module-icon">
-                            <i class="bi bi-calendar2-week"></i>
-                        </span>
-                        <span class="dashboard-module-text">
-                            <strong>Citas</strong>
-                            <small>Programar y consultar las citas psicológicas.</small>
-                        </span>
-                        <i class="bi bi-arrow-up-right dashboard-module-arrow"></i>
-                    </a>
-                </div>
-
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <a class="dashboard-module dashboard-module-purple"
-                       href="historias_clinicas/listar.php">
-                        <span class="dashboard-module-icon">
-                            <i class="bi bi-file-earmark-medical"></i>
-                        </span>
-                        <span class="dashboard-module-text">
-                            <strong>Historias clínicas</strong>
-                            <small>Registrar y consultar la atención psicológica.</small>
-                        </span>
-                        <i class="bi bi-arrow-up-right dashboard-module-arrow"></i>
-                    </a>
-                </div>
-
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <a class="dashboard-module dashboard-module-cyan"
-                       href="docentes/listar.php">
-                        <span class="dashboard-module-icon">
-                            <i class="bi bi-person-badge"></i>
-                        </span>
-                        <span class="dashboard-module-text">
-                            <strong>Docentes</strong>
-                            <small>Consultar los docentes registrados.</small>
-                        </span>
-                        <i class="bi bi-arrow-up-right dashboard-module-arrow"></i>
-                    </a>
-                </div>
-
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <a class="dashboard-module dashboard-module-red"
-                       href="informes/listar.php">
-                        <span class="dashboard-module-icon">
-                            <i class="bi bi-file-earmark-bar-graph"></i>
-                        </span>
-                        <span class="dashboard-module-text">
-                            <strong>Informes</strong>
-                            <small>Generar y consultar informes mensuales.</small>
-                        </span>
-                        <i class="bi bi-arrow-up-right dashboard-module-arrow"></i>
-                    </a>
-                </div>
-
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <a class="dashboard-module dashboard-module-indigo"
-                       href="<?= login_html(login_url('estadisticas/index.php')) ?>">
-                        <span class="dashboard-module-icon">
-                            <i class="bi bi-bar-chart-line"></i>
-                        </span>
-                        <span class="dashboard-module-text">
-                            <strong>Estadísticas</strong>
-                            <small>Consultar las sesiones y el seguimiento de los estudiantes.</small>
-                        </span>
-                        <i class="bi bi-arrow-up-right dashboard-module-arrow"></i>
-                    </a>
-                </div>
-            </div>
-        </section>
-
-    </div>
-</main>
-
-<?php include 'includes/footer.php'; ?>
+<?php include __DIR__ . '/includes/footer.php'; ?>

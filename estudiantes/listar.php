@@ -143,9 +143,7 @@ include '../includes/navbar.php';
                             Importar datos
                         </button>
                     </form>
-
-                    <small class="text-muted">CSV UTF-8 separado por punto y coma. Se importan las filas válidas y se informan las rechazadas. Estados: Activo o Retirado.</small>
-
+                    <small class="text-muted d-block mt-1"> 
                 </div>
 
             </div>

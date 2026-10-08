@@ -58,6 +58,16 @@ Los archivos específicos viven dentro de su módulo: `datos.php` reúne la vali
 
 Los roles y métodos HTTP se declaran en [config/permisos.php](config/permisos.php). Las escrituras requieren sesión, permiso y token CSRF.
 
+Al registrar un docente, seleccionar una cuenta activa con rol Docente completa nombres, apellidos, correo y teléfono disponible. Los campos se pueden corregir antes de guardar; comparten la persona de la cuenta. Las casillas permiten asignar varias materias y recuperarlas al editar. El catálogo incluye Física, Química, Tecnología y Religión; para una base existente se agregan con la migración normalizada de materias.
+
+## Panel principal
+
+Disponible para administrador y psicóloga. Sus tarjetas muestran estudiantes activos con historia en seguimiento, estudiantes activos con derivaciones abiertas de prioridad alta, citas pendientes o reprogramadas de hoy a seis días después y sesiones acumuladas hasta hoy, con el subtotal de los últimos 30 días (hoy y los 29 anteriores).
+
+El seguimiento prioritario muestra hasta cinco estudiantes activos con derivaciones pendientes o en seguimiento. Se elige una derivación por estudiante: la de mayor prioridad y, en caso de empate, la más antigua. La tabla ordena primero por prioridad y después por última sesión, situando al inicio de cada prioridad a quienes no tienen sesiones. Usa la última inscripción para el curso y enlaza la derivación y la historia disponible. La prioridad procede de la derivación; no representa una evaluación clínica de riesgo.
+
+La agenda muestra todas las citas del día salvo las canceladas, ordenadas por hora, con su estado y profesional. No se inventan horas de finalización ni porcentajes de evolución. Los errores de consulta se muestran como tales, sin sustituirlos por ceros. Los accesos principales respetan los permisos del usuario.
+
 ## Estadísticas de seguimiento
 
 Disponible en el menú **Estadísticas** para administrador y psicóloga. Cada seguimiento guardado cuenta como una sesión; las citas no se suman al conteo. La pantalla muestra sesiones por mes, estado de las historias y detalle por estudiante, con enlaces a la historia y al último seguimiento.
@@ -71,7 +81,7 @@ La última sesión y el acumulado se calculan hasta la fecha final seleccionada.
 ```powershell
 & C:\xampp\php\php.exe tests\seguridad.php
 & C:\xampp\php\php.exe tests\informes_actualizacion.php
-& C:\xampp\php\php.exe tests\esquema_informes_importacion.php
+& C:\xampp\php\php.exe tests\esquema_informes_importacion.php --navegador
 & C:\xampp\php\php.exe tests\historias_derivaciones.php --navegador
 & C:\xampp\php\php.exe tests\trazabilidad.php --navegador
 & C:\xampp\php\php.exe tests\estadisticas.php --navegador

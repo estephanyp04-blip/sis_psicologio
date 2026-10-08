@@ -129,6 +129,37 @@ try {
     $baseVacia = estadisticas_datos($bd, ['desde'=>'1900-01-01','hasta'=>'1900-01-31']);
     verificar($baseVacia['resumen'] === ['historias'=>0,'sesiones'=>0,'con_sesiones'=>0,'sin_sesiones'=>0], 'No maneja un período sin historias.');
     echo "Conteos clínicos, inscripciones múltiples, límites de fechas y filtros: correctos.\n";
+    $sinDatos = estadisticas_panel($bd,'1900-01-01');
+    verificar(array_sum($sinDatos['resumen']) === 0 && !$sinDatos['prioritarios'] && !$sinDatos['agenda'], 'Panel sin datos inventa actividad.');
+    $hoy = new DateTimeImmutable('today');
+    $fecha = static fn(string $cambio): string => $hoy->modify($cambio)->format('Y-m-d');
+    $bd->query("UPDATE historias_clinicas SET estado='En seguimiento' WHERE id_historia=104");
+    $bd->query("UPDATE historias_clinicas SET estado='En seguimiento',fecha_apertura='".$fecha('+1 day')."' WHERE id_historia=124");
+    $bd->query("INSERT INTO seguimientos (id_historia,id_psicologa,fecha,descripcion) VALUES
+        (101,102,'".$fecha('-29 days')."','DETALLE_PRIVADO'),(101,102,'".$fecha('0 days')."','DETALLE_PRIVADO'),
+        (101,102,'".$fecha('+1 day')."','DETALLE_PRIVADO'),(101,102,'".$fecha('-30 days')."','DETALLE_PRIVADO'),
+        (104,102,'".$fecha('-4 days')."','DETALLE_PRIVADO')");
+    foreach ([[901,1,'Alta','Pendiente','-10 days'],[902,1,'Alta','En seguimiento','-5 days'],
+        [903,2,'Media','Pendiente','-7 days'],[904,3,'Alta','Pendiente','-8 days'],[905,4,'Baja','En seguimiento','-7 days'],
+        [906,5,'Alta','Atendido','-10 days'],[907,6,'Alta','Pendiente','+1 day'],[908,7,'Alta','Pendiente','-6 days'],
+        [909,25,'Media','Pendiente','-2 days'],[910,8,'Baja','Pendiente','-3 days']] as [$id,$estudiante,$prioridad,$estado,$cuando]) {
+        $bd->query("INSERT INTO derivaciones (id_derivacion,id_estudiante,id_docente,fecha,motivo,prioridad,estado)
+            VALUES ($id,$estudiante,201,'".$fecha($cuando)."','DETALLE_PRIVADO','$prioridad','$estado')");
+    }
+    foreach ([[901,1,'09:00','Pendiente','0 days'],[902,2,'10:00','Reprogramada','0 days'],
+        [903,4,'11:00','Atendida','0 days'],[904,7,'12:00','Cancelada','0 days'],[905,2,'09:00','Pendiente','+6 days'],
+        [906,2,'09:00','Pendiente','+7 days'],[907,2,'09:00','Pendiente','-1 day'],[908,2,'09:00','Atendida','+1 day']] as [$id,$estudiante,$hora,$estado,$cuando]) {
+        $bd->query("INSERT INTO citas (id_cita,id_estudiante,id_psicologa,fecha,hora,estado)
+            VALUES ($id,$estudiante,102,'".$fecha($cuando)."','$hora','$estado')");
+    }
+    $panel = estadisticas_panel($bd);
+    verificar($panel['resumen'] === ['en_seguimiento'=>2,'prioridad_alta'=>2,'citas_pendientes'=>3,'sesiones'=>11,'sesiones_recientes'=>3,'por_atender'=>6], 'Panel: totales, estados o límites de 7/30 días incorrectos.');
+    verificar(array_map('intval',array_column($panel['prioritarios'],'id_estudiante')) === [7,1,25,2,8], 'Panel: repite estudiantes, omite sin historia o no respeta prioridad/antigüedad.');
+    $prioritario = $panel['prioritarios'][1];
+    verificar((int)$prioritario['id_derivacion'] === 901 && $prioritario['curso'] === '2do de Secundaria' && $prioritario['paralelo'] === 'B', 'Panel no elige derivación abierta más antigua o última inscripción.');
+    verificar($prioritario['ultima_sesion'] === $fecha('0 days') && $panel['prioritarios'][2]['id_historia'] === null, 'Panel incluye sesión futura o inventa historia.');
+    verificar(array_map('intval',array_column($panel['agenda'],'id_cita')) === [901,902,903], 'Agenda no respeta horario, día o cancelaciones.');
+    echo "Panel: tarjetas, prioridad por estudiante, agenda y límites de fechas correctos.\n";
     mkdir($temporal . '/app', 0700); mkdir($temporal . '/sesiones', 0700);
     foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($raiz, FilesystemIterator::SKIP_DOTS)) as $archivo) {
         if (!in_array($archivo->getExtension(), ['php','css','js'], true)) continue;
@@ -167,6 +198,11 @@ try {
     verificar(http($url, ['csrf'=>str_repeat('c',64)])['codigo'] === 405, 'Estadísticas acepta escrituras.');
     $r = http('index.php');
     verificar(str_contains($r['cuerpo'],'href="/estadisticas/index.php"'), 'El panel conserva el enlace deshabilitado.');
+    verificar($r['codigo'] === 200 && str_contains($r['cuerpo'],'id="panel-citas_pendientes" data-valor="3"') && str_contains($r['cuerpo'],'Mostrando 5 de 6'), 'El panel no muestra los conteos y límite reales.');
+    verificar(str_contains($r['cuerpo'],'Ana &lt;prueba&gt;') && !str_contains($r['cuerpo'],'DETALLE_PRIVADO') && !str_contains($r['cuerpo'],'NOTA_CLINICA_NO_DEBE_EXHIBIRSE'), 'El panel no escapa nombres o muestra notas clínicas.');
+    $r = http('index.php',null,'prueba_psicologa');
+    verificar($r['codigo'] === 200 && !str_contains($r['cuerpo'],'docentes/listar.php'), 'El panel ofrece accesos sin permiso a psicóloga.');
+    foreach (['prueba_docente','prueba_director'] as $usuario) verificar(http('index.php',null,$usuario)['codigo'] === 403, 'Rol restringido accede al panel clínico.');
     $r = http($url . '&pagina=2');
     verificar(str_contains($r['cuerpo'],'21–23 de 23 historias') && str_contains($r['cuerpo'],'data-valor="5"'), 'Paginación cambia los totales.');
     verificar(http($url . '&pagina[]=1')['codigo'] === 400, 'No rechaza página inválida.');
@@ -178,6 +214,8 @@ try {
     try {
         $r = http($url);
         verificar($r['codigo'] === 503 && str_contains($r['cuerpo'],'No se pudieron consultar') && !str_contains($r['cuerpo'],'id="total-historias"'), 'Error SQL se presenta como ausencia de atenciones.');
+        $r = http('index.php');
+        verificar($r['codigo'] === 503 && str_contains($r['cuerpo'],'No se pudo cargar el resumen') && !str_contains($r['cuerpo'],'id="panel-sesiones"'), 'Panel presenta errores de consulta como ceros.');
     } finally { $bd->query('RENAME TABLE seguimientos_prueba TO seguimientos'); }
     echo "Página, enlaces, paginación, errores y privacidad por rol: correctos.\n";
     if (in_array('--navegador', $argv, true)) {
@@ -226,6 +264,22 @@ try {
         comprobar(campo('curso').value==='0' && campo('estado').value==='' && campo('hasta').value===__HOY__,'No restablece los filtros.');
         await abrir(ruta);
         comprobar(app.contentDocument.querySelector('.estadisticas-tabla-scroll').getBoundingClientRect().right<=app.contentWindow.innerWidth+1,'La tabla desborda su contenedor.');
+        await abrir('/index.php');
+        comprobar(campo('panel-citas_pendientes').dataset.valor==='3' && campo('panel-sesiones').dataset.valor==='11','Tarjetas del panel incorrectas.');
+        comprobar(app.contentDocument.querySelectorAll('.panel-tabla tr[data-estudiante]').length===5 && app.contentDocument.querySelectorAll('.panel-agenda li').length===3,'Panel sin tabla o agenda.');
+        comprobar(app.contentDocument.documentElement.scrollWidth<=app.contentWindow.innerWidth+1,'El panel desborda el ancho disponible.');
+        const tarjetas=Array.from(app.contentDocument.querySelectorAll('.panel-tarjeta'));
+        comprobar(tarjetas.every(t=>t.getBoundingClientRect().width>0) && (ancho>1250 ? tarjetas[0].offsetTop===tarjetas[3].offsetTop : tarjetas[0].offsetTop<tarjetas[3].offsetTop),'Tarjetas no se adaptan a pantalla.');
+        const derivacion=app.contentDocument.querySelector('.panel-abrir').href;
+        await abrir(derivacion);
+        comprobar(app.contentWindow.location.pathname==='/derivaciones/ver.php' && app.contentDocument.body.textContent.includes('Prueba 7'),'No abre la derivación del panel.');
+        await abrir('/index.php');
+        await abrir(app.contentDocument.querySelector('.panel-cita > a').href);
+        comprobar(app.contentWindow.location.pathname==='/citas/editar.php' && campo('form-cita')!==null,'No abre la cita de la agenda.');
+        await abrir('/index.php');
+        await abrir(campo('panel-sesiones').closest('a').href);
+        comprobar(campo('filtros-estadisticas')!==null,'Tarjeta no abre estadísticas.');
+        await abrir('/index.php');
         app.contentWindow.scrollTo(0,0);
         window.scrollTo(0,0);
         await new Promise(resolve=>setTimeout(resolve,500));
@@ -241,7 +295,7 @@ HTML;
                 '--user-data-dir='.$temporal.'/chrome-'.$ancho,'--window-size='.max(500,$ancho).',1800','--dump-dom','--virtual-time-budget=20000',
                 'http://127.0.0.1:'.$puerto.'/__prueba_navegador?secreto='.$secreto.'&ancho='.$ancho];
             $capturas = getenv('CAPTURAS_ESTADISTICAS');
-            if ($capturas && is_dir($capturas)) array_splice($argumentos, -1, 0, ['--screenshot='.$capturas.'/estadisticas-'.$ancho.'.png']);
+            if ($capturas && is_dir($capturas)) array_splice($argumentos, -1, 0, ['--screenshot='.$capturas.'/panel-'.$ancho.'.png']);
             $html = ejecutar($argumentos);
             $dom = new DOMDocument(); @$dom->loadHTML($html);
             $resultado = json_decode($dom->getElementById('resultado')?->textContent ?? '',true);

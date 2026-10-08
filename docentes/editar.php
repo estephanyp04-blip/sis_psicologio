@@ -64,6 +64,7 @@ $sqlUsuarios = "
         p.nombres AS nombre,
         p.apellidos AS apellido,
         u.usuario,
+        p.telefono,
         p.correo
     FROM usuarios u
     INNER JOIN personas p ON p.id_persona=u.id_persona
@@ -196,6 +197,9 @@ include '../includes/navbar.php';
                                     data-correo="<?= escapar(
                                         $usuario['correo']
                                     ); ?>"
+                                    data-telefono="<?= escapar(
+                                        $usuario['telefono']
+                                    ); ?>"
                                     <?= (int) $usuario['id_usuario'] ===
                                         (int) $docente['id_usuario']
                                             ? 'selected'
@@ -209,6 +213,10 @@ include '../includes/navbar.php';
                                 </option>
                             <?php endwhile; ?>
                         </select>
+                        <div class="form-text">
+                            Si cambia la cuenta, se cargarán los datos personales de esa cuenta.
+                            Puede revisarlos y corregirlos antes de guardar.
+                        </div>
                     </div>
                 </div>
 
@@ -362,40 +370,7 @@ include '../includes/navbar.php';
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const formulario = document.getElementById('formDocente');
-    const materias = document.querySelectorAll('.materia-check');
-    const errorMaterias = document.getElementById('errorMaterias');
-
-    formulario.addEventListener('submit', function (evento) {
-        const seleccionada = Array.from(materias).some(
-            materia => materia.checked
-        );
-
-        if (!seleccionada) {
-            evento.preventDefault();
-            errorMaterias.classList.remove('d-none');
-            materias[0].focus();
-            return;
-        }
-
-        errorMaterias.classList.add('d-none');
-    });
-
-    materias.forEach(function (materia) {
-        materia.addEventListener('change', function () {
-            const seleccionada = Array.from(materias).some(
-                elemento => elemento.checked
-            );
-
-            if (seleccionada) {
-                errorMaterias.classList.add('d-none');
-            }
-        });
-    });
-});
-</script>
+<script src="<?= login_html(login_url('asset/js/docentes.js?v=1')) ?>" defer></script>
 
 <?php
 $stmtUsuarios->close();
