@@ -6,7 +6,7 @@ El archivo [psicologia_db.sql](psicologia_db.sql) contiene el esquema normalizad
 
 - `personas` comparte los datos de usuarios y docentes.
 - `secciones` e `inscripciones` relacionan curso, paralelo, turno y gestión de los estudiantes.
-- `historias_clinicas` usa `id_psicologa`, `id_derivacion_origen` e `id_cita_origen`.
+- `historias_clinicas` usa `cod_psicologa`, `cod_derivacion_origen` e `cod_cita_origen`.
 - `informes` guarda la cabecera y `informe_individual` el detalle y las relaciones del informe.
 - Las opciones clínicas, materias y categorías de derivación se guardan en catálogos relacionados.
 

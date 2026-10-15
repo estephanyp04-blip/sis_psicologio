@@ -71,11 +71,11 @@ function derivacion_imagen_guardar(mysqli $bd, int $idDerivacion, array $imagen,
     try {
         if ($idEvidencia !== null) {
             $stmt = $bd->prepare('UPDATE derivacion_evidencias
-                SET nombre_original=?,ruta=?,tipo_mime=?,descripcion=? WHERE id_evidencia=? AND id_derivacion=?');
+                SET nombre_original=?,ruta=?,tipo_mime=?,descripcion=? WHERE cod_evidencia=? AND cod_derivacion=?');
             $stmt->bind_param('ssssii', $imagen['nombre_original'], $rutaRelativa, $imagen['tipo_mime'], $imagen['descripcion'], $idEvidencia, $idDerivacion);
         } else {
             $stmt = $bd->prepare('INSERT INTO derivacion_evidencias
-                (id_derivacion,nombre_original,ruta,tipo_mime,descripcion) VALUES (?,?,?,?,?)');
+                (cod_derivacion,nombre_original,ruta,tipo_mime,descripcion) VALUES (?,?,?,?,?)');
             $stmt->bind_param('issss', $idDerivacion, $imagen['nombre_original'], $rutaRelativa, $imagen['tipo_mime'], $imagen['descripcion']);
         }
         $stmt->execute();

@@ -6,8 +6,8 @@ require_once '../config/conexion.php';
 
 /* PERMISOS*/
 
-$rolActual = isset($_SESSION['id_rol'])
-    ? (int) $_SESSION['id_rol']
+$rolActual = isset($_SESSION['cod_rol'])
+    ? (int) $_SESSION['cod_rol']
     : 0;
 
 $rolesPermitidos = [1, 2];
@@ -41,7 +41,7 @@ function e($valor): string
 
 $sql = "
     SELECT
-        h.id_historia,
+        h.cod_historia,
         h.fecha_apertura,
         h.estado,
         e.ci,
@@ -52,14 +52,14 @@ $sql = "
         CONCAT_WS(' ', p.nombres, p.apellidos) AS profesional
     FROM historias_clinicas h
     INNER JOIN vista_estudiantes e
-        ON e.id_estudiante = h.id_estudiante
+        ON e.cod_estudiante = h.cod_estudiante
     LEFT JOIN usuarios u
-        ON u.id_usuario = h.id_psicologa
+        ON u.cod_usuario = h.cod_psicologa
     LEFT JOIN personas p
-        ON p.id_persona = u.id_persona
+        ON p.cod_persona = u.cod_persona
     ORDER BY
         h.fecha_apertura DESC,
-        h.id_historia DESC
+        h.cod_historia DESC
 ";
 
 $resultado = $conexion->query($sql);
@@ -323,7 +323,7 @@ include '../includes/navbar.php';
                                         <a
                                             class="btn-accion"
                                             href="ver.php?id=<?= (int)
-                                                $historia['id_historia']
+                                                $historia['cod_historia']
                                             ?>">
 
                                             <i class="bi bi-eye"></i>
@@ -334,7 +334,7 @@ include '../includes/navbar.php';
                                             <a
                                                 class="btn-accion editar"
                                                 href="editar.php?id=<?= (int)
-                                                    $historia['id_historia']
+                                                    $historia['cod_historia']
                                                 ?>">
 
                                                 <i class="bi bi-pencil"></i>

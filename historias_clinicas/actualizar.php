@@ -4,10 +4,10 @@ requerir_acceso('historias_clinicas/actualizar.php');
 require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/datos.php';
 
-$id = filter_var($_POST['id_historia'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+$id = filter_var($_POST['cod_historia'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 if (!$id) { header('Location: listar.php'); exit; }
 try {
-    historia_guardar($conexion, $_POST, (int)$_SESSION['id_usuario'], $id);
+    historia_guardar($conexion, $_POST, (int)$_SESSION['cod_usuario'], $id);
     unset($_SESSION['datos_historia']);
     $_SESSION['mensaje'] = 'La historia clínica se actualizó correctamente.';
     $_SESSION['tipo_mensaje'] = 'success';

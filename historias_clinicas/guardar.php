@@ -5,7 +5,7 @@ require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/datos.php';
 
 try {
-    $id = historia_guardar($conexion, $_POST, (int)$_SESSION['id_usuario']);
+    $id = historia_guardar($conexion, $_POST, (int)$_SESSION['cod_usuario']);
     unset($_SESSION['datos_historia']);
     $_SESSION['mensaje'] = 'La historia clínica se creó correctamente.';
     $_SESSION['tipo_mensaje'] = 'success';

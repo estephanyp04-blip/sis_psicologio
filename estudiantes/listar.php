@@ -11,7 +11,7 @@ function e($v):string{
 /* CONSULTAR ESTUDIANTES */
 $sql="
     SELECT
-        id_estudiante,
+        cod_estudiante,
         codigo,
         ci,
         nombres,
@@ -398,7 +398,7 @@ include '../includes/navbar.php';
 
                     $codigo=!empty($fila['codigo'])
                         ?$fila['codigo']
-                        :$fila['id_estudiante'];
+                        :$fila['cod_estudiante'];
                     ?>
 
                     <tr
@@ -461,7 +461,7 @@ include '../includes/navbar.php';
                                 <?php if(($fila['estado']??'')==='Activo'):?>
 
                                     <a
-                                        href="editar.php?id=<?= (int)$fila['id_estudiante'] ?>"
+                                        href="editar.php?id=<?= (int)$fila['cod_estudiante'] ?>"
                                         class="btn btn-sm btn-outline-primary"
                                         title="Editar estudiante"
                                     >
@@ -477,8 +477,8 @@ include '../includes/navbar.php';
 
                                         <input
                                             type="hidden"
-                                            name="id_estudiante"
-                                            value="<?= (int)$fila['id_estudiante'] ?>"
+                                            name="cod_estudiante"
+                                            value="<?= (int)$fila['cod_estudiante'] ?>"
                                         >
 
                                         <input
@@ -508,8 +508,8 @@ include '../includes/navbar.php';
 
                                         <input
                                             type="hidden"
-                                            name="id_estudiante"
-                                            value="<?= (int)$fila['id_estudiante'] ?>"
+                                            name="cod_estudiante"
+                                            value="<?= (int)$fila['cod_estudiante'] ?>"
                                         >
 
                                         <input

@@ -50,7 +50,7 @@ if ($rsParalelos) {
 }
 
 // Estudiantes activos, filtrados por curso y paralelo si se eligieron
-$sqlEstudiantes = "SELECT id_estudiante, nombres, apellidos, curso, paralelo
+$sqlEstudiantes = "SELECT cod_estudiante, nombres, apellidos, curso, paralelo
                     FROM vista_estudiantes
                     WHERE estado = 'Activo'";
 
@@ -71,16 +71,16 @@ if (!$rsEstudiantes) {
 
 // Psicólogas activas disponibles para la atención.
 $rsProfesionales = $conexion->query(
-    "SELECT u.id_usuario,p.nombres AS nombre,p.apellidos AS apellido,u.usuario,p.correo
-     FROM usuarios u INNER JOIN personas p ON p.id_persona=u.id_persona
-     WHERE u.id_rol = 2 AND u.estado = 'Activo' ORDER BY p.apellidos,p.nombres"
+    "SELECT u.cod_usuario,p.nombres AS nombre,p.apellidos AS apellido,u.usuario,p.correo
+     FROM usuarios u INNER JOIN personas p ON p.cod_persona=u.cod_persona
+     WHERE u.cod_rol = 2 AND u.estado = 'Activo' ORDER BY p.apellidos,p.nombres"
 );
 $profesionales = $rsProfesionales->fetch_all(MYSQLI_ASSOC);
 $rsProfesionales->free();
 
 // Valores anteriores
-$idEstudianteAnt   = (int) ($d['id_estudiante'] ?? 0);
-$idDocenteAnt      = (int) ($d['id_docente'] ?? 0);
+$idEstudianteAnt   = (int) ($d['cod_estudiante'] ?? 0);
+$idDocenteAnt      = (int) ($d['cod_docente'] ?? 0);
 $fechaAnt          = $d['fecha'] ?? date('Y-m-d');
 $materiaAnt        = $d['materia'] ?? '';
 $motivoAnt         = $d['motivo'] ?? '';
@@ -88,23 +88,23 @@ $observacionesAnt  = $d['observaciones'] ?? '';
 $prioridadAnt      = $d['prioridad'] ?? 'Media';
 $categoriasAnt     = is_array($d['categorias'] ?? null) ? $d['categorias'] : [];
 $solicitarCitaAnt  = !array_key_exists('solicitar_cita', $d) || (int) $d['solicitar_cita'] === 1;
-$idProfesionalAnt  = (int) ($d['id_profesional'] ?? 0);
+$idProfesionalAnt  = (int) ($d['cod_profesional'] ?? 0);
 $descripcionImagenAnt = is_string($d['descripcion_imagen'] ?? null) ? $d['descripcion_imagen'] : '';
-$rolActual = (int)($_SESSION['id_rol'] ?? 0);
+$rolActual = (int)($_SESSION['cod_rol'] ?? 0);
 $docentesDisponibles = [];
 if ($rolActual === 1) {
-    $docentesDisponibles = $conexion->query("SELECT d.id_docente,p.nombres,p.apellidos
-        FROM docentes d INNER JOIN personas p ON p.id_persona=d.id_persona
+    $docentesDisponibles = $conexion->query("SELECT d.cod_docente,p.nombres,p.apellidos
+        FROM docentes d INNER JOIN personas p ON p.cod_persona=d.cod_persona
         WHERE d.estado='Activo' ORDER BY p.apellidos,p.nombres")->fetch_all(MYSQLI_ASSOC);
 }
 // Preseleccionar la cuenta indicada sin reemplazar una elección anterior.
-if (!array_key_exists('id_profesional', $d)) {
+if (!array_key_exists('cod_profesional', $d)) {
     $coincidenciasMaria = array_filter($profesionales, static function (array $profesional): bool {
         return strtolower(trim((string) $profesional['usuario'])) === 'psicologa'
             && strtolower(trim((string) $profesional['correo'])) === 'psicologia@canadapailita.edu.bo';
     });
     if (count($coincidenciasMaria) === 1) {
-        $idProfesionalAnt = (int) reset($coincidenciasMaria)['id_usuario'];
+        $idProfesionalAnt = (int) reset($coincidenciasMaria)['cod_usuario'];
     }
 }
 
@@ -196,8 +196,8 @@ $materias = array_column(
 
                     <div class="row g-4">
                         <div class="col-md-8">
-                            <label for="id_estudiante" class="form-label">Estudiante <span class="text-danger">*</span></label>
-                            <select name="id_estudiante" id="id_estudiante" class="form-select" required>
+                            <label for="cod_estudiante" class="form-label">Estudiante <span class="text-danger">*</span></label>
+                            <select name="cod_estudiante" id="cod_estudiante" class="form-select" required>
                                 <option value="">
                                     <?= $cursoFiltro === ''
                                         ? 'Seleccione un curso arriba o elija de la lista completa...'
@@ -213,7 +213,7 @@ $materias = array_column(
                                         $cursoActual = $cursoLabel;
                                     endif;
                                     ?>
-                                    <option value="<?= (int) $e['id_estudiante'] ?>" <?= $idEstudianteAnt === (int) $e['id_estudiante'] ? 'selected' : '' ?>>
+                                    <option value="<?= (int) $e['cod_estudiante'] ?>" <?= $idEstudianteAnt === (int) $e['cod_estudiante'] ? 'selected' : '' ?>>
                                         <?= escapar($e['apellidos'] . ' ' . $e['nombres']) ?>
                                     </option>
                                 <?php endwhile; if ($cursoActual !== null) echo '</optgroup>'; ?>
@@ -239,11 +239,11 @@ $materias = array_column(
                         </div>
                         <?php if ($rolActual === 1): ?>
                             <div class="col-md-6">
-                                <label for="id_docente" class="form-label">Docente que realiza la derivación <span class="text-danger">*</span></label>
-                                <select name="id_docente" id="id_docente" class="form-select" required>
+                                <label for="cod_docente" class="form-label">Docente que realiza la derivación <span class="text-danger">*</span></label>
+                                <select name="cod_docente" id="cod_docente" class="form-select" required>
                                     <option value="">Seleccione un docente...</option>
                                     <?php foreach ($docentesDisponibles as $docente): ?>
-                                        <option value="<?= (int)$docente['id_docente'] ?>" <?= $idDocenteAnt === (int)$docente['id_docente'] ? 'selected' : '' ?>>
+                                        <option value="<?= (int)$docente['cod_docente'] ?>" <?= $idDocenteAnt === (int)$docente['cod_docente'] ? 'selected' : '' ?>>
                                             <?= escapar(trim($docente['apellidos'] . ' ' . $docente['nombres'])) ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -340,14 +340,14 @@ $materias = array_column(
 
                         <div class="row g-3">
                             <div class="col-md-8">
-                                <label for="id_profesional" class="form-label">
+                                <label for="cod_profesional" class="form-label">
                                     Psicóloga encargada <span class="text-muted">(opcional)</span>
                                 </label>
-                                <select name="id_profesional" id="id_profesional" class="form-select">
+                                <select name="cod_profesional" id="cod_profesional" class="form-select">
                                     <option value="">Sin asignar</option>
                                     <?php foreach ($profesionales as $p): ?>
-                                        <option value="<?= (int) $p['id_usuario'] ?>"
-                                            <?= $idProfesionalAnt === (int) $p['id_usuario'] ? 'selected' : '' ?>>
+                                        <option value="<?= (int) $p['cod_usuario'] ?>"
+                                            <?= $idProfesionalAnt === (int) $p['cod_usuario'] ? 'selected' : '' ?>>
                                             <?= escapar(trim($p['nombre'] . ' ' . ($p['apellido'] ?? ''))) ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -382,7 +382,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const grupoCategorias = document.getElementById('grupoCategorias');
     const errorCategorias = document.getElementById('errorCategorias');
     const solicitarCita = document.getElementById('solicitar_cita');
-    const profesional = document.getElementById('id_profesional');
+    const profesional = document.getElementById('cod_profesional');
     const imagen = document.getElementById('imagen');
     const descripcionImagen = document.getElementById('descripcion_imagen');
 

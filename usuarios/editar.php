@@ -10,9 +10,9 @@ if(!$id){
     exit;
 }
 
-$stmt=$conexion->prepare("SELECT u.id_usuario,p.nombres AS nombre,p.apellidos AS apellido,u.usuario,p.correo,u.estado,u.id_rol
-    FROM usuarios u INNER JOIN personas p ON p.id_persona=u.id_persona
-    WHERE u.id_usuario=? LIMIT 1");
+$stmt=$conexion->prepare("SELECT u.cod_usuario,p.nombres AS nombre,p.apellidos AS apellido,u.usuario,p.correo,u.estado,u.cod_rol
+    FROM usuarios u INNER JOIN personas p ON p.cod_persona=u.cod_persona
+    WHERE u.cod_usuario=? LIMIT 1");
 
 if(!$stmt){
     die('Error al preparar la consulta: '.$conexion->error);
@@ -30,7 +30,7 @@ if(!$datos){
     exit;
 }
 
-$resultadoRoles=$conexion->query("SELECT id_rol,nombre FROM roles ORDER BY id_rol ASC");
+$resultadoRoles=$conexion->query("SELECT cod_rol,nombre FROM roles ORDER BY cod_rol ASC");
 
 if(!$resultadoRoles){
     die('Error al consultar roles: '.$conexion->error);
@@ -72,7 +72,7 @@ include '../includes/navbar.php';
 
             <form action="actualizar.php" method="POST" autocomplete="off">
                 <?= login_campo_csrf() ?>
-                <input type="hidden" name="id_usuario" value="<?= (int)$datos['id_usuario']; ?>">
+                <input type="hidden" name="cod_usuario" value="<?= (int)$datos['cod_usuario']; ?>">
 
                 <div class="form-section mb-4">
                     <h5 class="section-title">
@@ -146,16 +146,16 @@ include '../includes/navbar.php';
                         </div>
 
                         <div class="col-md-3">
-                            <label for="id_rol" class="form-label">
+                            <label for="cod_rol" class="form-label">
                                 Rol <span class="text-danger">*</span>
                             </label>
-                            <select name="id_rol" id="id_rol" class="form-select" required>
+                            <select name="cod_rol" id="cod_rol" class="form-select" required>
                                 <option value="">Seleccionar rol...</option>
 
                                 <?php while($rol=$resultadoRoles->fetch_assoc()): ?>
                                     <option
-                                        value="<?= (int)$rol['id_rol']; ?>"
-                                        <?= (int)$datos['id_rol']===(int)$rol['id_rol']?'selected':''; ?>>
+                                        value="<?= (int)$rol['cod_rol']; ?>"
+                                        <?= (int)$datos['cod_rol']===(int)$rol['cod_rol']?'selected':''; ?>>
                                         <?= htmlspecialchars($rol['nombre']); ?>
                                     </option>
                                 <?php endwhile; ?>

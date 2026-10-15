@@ -5,7 +5,7 @@ requerir_acceso('informes/editar.php');
 require_once '../config/conexion.php';
 require_once __DIR__ . '/datos.php';
 
-$rolActual = (int)($_SESSION['id_rol'] ?? 0);
+$rolActual = (int)($_SESSION['cod_rol'] ?? 0);
 if (!in_array($rolActual, [1, 2], true)) {
     $_SESSION['mensaje'] = 'No tiene permiso para editar informes.';
     $_SESSION['tipo_mensaje'] = 'danger';
@@ -27,9 +27,9 @@ if (!$idInforme) {
 $stmt = $conexion->prepare("
     SELECT i.*,d.*,i.fecha_inicio AS fecha,e.nombres,e.apellidos,e.curso,e.paralelo
     FROM informes i
-    INNER JOIN informe_individual d ON d.id_informe=i.id_informe
-    INNER JOIN vista_estudiantes e ON e.id_estudiante=d.id_estudiante
-    WHERE i.id_informe = ?
+    INNER JOIN informe_individual d ON d.cod_informe=i.cod_informe
+    INNER JOIN vista_estudiantes e ON e.cod_estudiante=d.cod_estudiante
+    WHERE i.cod_informe = ?
     LIMIT 1
 ");
 $stmt->bind_param('i', $idInforme);
@@ -50,7 +50,7 @@ $tipos = array_filter(array_map('trim', explode(',', (string)$informe['tipo_aten
 if (($recuperado['id'] ?? 0) === $idInforme) {
     $datos = $recuperado['datos'];
     $tipos = $datos['tipo_atencion'];
-    unset($datos['id_estudiante'], $datos['id_historia'], $datos['tipo_atencion']);
+    unset($datos['cod_estudiante'], $datos['cod_historia'], $datos['tipo_atencion']);
     $informe = array_replace($informe, $datos);
 }
 $mensaje = $_SESSION['mensaje'] ?? '';
@@ -93,7 +93,7 @@ include '../includes/navbar.php';
 
             <form action="actualizar.php" method="POST" id="formInforme" autocomplete="off">
                 <?= login_campo_csrf() ?>
-                <input type="hidden" name="id_informe" value="<?= (int)$idInforme ?>">
+                <input type="hidden" name="cod_informe" value="<?= (int)$idInforme ?>">
 
                 <section class="form-section">
                     <h5 class="section-title"><i class="bi bi-person-vcard"></i>Datos generales</h5>
@@ -114,7 +114,7 @@ include '../includes/navbar.php';
                         <div class="col-md-6">
                             <label class="form-label">Estudiante</label>
                             <input type="text" class="form-control" value="<?= e(trim($informe['apellidos'] . ' ' . $informe['nombres'])) ?>" readonly>
-                            <input type="hidden" name="id_estudiante" value="<?= (int)$informe['id_estudiante'] ?>">
+                            <input type="hidden" name="cod_estudiante" value="<?= (int)$informe['cod_estudiante'] ?>">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Curso</label>

@@ -9,8 +9,8 @@ require_once '../config/conexion.php';
 
 $baseUrl = rtrim(login_config()['base_url'], '/');
 
-$rol       = (int) ($_SESSION['id_rol'] ?? 0);
-$idDocente = (int) ($_SESSION['id_docente'] ?? 0);
+$rol       = (int) ($_SESSION['cod_rol'] ?? 0);
+$idDocente = (int) ($_SESSION['cod_docente'] ?? 0);
 
 $esDocente      = ($rol === 3);
 
@@ -45,7 +45,7 @@ function claseEstado(string $estado): string
 
 $sql = "
     SELECT
-        d.id_derivacion,
+        d.cod_derivacion,
         d.fecha,
         d.estado,
         d.prioridad,
@@ -61,15 +61,15 @@ $sql = "
 
     FROM derivaciones d
 
-    LEFT JOIN materias m ON m.id_materia = d.id_materia
+    LEFT JOIN materias m ON m.cod_materia = d.cod_materia
 
     LEFT JOIN vista_estudiantes e
-        ON e.id_estudiante = d.id_estudiante
+        ON e.cod_estudiante = d.cod_estudiante
 
     LEFT JOIN docentes doc
-        ON doc.id_docente = d.id_docente
+        ON doc.cod_docente = d.cod_docente
     LEFT JOIN personas persona
-        ON persona.id_persona = doc.id_persona
+        ON persona.cod_persona = doc.cod_persona
 ";
 
 
@@ -78,7 +78,7 @@ $sql = "
 if ($esDocente) {
 
     $sql .= "
-        WHERE d.id_docente = ?
+        WHERE d.cod_docente = ?
     ";
 
     $sql .= "
@@ -91,7 +91,7 @@ if ($esDocente) {
                 ELSE 4
             END,
             d.fecha DESC,
-            d.id_derivacion DESC
+            d.cod_derivacion DESC
     ";
 
     $stmt = $conexion->prepare($sql);
@@ -120,7 +120,7 @@ if ($esDocente) {
                 ELSE 4
             END,
             d.fecha DESC,
-            d.id_derivacion DESC
+            d.cod_derivacion DESC
     ";
 
     $resultado = $conexion->query($sql);
@@ -600,7 +600,7 @@ include '../includes/navbar.php';
 
                                             <small>
                                                 Derivación #
-                                                <?= (int) $fila['id_derivacion'] ?>
+                                                <?= (int) $fila['cod_derivacion'] ?>
                                             </small>
                                             <small><?= e($fila['materia'] ?? 'Materia no registrada') ?></small>
                                             <small>Prioridad: <?= e($fila['prioridad']) ?></small>
@@ -679,7 +679,7 @@ include '../includes/navbar.php';
 
                                         <a
                                             class="btn-accion"
-                                            href="ver.php?id=<?= (int) $fila['id_derivacion'] ?>"
+                                            href="ver.php?id=<?= (int) $fila['cod_derivacion'] ?>"
                                             title="Ver derivación"
                                         >
 
@@ -698,7 +698,7 @@ include '../includes/navbar.php';
 
                                             <a
                                                 class="btn-accion editar"
-                                                href="editar.php?id=<?= (int) $fila['id_derivacion'] ?>"
+                                                href="editar.php?id=<?= (int) $fila['cod_derivacion'] ?>"
                                                 title="Editar derivación"
                                             >
 
@@ -716,7 +716,7 @@ include '../includes/navbar.php';
                                             <form action="eliminar.php" method="POST" class="d-inline"
                                                 onsubmit="return confirm('¿Eliminar esta derivación pendiente?');">
                                                 <?= login_campo_csrf() ?>
-                                                <input type="hidden" name="id_derivacion" value="<?= (int)$fila['id_derivacion'] ?>">
+                                                <input type="hidden" name="cod_derivacion" value="<?= (int)$fila['cod_derivacion'] ?>">
                                                 <button type="submit" class="btn-accion" title="Eliminar derivación">
                                                     <i class="bi bi-trash"></i><span>Eliminar</span>
                                                 </button>

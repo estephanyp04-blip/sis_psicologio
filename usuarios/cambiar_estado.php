@@ -9,7 +9,7 @@ if($_SERVER['REQUEST_METHOD']!=='POST'){
     exit;
 }
 
-$id=filter_input(INPUT_POST,'id_usuario',FILTER_VALIDATE_INT);
+$id=filter_input(INPUT_POST,'cod_usuario',FILTER_VALIDATE_INT);
 
 if(!$id){
     $_SESSION['mensaje']='Usuario no válido.';
@@ -18,7 +18,7 @@ if(!$id){
     exit;
 }
 
-$stmt=$conexion->prepare("SELECT estado FROM usuarios WHERE id_usuario=? LIMIT 1");
+$stmt=$conexion->prepare("SELECT estado FROM usuarios WHERE cod_usuario=? LIMIT 1");
 
 if(!$stmt){
     $_SESSION['mensaje']='Error al consultar el usuario.';
@@ -41,7 +41,7 @@ if(!$usuario){
 
 $nuevoEstado=$usuario['estado']==='Activo'?'Inactivo':'Activo';
 
-$stmtActualizar=$conexion->prepare("UPDATE usuarios SET estado=? WHERE id_usuario=?");
+$stmtActualizar=$conexion->prepare("UPDATE usuarios SET estado=? WHERE cod_usuario=?");
 
 if(!$stmtActualizar){
     $_SESSION['mensaje']='Error al preparar la actualización.';

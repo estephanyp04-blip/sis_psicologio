@@ -35,7 +35,7 @@ if (!empty($fixture['cuatro_roles'])) $usuariosPermitidos = array_merge($usuario
 if (!in_array($usuario, $usuariosPermitidos, true)) { http_response_code(403); exit; }
 if (($_SESSION['usuario'] ?? '') !== $usuario) {
     $cuenta = login_buscar_usuario($usuario);
-    if ((int)$cuenta['id_rol']===3) $cuenta['id_docente']=login_docente((int)$cuenta['id_usuario']);
+    if ((int)$cuenta['cod_rol']===3) $cuenta['cod_docente']=login_docente((int)$cuenta['cod_usuario']);
     login_establecer($cuenta);
 }
 $_SESSION['login_csrf'] = str_repeat('c', 64);

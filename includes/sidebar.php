@@ -27,7 +27,7 @@ $gruposMenu = [
 ];
 ?>
 
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar-navigation" aria-label="Menú de navegación" tabindex="-1">
     <a href="<?= login_html(login_inicio_url()) ?>" class="logo">
         <i class="bi bi-heart-pulse"></i>
         <h5>Sistema Psicológico</h5>
@@ -58,3 +58,4 @@ $gruposMenu = [
         <?php endforeach; ?>
     </nav>
 </aside>
+<button class="sidebar-backdrop" type="button" data-sidebar-close aria-label="Cerrar menú de navegación" hidden></button>

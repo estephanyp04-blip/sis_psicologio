@@ -8,7 +8,7 @@ include '../includes/header.php';
 include '../includes/sidebar.php';
 include '../includes/navbar.php';
 
-$sqlRoles="SELECT id_rol,nombre FROM roles ORDER BY id_rol ASC";
+$sqlRoles="SELECT cod_rol,nombre FROM roles ORDER BY cod_rol ASC";
 $resultadoRoles=$conexion->query($sqlRoles);
 
 if(!$resultadoRoles){
@@ -140,14 +140,14 @@ if(!$resultadoRoles){
                         </div>
 
                         <div class="col-md-3">
-                            <label for="id_rol" class="form-label">
+                            <label for="cod_rol" class="form-label">
                                 Rol
                                 <span class="text-danger">*</span>
                             </label>
 
                             <select
-                                name="id_rol"
-                                id="id_rol"
+                                name="cod_rol"
+                                id="cod_rol"
                                 class="form-select"
                                 required>
 
@@ -156,7 +156,7 @@ if(!$resultadoRoles){
                                 </option>
 
                                 <?php while($rol=$resultadoRoles->fetch_assoc()): ?>
-                                    <option value="<?= (int)$rol['id_rol']; ?>">
+                                    <option value="<?= (int)$rol['cod_rol']; ?>">
                                         <?= htmlspecialchars($rol['nombre']); ?>
                                     </option>
                                 <?php endwhile; ?>

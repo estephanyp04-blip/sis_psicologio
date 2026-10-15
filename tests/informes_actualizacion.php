@@ -27,28 +27,28 @@ try {
     $bd->query("SET SESSION sql_mode='STRICT_ALL_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
     // Se crean todas las tablas antes de insertar. Nunca se escriben tablas permanentes.
     $bd->query("CREATE TEMPORARY TABLE informes (
-        id_informe INT UNSIGNED PRIMARY KEY, numero_ficha VARCHAR(30), id_elaborado_por INT UNSIGNED,
+        cod_informe INT UNSIGNED PRIMARY KEY, numero_ficha VARCHAR(30), cod_elaborado_por INT UNSIGNED,
         titulo VARCHAR(180), fecha_inicio DATE, fecha_fin DATE, descripcion TEXT, conclusiones TEXT,
         recomendaciones TEXT, estado ENUM('Borrador','Finalizado')) ENGINE=InnoDB");
     $bd->query("CREATE TEMPORARY TABLE informe_individual (
-        id_informe INT UNSIGNED PRIMARY KEY, id_estudiante INT UNSIGNED, id_historia INT UNSIGNED,
-        id_derivacion INT UNSIGNED, id_seguimiento INT UNSIGNED, numero_atenciones INT UNSIGNED,
+        cod_informe INT UNSIGNED PRIMARY KEY, cod_estudiante INT UNSIGNED, cod_historia INT UNSIGNED,
+        cod_derivacion INT UNSIGNED, cod_seguimiento INT UNSIGNED, numero_atenciones INT UNSIGNED,
         referido_por VARCHAR(150), tipo_atencion TEXT, motivo TEXT, diagnostico TEXT,
         aspecto_cognitivo TEXT, aspectos_afectivos TEXT, diagnostico_acuerdos TEXT, recibido_por VARCHAR(150),
         CONSTRAINT fallo_detalle_prueba CHECK (numero_atenciones < 100)) ENGINE=InnoDB");
-    $bd->query('CREATE TEMPORARY TABLE seguimientos (id_seguimiento INT PRIMARY KEY, fecha DATE) ENGINE=InnoDB');
+    $bd->query('CREATE TEMPORARY TABLE seguimientos (cod_seguimiento INT PRIMARY KEY, fecha DATE) ENGINE=InnoDB');
     $bd->query("CREATE TEMPORARY TABLE auditoria (
-        id_auditoria INT PRIMARY KEY AUTO_INCREMENT, id_usuario INT, modulo VARCHAR(50),
+        cod_auditoria INT PRIMARY KEY AUTO_INCREMENT, cod_usuario INT, modulo VARCHAR(50),
         accion VARCHAR(50), registro_id INT, detalle TEXT,
-        CONSTRAINT fallo_auditoria_prueba CHECK (id_usuario = 102)) ENGINE=InnoDB");
-    $bd->query("INSERT INTO informes (id_informe,numero_ficha,id_elaborado_por,titulo,fecha_inicio,estado)
+        CONSTRAINT fallo_auditoria_prueba CHECK (cod_usuario = 102)) ENGINE=InnoDB");
+    $bd->query("INSERT INTO informes (cod_informe,numero_ficha,cod_elaborado_por,titulo,fecha_inicio,estado)
         VALUES (1,'PRUEBA-1',101,'Original','2026-01-01','Borrador'),(2,'PRUEBA-2',101,'Otro','2026-01-01','Borrador')");
-    $bd->query("INSERT INTO informe_individual (id_informe,id_estudiante,id_historia,id_derivacion,id_seguimiento,numero_atenciones,motivo)
+    $bd->query("INSERT INTO informe_individual (cod_informe,cod_estudiante,cod_historia,cod_derivacion,cod_seguimiento,numero_atenciones,motivo)
         VALUES (1,201,301,401,501,1,'Original'),(2,202,NULL,NULL,NULL,2,'Otro')");
     $bd->query("INSERT INTO seguimientos VALUES (501,'2026-01-01')");
 
     $datos = informe_datos([
-        'id_estudiante' => 201, 'id_historia' => 301, 'id_seguimiento' => 501,
+        'cod_estudiante' => 201, 'cod_historia' => 301, 'cod_seguimiento' => 501,
         'titulo' => 'Título editado', 'fecha' => '2026-01-02', 'numero_atenciones' => 9,
         'tipo_atencion' => ['Evaluación', 'Orientación'], 'referido_por' => 'Referente editado',
         'motivo' => 'Motivo editado', 'diagnostico' => 'Diagnóstico editado',
@@ -71,19 +71,19 @@ try {
     foreach (['referido_por', 'motivo', 'diagnostico', 'aspecto_cognitivo', 'aspectos_afectivos', 'diagnostico_acuerdos', 'recibido_por'] as $campo) {
         comprobar($detalle[$campo] === $datos[$campo], "No se guardó $campo en el detalle.");
     }
-    comprobar((int)$cabecera['id_elaborado_por'] === 101 && $cabecera['numero_ficha'] === 'PRUEBA-1', 'Cambió el autor o la ficha.');
-    foreach (['id_estudiante' => 201, 'id_historia' => 301, 'id_derivacion' => 401, 'id_seguimiento' => 501] as $campo => $id) {
+    comprobar((int)$cabecera['cod_elaborado_por'] === 101 && $cabecera['numero_ficha'] === 'PRUEBA-1', 'Cambió el autor o la ficha.');
+    foreach (['cod_estudiante' => 201, 'cod_historia' => 301, 'cod_derivacion' => 401, 'cod_seguimiento' => 501] as $campo => $id) {
         comprobar((int)$detalle[$campo] === $id, "Cambió la relación $campo.");
     }
     comprobar($antes['informes'][1] === $despues['informes'][1] && $antes['informe_individual'][1] === $despues['informe_individual'][1], 'Se modificó otro informe.');
-    comprobar(count($despues['auditoria']) === 1 && (int)$despues['auditoria'][0]['id_usuario'] === 102
+    comprobar(count($despues['auditoria']) === 1 && (int)$despues['auditoria'][0]['cod_usuario'] === 102
         && (int)$despues['auditoria'][0]['registro_id'] === 1, 'No se registró al editor en auditoría.');
 
-    foreach ([['numero_atenciones' => 100], ['id_editor' => 999]] as $caso) {
+    foreach ([['numero_atenciones' => 100], ['cod_editor' => 999]] as $caso) {
         $previo = foto($bd);
         $rechazado = false;
         try {
-            informe_actualizar($bd, 1, array_replace($datos, ['titulo' => 'No debe persistir', 'motivo' => 'No debe persistir'], $caso), $caso['id_editor'] ?? 102);
+            informe_actualizar($bd, 1, array_replace($datos, ['titulo' => 'No debe persistir', 'motivo' => 'No debe persistir'], $caso), $caso['cod_editor'] ?? 102);
         } catch (mysqli_sql_exception $error) {
             // 4025 corresponde a las restricciones CHECK de estas tablas temporales.
             if ($error->getCode() !== 4025) throw $error;
@@ -93,7 +93,7 @@ try {
         comprobar(foto($bd) === $previo, 'El fallo dejó cambios parciales en cabecera, detalle o auditoría.');
     }
 
-    foreach (['id_estudiante' => 202, 'id_seguimiento' => 502] as $campo => $id) {
+    foreach (['cod_estudiante' => 202, 'cod_seguimiento' => 502] as $campo => $id) {
         $previo = foto($bd);
         $rechazado = false;
         try { informe_actualizar($bd, 1, array_replace($datos, [$campo => $id]), 102); }

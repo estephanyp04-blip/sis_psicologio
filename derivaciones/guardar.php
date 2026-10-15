@@ -32,9 +32,9 @@ function escaparDerivacion($valor): string
 {
     return htmlspecialchars((string) $valor, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
-$idUsuario = enteroDerivacion($_SESSION['id_usuario'] ?? 0);
-$idEstudiante = enteroDerivacion($_POST['id_estudiante'] ?? 0);
-$idDocenteElegido = enteroDerivacion($_POST['id_docente'] ?? 0);
+$idUsuario = enteroDerivacion($_SESSION['cod_usuario'] ?? 0);
+$idEstudiante = enteroDerivacion($_POST['cod_estudiante'] ?? 0);
+$idDocenteElegido = enteroDerivacion($_POST['cod_docente'] ?? 0);
 $fecha = textoDerivacion('fecha');
 $materia = textoDerivacion('materia');
 $motivo = textoDerivacion('motivo');
@@ -43,22 +43,22 @@ $descripcionImagen = textoDerivacion('descripcion_imagen');
 $prioridad = textoDerivacion('prioridad');
 $categorias = isset($_POST['categorias']) && is_array($_POST['categorias']) ? $_POST['categorias'] : [];
 $solicitarCita = isset($_POST['solicitar_cita']) ? 1 : 0;
-$idProfesional = enteroDerivacion($_POST['id_profesional'] ?? 0);
-$categoriasDisponibles = $conexion->query("SELECT id_categoria,nombre FROM categorias_derivacion WHERE estado='Activo'")->fetch_all(MYSQLI_ASSOC);
+$idProfesional = enteroDerivacion($_POST['cod_profesional'] ?? 0);
+$categoriasDisponibles = $conexion->query("SELECT cod_categoria,nombre FROM categorias_derivacion WHERE estado='Activo'")->fetch_all(MYSQLI_ASSOC);
 $categoriasPorNombre = [];
-foreach ($categoriasDisponibles as $categoria) $categoriasPorNombre[$categoria['nombre']] = (int)$categoria['id_categoria'];
+foreach ($categoriasDisponibles as $categoria) $categoriasPorNombre[$categoria['nombre']] = (int)$categoria['cod_categoria'];
 $categoriasLimpias = [];
 foreach ($categorias as $categoria) {
     if (is_string($categoria) && isset($categoriasPorNombre[trim($categoria)])) $categoriasLimpias[] = trim($categoria);
 }
 $categoriasLimpias = array_values(array_unique($categoriasLimpias));
 $datos = [
-    'id_estudiante' => $idEstudiante, 'id_docente' => $idDocenteElegido,
+    'cod_estudiante' => $idEstudiante, 'cod_docente' => $idDocenteElegido,
     'fecha' => $fecha, 'materia' => $materia, 'motivo' => $motivo,
     'observaciones' => $observaciones, 'prioridad' => $prioridad,
     'descripcion_imagen' => $descripcionImagen,
     'categorias' => $categoriasLimpias, 'solicitar_cita' => $solicitarCita,
-    'id_profesional' => $idProfesional
+    'cod_profesional' => $idProfesional
 ];
 $_SESSION['datos_derivacion'] = $datos;
 // El usuario debe estar autenticado para identificar al responsable.
@@ -66,12 +66,12 @@ if ($idUsuario <= 0) {
     errorDerivacion('Inicie sesión con una cuenta de Docente o Administrador antes de registrar la derivación.');
 }
 try {
-    $stmtUsuario = $conexion->prepare("SELECT id_rol FROM usuarios WHERE id_usuario = ? AND estado = 'Activo' LIMIT 1");
+    $stmtUsuario = $conexion->prepare("SELECT cod_rol FROM usuarios WHERE cod_usuario = ? AND estado = 'Activo' LIMIT 1");
     $stmtUsuario->bind_param('i', $idUsuario);
     $stmtUsuario->execute();
     $usuarioActual = $stmtUsuario->get_result()->fetch_assoc();
     $stmtUsuario->close();
-    $idRol = (int) ($usuarioActual['id_rol'] ?? 0);
+    $idRol = (int) ($usuarioActual['cod_rol'] ?? 0);
     if (!in_array($idRol, [1, 3], true)) {
         errorDerivacion('Su cuenta no tiene permiso para registrar derivaciones.');
     }
@@ -91,10 +91,10 @@ try {
     } elseif ($fecha > date('Y-m-d')) {
         $errores[] = 'La fecha del reporte no puede ser futura.';
     }
-    $stmtMateria = $conexion->prepare("SELECT id_materia FROM materias WHERE nombre=? AND estado='Activo' LIMIT 1");
+    $stmtMateria = $conexion->prepare("SELECT cod_materia FROM materias WHERE nombre=? AND estado='Activo' LIMIT 1");
     $stmtMateria->bind_param('s', $materia);
     $stmtMateria->execute();
-    $idMateria = (int)($stmtMateria->get_result()->fetch_assoc()['id_materia'] ?? 0);
+    $idMateria = (int)($stmtMateria->get_result()->fetch_assoc()['cod_materia'] ?? 0);
     $stmtMateria->close();
     if (!$idMateria) $errores[] = 'Debe seleccionar una materia activa del catálogo.';
     if (!$categoriasLimpias) {
@@ -118,7 +118,7 @@ try {
     if ($errores) {
         errorDerivacion(implode("\n", $errores));
     }
-    $stmtEstudiante = $conexion->prepare("SELECT id_estudiante FROM estudiantes WHERE id_estudiante = ? AND estado = 'Activo' LIMIT 1");
+    $stmtEstudiante = $conexion->prepare("SELECT cod_estudiante FROM estudiantes WHERE cod_estudiante = ? AND estado = 'Activo' LIMIT 1");
     $stmtEstudiante->bind_param('i', $idEstudiante);
     $stmtEstudiante->execute();
     $existeEstudiante = $stmtEstudiante->get_result()->num_rows > 0;
@@ -128,19 +128,19 @@ try {
     }
     // Un docente solo puede registrar derivaciones a su propio nombre.
     if ($idRol === 3) {
-        $stmtDocente = $conexion->prepare('SELECT d.id_docente FROM docentes d
-            INNER JOIN usuarios u ON u.id_persona=d.id_persona WHERE u.id_usuario = ? LIMIT 2');
+        $stmtDocente = $conexion->prepare('SELECT d.cod_docente FROM docentes d
+            INNER JOIN usuarios u ON u.cod_persona=d.cod_persona WHERE u.cod_usuario = ? LIMIT 2');
         $stmtDocente->bind_param('i', $idUsuario);
         $stmtDocente->execute();
         $resultadoDocente = $stmtDocente->get_result();
         if ($resultadoDocente->num_rows !== 1) {
             $stmtDocente->close();
-            unset($_SESSION['id_docente']);
+            unset($_SESSION['cod_docente']);
             errorDerivacion('Su cuenta no tiene un docente asociado de forma única. Solicite al administrador revisar la asignación de su cuenta.');
         }
-        $idDocente = (int) $resultadoDocente->fetch_assoc()['id_docente'];
+        $idDocente = (int) $resultadoDocente->fetch_assoc()['cod_docente'];
         $stmtDocente->close();
-        $_SESSION['id_docente'] = $idDocente;
+        $_SESSION['cod_docente'] = $idDocente;
     } else {
         if ($subidaImagen !== null && $idDocenteElegido <= 0) {
             errorDerivacion('Seleccione el docente responsable antes de adjuntar la imagen.');
@@ -148,8 +148,8 @@ try {
         // El administrador elige al docente; no se asigna uno por defecto.
         $idDocente = $idDocenteElegido;
         if ($idDocente <= 0) {
-            $resultadoDocentes = $conexion->query("SELECT d.id_docente,p.nombres,p.apellidos
-                FROM docentes d INNER JOIN personas p ON p.id_persona=d.id_persona
+            $resultadoDocentes = $conexion->query("SELECT d.cod_docente,p.nombres,p.apellidos
+                FROM docentes d INNER JOIN personas p ON p.cod_persona=d.cod_persona
                 WHERE d.estado='Activo' ORDER BY p.apellidos,p.nombres");
             $docentes = $resultadoDocentes->fetch_all(MYSQLI_ASSOC);
             $resultadoDocentes->free();
@@ -169,7 +169,7 @@ try {
                         <form action="guardar.php" method="POST">
                             <?= login_campo_csrf() ?>
                             <?php foreach ($datos as $campo => $valor): ?>
-                                <?php if ($campo === 'id_docente' || ($campo === 'solicitar_cita' && !$valor)) { continue; } ?>
+                                <?php if ($campo === 'cod_docente' || ($campo === 'solicitar_cita' && !$valor)) { continue; } ?>
                                 <?php if (is_array($valor)): ?>
                                     <?php foreach ($valor as $elemento): ?>
                                         <input type="hidden" name="<?= escaparDerivacion($campo) ?>[]" value="<?= escaparDerivacion($elemento) ?>">
@@ -178,11 +178,11 @@ try {
                                     <input type="hidden" name="<?= escaparDerivacion($campo) ?>" value="<?= escaparDerivacion($valor) ?>">
                                 <?php endif; ?>
                             <?php endforeach; ?>
-                            <label class="form-label" for="id_docente">Docente <span class="text-danger">*</span></label>
-                            <select class="form-select mb-3" id="id_docente" name="id_docente" required>
+                            <label class="form-label" for="cod_docente">Docente <span class="text-danger">*</span></label>
+                            <select class="form-select mb-3" id="cod_docente" name="cod_docente" required>
                                 <option value="">Seleccione un docente...</option>
                                 <?php foreach ($docentes as $docente): ?>
-                                    <option value="<?= (int) $docente['id_docente'] ?>"><?= escaparDerivacion($docente['apellidos'] . ' ' . $docente['nombres']) ?></option>
+                                    <option value="<?= (int) $docente['cod_docente'] ?>"><?= escaparDerivacion($docente['apellidos'] . ' ' . $docente['nombres']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                             <button type="submit" class="btn btn-primary">Guardar derivación</button>
@@ -196,7 +196,7 @@ try {
             <?php
             exit;
         }
-        $stmtDocente = $conexion->prepare("SELECT id_docente FROM docentes WHERE id_docente = ? AND estado='Activo' LIMIT 1");
+        $stmtDocente = $conexion->prepare("SELECT cod_docente FROM docentes WHERE cod_docente = ? AND estado='Activo' LIMIT 1");
         $stmtDocente->bind_param('i', $idDocente);
         $stmtDocente->execute();
         $existeDocente = $stmtDocente->get_result()->num_rows === 1;
@@ -209,8 +209,8 @@ try {
     $nombreProfesional = '';
     if ($solicitarCita === 1 && $idProfesional > 0) {
         $stmtProfesional = $conexion->prepare("SELECT p.nombres AS nombre,p.apellidos AS apellido
-            FROM usuarios u INNER JOIN personas p ON p.id_persona=u.id_persona
-            WHERE u.id_usuario = ? AND u.id_rol = 2 AND u.estado = 'Activo' LIMIT 1");
+            FROM usuarios u INNER JOIN personas p ON p.cod_persona=u.cod_persona
+            WHERE u.cod_usuario = ? AND u.cod_rol = 2 AND u.estado = 'Activo' LIMIT 1");
         $stmtProfesional->bind_param('i', $idProfesional);
         $stmtProfesional->execute();
         $profesional = $stmtProfesional->get_result()->fetch_assoc();
@@ -240,13 +240,13 @@ try {
     $conexion->begin_transaction();
     try {
         $stmt = $conexion->prepare('INSERT INTO derivaciones
-            (fecha,id_estudiante,id_docente,id_materia,motivo,observaciones,prioridad,estado,id_psicologa_solicitada,solicitar_cita)
+            (fecha,cod_estudiante,cod_docente,cod_materia,motivo,observaciones,prioridad,estado,cod_psicologa_solicitada,solicitar_cita)
             VALUES (?,?,?,?,?,?,?,?,?,?)');
         $stmt->bind_param('siiissssii', $fecha, $idEstudiante, $idDocente, $idMateria, $motivo, $observacionesFinales, $prioridad, $estado, $idProfesionalGuardar, $solicitarCita);
         $stmt->execute();
         $idDerivacion = (int)$conexion->insert_id;
         $stmt->close();
-        $stmtCategoria = $conexion->prepare('INSERT INTO derivacion_categorias (id_derivacion,id_categoria) VALUES (?,?)');
+        $stmtCategoria = $conexion->prepare('INSERT INTO derivacion_categorias (cod_derivacion,cod_categoria) VALUES (?,?)');
         foreach ($categoriasLimpias as $categoria) {
             $idCategoria = $categoriasPorNombre[$categoria];
             $stmtCategoria->bind_param('ii', $idDerivacion, $idCategoria);

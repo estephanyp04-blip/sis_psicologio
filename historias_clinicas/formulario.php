@@ -17,12 +17,12 @@ $datosIniciales = isset($datosIniciales) && is_array($datosIniciales)
     ? $datosIniciales
     : [];
 
-$esEdicion = !empty($historia['id_historia']);
+$esEdicion = !empty($historia['cod_historia']);
 $recuperacion = $_SESSION['datos_historia'] ?? [];
-$datosSesion = ($recuperacion['id'] ?? -1) === (int)($historia['id_historia'] ?? 0)
+$datosSesion = ($recuperacion['id'] ?? -1) === (int)($historia['cod_historia'] ?? 0)
     ? ($recuperacion['datos'] ?? []) : [];
 unset($_SESSION['datos_historia']);
-if ($esEdicion) unset($datosSesion['id_historia'], $datosSesion['id_estudiante'], $datosSesion['id_derivacion'], $datosSesion['id_cita']);
+if ($esEdicion) unset($datosSesion['cod_historia'], $datosSesion['cod_estudiante'], $datosSesion['cod_derivacion'], $datosSesion['cod_cita']);
 
 function valorHistoria(string $campo, $defecto = '')
 {
@@ -61,7 +61,7 @@ function opcionesHistoria(string $grupo): array
 
 $accionFormulario = $esEdicion ? 'actualizar.php' : 'guardar.php';
 
-$vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
+$vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
 ?>
 
 <form
@@ -71,9 +71,9 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
     autocomplete="off"
 >
     <?= login_campo_csrf() ?>
-    <input type="hidden" name="id_cita" value="<?= (int)valorHistoria('id_cita', 0) ?>">
-    <?php if ((int)valorHistoria('id_cita', 0)): ?>
-        <p class="alert alert-info">Cita de origen #<?= (int)valorHistoria('id_cita') ?>. Se conservarán su estudiante y derivación al guardar.</p>
+    <input type="hidden" name="cod_cita" value="<?= (int)valorHistoria('cod_cita', 0) ?>">
+    <?php if ((int)valorHistoria('cod_cita', 0)): ?>
+        <p class="alert alert-info">Cita de origen #<?= (int)valorHistoria('cod_cita') ?>. Se conservarán su estudiante y derivación al guardar.</p>
     <?php endif; ?>
     <?php foreach (HISTORIA_OPCIONES as $grupo => $_): ?>
         <input type="hidden" name="opciones_presentes[<?= escapar($grupo) ?>]" value="1">
@@ -84,17 +84,17 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
     <?php if ($esEdicion): ?>
         <input
             type="hidden"
-            name="id_historia"
-            value="<?= (int)valorHistoria('id_historia') ?>"
+            name="cod_historia"
+            value="<?= (int)valorHistoria('cod_historia') ?>"
         >
     <?php endif; ?>
 
     <!-- ✅ SIEMPRE presente; el JS decide su valor -->
     <input
         type="hidden"
-        name="id_derivacion"
+        name="cod_derivacion"
         id="input_id_derivacion"
-        value="<?= (int)valorHistoria('id_derivacion', 0) ?>"
+        value="<?= (int)valorHistoria('cod_derivacion', 0) ?>"
     >
 
     <section class="historia-formulario-top">
@@ -146,12 +146,12 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
 
                 <!-- ESTUDIANTE -->
                 <div class="col-lg-8">
-                    <label for="id_estudiante" class="form-label">
+                    <label for="cod_estudiante" class="form-label">
                         Estudiante <span class="text-danger">*</span>
                     </label>
                     <select
-                        name="id_estudiante"
-                        id="id_estudiante"
+                        name="cod_estudiante"
+                        id="cod_estudiante"
                         class="form-select"
                         required
                         <?= $esEdicion ? 'disabled' : '' ?>
@@ -160,11 +160,11 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
                         <?php foreach ($estudiantes as $estudiante): ?>
                             <?php
                             $seleccionadoEstudiante =
-                                (int)valorHistoria('id_estudiante') ===
-                                (int)$estudiante['id_estudiante'];
+                                (int)valorHistoria('cod_estudiante') ===
+                                (int)$estudiante['cod_estudiante'];
                             ?>
                             <option
-                                value="<?= (int)$estudiante['id_estudiante'] ?>"
+                                value="<?= (int)$estudiante['cod_estudiante'] ?>"
                                 data-nombre="<?= escapar(
                                     $estudiante['nombres'] . ' ' . $estudiante['apellidos']
                                 ) ?>"
@@ -198,8 +198,8 @@ $vieneDerivacion = (int)valorHistoria('id_derivacion', 0) > 0;
                     <?php if ($esEdicion): ?>
                         <input
                             type="hidden"
-                            name="id_estudiante"
-                            value="<?= (int)valorHistoria('id_estudiante') ?>"
+                            name="cod_estudiante"
+                            value="<?= (int)valorHistoria('cod_estudiante') ?>"
                         >
                     <?php endif; ?>
                 </div>
@@ -836,7 +836,7 @@ document.addEventListener('DOMContentLoaded', function () {
     /* =====================================================
        3. DATOS DEL ESTUDIANTE
        ===================================================== */
-    const estudianteSelect = document.getElementById('id_estudiante');
+    const estudianteSelect = document.getElementById('cod_estudiante');
     const nombreCompleto = document.getElementById('nombre_completo');
     const fechaNacimiento = document.getElementById('fecha_nacimiento_estudiante');
     const edadEstudiante = document.getElementById('edad_estudiante');
@@ -1016,7 +1016,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         try {
             const resp = await fetch(
-                `ajax_derivaciones.php?id_estudiante=${encodeURIComponent(idEst)}`,
+                `ajax_derivaciones.php?cod_estudiante=${encodeURIComponent(idEst)}`,
                 { headers: { 'Accept': 'application/json' }, signal: controladorDerivaciones.signal }
             );
 
@@ -1055,7 +1055,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 infoDeriv.textContent = `${lista.length} derivación(es) disponible(s).`;
             }
 
-            /* Si ya viene un id_derivacion preseleccionado (por URL), aplicarlo */
+            /* Si ya viene un cod_derivacion preseleccionado (por URL), aplicarlo */
             if (seleccionAnterior && seleccionAnterior !== '0') {
                 const existe = lista.some(
                     (x) => String(x.id) === String(seleccionAnterior)

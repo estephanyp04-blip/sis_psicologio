@@ -5,13 +5,13 @@ require_once __DIR__ . '/evidencias.php';
 
 function derivacion_catalogo_categorias(mysqli $bd): array
 {
-    return array_column($bd->query('SELECT id_categoria,nombre,estado FROM categorias_derivacion ORDER BY nombre')->fetch_all(MYSQLI_ASSOC), null, 'nombre');
+    return array_column($bd->query('SELECT cod_categoria,nombre,estado FROM categorias_derivacion ORDER BY nombre')->fetch_all(MYSQLI_ASSOC), null, 'nombre');
 }
 
 function derivacion_categorias_registradas(mysqli $bd, int $id, string $observaciones): array
 {
     $stmt = $bd->prepare('SELECT c.nombre FROM derivacion_categorias dc
-        INNER JOIN categorias_derivacion c ON c.id_categoria=dc.id_categoria WHERE dc.id_derivacion=? ORDER BY c.nombre');
+        INNER JOIN categorias_derivacion c ON c.cod_categoria=dc.cod_categoria WHERE dc.cod_derivacion=? ORDER BY c.nombre');
     $stmt->bind_param('i', $id); $stmt->execute();
     $nombres = array_column($stmt->get_result()->fetch_all(MYSQLI_ASSOC), 'nombre');
     $stmt->close();
@@ -88,15 +88,15 @@ function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, in
     $rutaAnterior = null;
     $bd->begin_transaction();
     try {
-        $stmt = $bd->prepare('SELECT d.observaciones,d.estado,d.id_materia,m.nombre AS materia
-            FROM derivaciones d LEFT JOIN materias m ON m.id_materia=d.id_materia
-            WHERE d.id_derivacion = ? AND (? <> 3 OR d.id_docente = ?) FOR UPDATE');
+        $stmt = $bd->prepare('SELECT d.observaciones,d.estado,d.cod_materia,m.nombre AS materia
+            FROM derivaciones d LEFT JOIN materias m ON m.cod_materia=d.cod_materia
+            WHERE d.cod_derivacion = ? AND (? <> 3 OR d.cod_docente = ?) FOR UPDATE');
         $stmt->bind_param('iii', $id, $rol, $docente); $stmt->execute();
         $actual = $stmt->get_result()->fetch_assoc(); $stmt->close();
         if (!$actual) throw new InvalidArgumentException('La derivación no existe o no tiene permiso para editarla.');
         if ($actual['estado'] !== 'Pendiente') throw new InvalidArgumentException('Solo se pueden editar derivaciones pendientes.');
-        $stmt = $bd->prepare('SELECT id_evidencia,ruta,descripcion FROM derivacion_evidencias
-            WHERE id_derivacion=? ORDER BY id_evidencia DESC LIMIT 1 FOR UPDATE');
+        $stmt = $bd->prepare('SELECT cod_evidencia,ruta,descripcion FROM derivacion_evidencias
+            WHERE cod_derivacion=? ORDER BY cod_evidencia DESC LIMIT 1 FOR UPDATE');
         $stmt->bind_param('i', $id); $stmt->execute();
         $evidencia = $stmt->get_result()->fetch_assoc() ?: null; $stmt->close();
         $descripcionImagenFinal = $descripcionImagenPresente
@@ -108,20 +108,20 @@ function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, in
         $activas = array_keys(array_filter($catalogo, static fn($c) => $c['estado'] === 'Activo'));
         $registradas = derivacion_categorias_registradas($bd, $id, $actual['observaciones'] ?? '');
         $observaciones = derivacion_observaciones($entrada, $actual['observaciones'], $activas, $registradas);
-        $idMateria = flujo_fila($bd, "SELECT id_materia FROM materias WHERE nombre=? AND (estado='Activo' OR id_materia=?) LIMIT 1", [$entrada['materia'], $actual['id_materia']]);
+        $idMateria = flujo_fila($bd, "SELECT cod_materia FROM materias WHERE nombre=? AND (estado='Activo' OR cod_materia=?) LIMIT 1", [$entrada['materia'], $actual['cod_materia']]);
         if (!$idMateria) throw new InvalidArgumentException('La materia seleccionada no está activa en el catálogo.');
-        $idMateria = (int)$idMateria['id_materia'];
-        $stmt = $bd->prepare('UPDATE derivaciones SET fecha=?, id_materia=?, motivo=?, observaciones=?, prioridad=? WHERE id_derivacion=? AND (? <> 3 OR id_docente=?) AND estado=\'Pendiente\'');
+        $idMateria = (int)$idMateria['cod_materia'];
+        $stmt = $bd->prepare('UPDATE derivaciones SET fecha=?, cod_materia=?, motivo=?, observaciones=?, prioridad=? WHERE cod_derivacion=? AND (? <> 3 OR cod_docente=?) AND estado=\'Pendiente\'');
         $stmt->bind_param('sisssiii', $entrada['fecha'], $idMateria, $entrada['motivo'], $observaciones, $entrada['prioridad'], $id, $rol, $docente);
         $stmt->execute(); $stmt->close();
         if (($entrada['observaciones_presentes'] ?? '') === '1') {
-            $stmt = $bd->prepare('DELETE FROM derivacion_categorias WHERE id_derivacion=?');
+            $stmt = $bd->prepare('DELETE FROM derivacion_categorias WHERE cod_derivacion=?');
             $stmt->bind_param('i', $id); $stmt->execute(); $stmt->close();
-            $vinculo = $bd->prepare('INSERT INTO derivacion_categorias (id_derivacion,id_categoria) VALUES (?,?)');
+            $vinculo = $bd->prepare('INSERT INTO derivacion_categorias (cod_derivacion,cod_categoria) VALUES (?,?)');
             foreach (array_unique($entrada['categorias'] ?? []) as $categoria) {
                 // Una categoría histórica sin catálogo permanece en observaciones.
                 if (!isset($catalogo[$categoria])) continue;
-                $idCategoria = (int)$catalogo[$categoria]['id_categoria'];
+                $idCategoria = (int)$catalogo[$categoria]['cod_categoria'];
                 $vinculo->bind_param('ii', $id, $idCategoria); $vinculo->execute();
             }
             $vinculo->close();
@@ -133,11 +133,11 @@ function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, in
                 $bd,
                 $id,
                 $subidaImagen,
-                $evidencia ? (int)$evidencia['id_evidencia'] : null
+                $evidencia ? (int)$evidencia['cod_evidencia'] : null
             );
         } elseif ($evidencia && $descripcionImagenPresente) {
-            $stmt = $bd->prepare('UPDATE derivacion_evidencias SET descripcion=? WHERE id_evidencia=? AND id_derivacion=?');
-            $idEvidencia = (int)$evidencia['id_evidencia'];
+            $stmt = $bd->prepare('UPDATE derivacion_evidencias SET descripcion=? WHERE cod_evidencia=? AND cod_derivacion=?');
+            $idEvidencia = (int)$evidencia['cod_evidencia'];
             $stmt->bind_param('sii', $descripcionImagen, $idEvidencia, $id);
             $stmt->execute(); $stmt->close();
         }

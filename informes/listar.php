@@ -4,7 +4,7 @@ requerir_acceso('informes/listar.php');
 
 require_once '../config/conexion.php';
 
-$rolActual = (int) ($_SESSION['id_rol'] ?? 0);
+$rolActual = (int) ($_SESSION['cod_rol'] ?? 0);
 $rolesPermitidos = [1, 2, 4];
 
 if (!in_array($rolActual, $rolesPermitidos, true)) {
@@ -18,14 +18,14 @@ $tipoMensaje = $_SESSION['tipo_mensaje'] ?? 'info';
 unset($_SESSION['mensaje'], $_SESSION['tipo_mensaje']);
 
 $sql = "SELECT
-            i.id_informe,
+            i.cod_informe,
             i.numero_ficha,
             i.fecha_inicio AS fecha,
             d.numero_atenciones,
             d.tipo_atencion,
             d.referido_por,
             i.estado,
-            e.id_estudiante,
+            e.cod_estudiante,
             e.nombres,
             e.apellidos,
             e.curso,
@@ -33,11 +33,11 @@ $sql = "SELECT
             p.nombres AS nombre_psicologo,
             p.apellidos AS apellido_psicologo
         FROM informes i
-        INNER JOIN informe_individual d ON d.id_informe=i.id_informe
-        INNER JOIN vista_estudiantes e ON d.id_estudiante=e.id_estudiante
-        INNER JOIN usuarios u ON i.id_elaborado_por=u.id_usuario
-        INNER JOIN personas p ON p.id_persona=u.id_persona
-        ORDER BY i.fecha_inicio DESC, i.id_informe DESC";
+        INNER JOIN informe_individual d ON d.cod_informe=i.cod_informe
+        INNER JOIN vista_estudiantes e ON d.cod_estudiante=e.cod_estudiante
+        INNER JOIN usuarios u ON i.cod_elaborado_por=u.cod_usuario
+        INNER JOIN personas p ON p.cod_persona=u.cod_persona
+        ORDER BY i.fecha_inicio DESC, i.cod_informe DESC";
 
 $resultado = $conexion->query($sql);
 
@@ -226,7 +226,7 @@ include '../includes/navbar.php';
                                     </div>
                                     <div>
                                         <strong><?= htmlspecialchars($nombreEstudiante); ?></strong>
-                                        <small>ID: <?= (int)$informe['id_estudiante']; ?></small>
+                                        <small>ID: <?= (int)$informe['cod_estudiante']; ?></small>
                                     </div>
                                 </div>
                             </td>
@@ -269,7 +269,7 @@ include '../includes/navbar.php';
                                 <div class="acciones-tabla">
 
                                     <a
-                                        href="ver.php?id=<?= (int)$informe['id_informe']; ?>"
+                                        href="ver.php?id=<?= (int)$informe['cod_informe']; ?>"
                                         class="btn-accion"
                                         title="Ver informe">
                                         <i class="bi bi-eye"></i>
@@ -278,7 +278,7 @@ include '../includes/navbar.php';
 
                                     <?php if ($puedeGestionar): ?>
                                         <a
-                                            href="editar.php?id=<?= (int)$informe['id_informe']; ?>"
+                                            href="editar.php?id=<?= (int)$informe['cod_informe']; ?>"
                                             class="btn-accion editar"
                                             title="Editar informe">
                                             <i class="bi bi-pencil"></i>
@@ -287,7 +287,7 @@ include '../includes/navbar.php';
                                     <?php endif; ?>
 
                                     <a
-                                        href="ver.php?id=<?= (int)$informe['id_informe']; ?>"
+                                        href="ver.php?id=<?= (int)$informe['cod_informe']; ?>"
                                         class="btn-accion"
                                         title="Abrir informe para imprimir"
                                         target="_blank" rel="noopener">

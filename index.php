@@ -73,14 +73,14 @@ include __DIR__ . '/includes/navbar.php';
                                 <thead><tr><th scope="col">Estudiante</th><th scope="col">Curso actual</th><th scope="col">Prioridad</th><th scope="col">Última sesión</th><th scope="col">Consultar</th></tr></thead>
                                 <tbody><?php foreach ($panel['prioritarios'] as $fila):
                                     $nombre = trim($fila['nombres'].' '.$fila['apellidos']); ?>
-                                    <tr data-estudiante="<?= (int)$fila['id_estudiante'] ?>">
+                                    <tr data-estudiante="<?= (int)$fila['cod_estudiante'] ?>">
                                         <th scope="row"><div class="panel-persona"><span class="panel-avatar" aria-hidden="true"><?= login_html(mb_strtoupper(mb_substr($fila['nombres'],0,1).mb_substr($fila['apellidos'],0,1))) ?></span>
                                             <span><?= login_html($nombre) ?><small>Código: <?= login_html($fila['codigo']) ?></small></span></div></th>
                                         <td><?= login_html(trim(($fila['curso'] ?? 'Sin curso registrado').' '.($fila['paralelo'] ?? ''))) ?></td>
                                         <td><span class="panel-prioridad panel-prioridad-<?= strtolower($fila['prioridad']) ?>"><?= login_html($fila['prioridad']) ?></span></td>
                                         <td><?= $fila['ultima_sesion'] ? $fechaVisible($fila['ultima_sesion']) : 'Sin sesiones' ?></td>
-                                        <td><a class="panel-abrir" aria-label="Ver derivación de <?= login_html($nombre) ?>" href="<?= login_html(login_url('derivaciones/ver.php?id='.(int)$fila['id_derivacion'])) ?>">Ver <span aria-hidden="true">›</span></a>
-                                            <?php if ($fila['id_historia']): ?><a class="panel-historia" href="<?= login_html(login_url('historias_clinicas/ver.php?id='.(int)$fila['id_historia'])) ?>">Historia</a><?php endif; ?></td>
+                                        <td><a class="panel-abrir" aria-label="Ver derivación de <?= login_html($nombre) ?>" href="<?= login_html(login_url('derivaciones/ver.php?id='.(int)$fila['cod_derivacion'])) ?>">Ver <span aria-hidden="true">›</span></a>
+                                            <?php if ($fila['cod_historia']): ?><a class="panel-historia" href="<?= login_html(login_url('historias_clinicas/ver.php?id='.(int)$fila['cod_historia'])) ?>">Historia</a><?php endif; ?></td>
                                     </tr>
                                 <?php endforeach; ?></tbody>
                             </table>
@@ -98,10 +98,10 @@ include __DIR__ . '/includes/navbar.php';
                     <?php else: ?>
                         <ol class="panel-agenda">
                             <?php foreach ($panel['agenda'] as $cita): ?>
-                                <li data-cita="<?= (int)$cita['id_cita'] ?>">
+                                <li data-cita="<?= (int)$cita['cod_cita'] ?>">
                                     <time datetime="<?= login_html($panel['hoy'].'T'.$cita['hora']) ?>"><?= substr($cita['hora'],0,5) ?></time>
                                     <div class="panel-cita panel-cita-<?= strtolower($cita['estado']) ?>">
-                                        <a href="<?= login_html(login_url('citas/editar.php?id='.(int)$cita['id_cita'])) ?>"><?= login_html($cita['nombres'].' '.$cita['apellidos']) ?></a>
+                                        <a href="<?= login_html(login_url('citas/editar.php?id='.(int)$cita['cod_cita'])) ?>"><?= login_html($cita['nombres'].' '.$cita['apellidos']) ?></a>
                                         <span><?= login_html($cita['estado']) ?></span><small>Profesional: <?= login_html($cita['profesional']) ?></small>
                                     </div>
                                 </li>

@@ -44,10 +44,10 @@ try {
         foreach (['usuarios', 'docentes', 'historias_clinicas', 'informes'] as $tabla) {
             $campos[$tabla] = array_column($bd->query("SHOW COLUMNS FROM `$tabla`")->fetch_all(MYSQLI_ASSOC), 'Field');
         }
-        $normalizado = in_array('id_persona', $campos['usuarios'], true)
-            && in_array('id_persona', $campos['docentes'], true)
-            && in_array('id_derivacion_origen', $campos['historias_clinicas'], true)
-            && in_array('id_elaborado_por', $campos['informes'], true);
+        $normalizado = in_array('cod_persona', $campos['usuarios'], true)
+            && in_array('cod_persona', $campos['docentes'], true)
+            && in_array('cod_derivacion_origen', $campos['historias_clinicas'], true)
+            && in_array('cod_elaborado_por', $campos['informes'], true);
     }
     $directorioMigraciones = $normalizado ? '/migrations_normalizadas/*.php' : '/migrations/*.php';
     $planificar = static function (mysqli $bd) use ($directorioMigraciones): array {

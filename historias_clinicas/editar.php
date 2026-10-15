@@ -4,7 +4,7 @@ requerir_acceso('historias_clinicas/editar.php');
 
 require_once '../config/conexion.php';
 
-$rol = (int)($_SESSION['id_rol'] ?? 0);
+$rol = (int)($_SESSION['cod_rol'] ?? 0);
 
 if (!in_array($rol, [1, 2], true)) {
     header('Location: listar.php');
@@ -40,8 +40,8 @@ $stmt = $conexion->prepare("
         e.telefono AS celular_estudiante,
         e.telefono,
         (SELECT r.nombres FROM estudiante_responsables er
-            INNER JOIN responsables r ON r.id_responsable=er.id_responsable
-            WHERE er.id_estudiante=e.id_estudiante AND er.parentesco='Tutor'
+            INNER JOIN responsables r ON r.cod_responsable=er.cod_responsable
+            WHERE er.cod_estudiante=e.cod_estudiante AND er.parentesco='Tutor'
             ORDER BY er.es_principal DESC LIMIT 1) AS nombre_tutor,
         m.nombre AS materia_derivacion,
         d.fecha AS fecha_derivacion,
@@ -49,12 +49,12 @@ $stmt = $conexion->prepare("
         d.prioridad AS prioridad_derivacion,
         d.observaciones AS observaciones_derivacion
     FROM historias_clinicas h
-    INNER JOIN vista_estudiantes e ON e.id_estudiante = h.id_estudiante
-    LEFT JOIN derivaciones d ON d.id_derivacion = h.id_derivacion_origen
-    LEFT JOIN docentes doc ON doc.id_docente = d.id_docente
-    LEFT JOIN personas dp ON dp.id_persona = doc.id_persona
-    LEFT JOIN materias m ON m.id_materia = d.id_materia
-    WHERE h.id_historia = ?
+    INNER JOIN vista_estudiantes e ON e.cod_estudiante = h.cod_estudiante
+    LEFT JOIN derivaciones d ON d.cod_derivacion = h.cod_derivacion_origen
+    LEFT JOIN docentes doc ON doc.cod_docente = d.cod_docente
+    LEFT JOIN personas dp ON dp.cod_persona = doc.cod_persona
+    LEFT JOIN materias m ON m.cod_materia = d.cod_materia
+    WHERE h.cod_historia = ?
     LIMIT 1
 ");
 
@@ -68,13 +68,13 @@ if (!$historia) {
     exit;
 }
 
-$historia['id_derivacion'] = (int)($historia['id_derivacion_origen'] ?? 0);
-$historia['id_cita'] = (int)($historia['id_cita_origen'] ?? 0);
+$historia['cod_derivacion'] = (int)($historia['cod_derivacion_origen'] ?? 0);
+$historia['cod_cita'] = (int)($historia['cod_cita_origen'] ?? 0);
 $historia['padre_madre'] = $historia['nombre_tutor'] ?? '';
 
 /* ESTUDIANTE ACTUAL */
 $estudiantes = [[
-    'id_estudiante' => $historia['id_estudiante'],
+    'cod_estudiante' => $historia['cod_estudiante'],
     'nombres' => $historia['nombres'],
     'apellidos' => $historia['apellidos'],
     'curso' => $historia['curso'],
@@ -102,10 +102,10 @@ foreach ($gruposPermitidos as $grupo) {
 $stmt = $conexion->prepare("
     SELECT g.codigo AS grupo,o.descripcion AS valor
     FROM historia_opciones ho
-    INNER JOIN opciones_historia o ON o.id_opcion=ho.id_opcion
-    INNER JOIN grupos_opciones_historia g ON g.id_grupo=o.id_grupo
-    WHERE ho.id_historia = ?
-    ORDER BY ho.id_opcion ASC
+    INNER JOIN opciones_historia o ON o.cod_opcion=ho.cod_opcion
+    INNER JOIN grupos_opciones_historia g ON g.cod_grupo=o.cod_grupo
+    WHERE ho.cod_historia = ?
+    ORDER BY ho.cod_opcion ASC
 ");
 
 $stmt->bind_param('i', $id);
@@ -125,7 +125,7 @@ $stmt->close();
 /* FAMILIARES */
 $stmt = $conexion->prepare("
     SELECT
-        id_familiar,
+        cod_familiar,
         nombre,
         edad,
         relacion,
@@ -133,8 +133,8 @@ $stmt = $conexion->prepare("
         ocupacion,
         observaciones
     FROM historia_familiares
-    WHERE id_historia = ?
-    ORDER BY id_familiar ASC
+    WHERE cod_historia = ?
+    ORDER BY cod_familiar ASC
 ");
 
 $stmt->bind_param('i', $id);

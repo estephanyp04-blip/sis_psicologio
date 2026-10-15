@@ -13,8 +13,8 @@ try {
     $confirmacion = rtrim(fgets(STDIN), "\r\n");
     if (strlen($clave) < 12 || strlen($clave) > 72 || strpos($clave, "\0") !== false || !hash_equals($clave, $confirmacion)) exit("Las contraseñas no coinciden o no cumplen la longitud. No se cambió nada.\n");
     $hash = password_hash($clave, PASSWORD_DEFAULT);
-    $s = login_bd()->prepare('UPDATE usuarios SET password=? WHERE id_usuario=?');
-    $s->bind_param('si', $hash, $u['id_usuario']);
+    $s = login_bd()->prepare('UPDATE usuarios SET password=? WHERE cod_usuario=?');
+    $s->bind_param('si', $hash, $u['cod_usuario']);
     $s->execute();
     $s->close();
     unset($clave, $confirmacion);

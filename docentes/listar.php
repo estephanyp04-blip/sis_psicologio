@@ -13,8 +13,8 @@ $busqueda = trim($_GET['buscar'] ?? '');
 
 $sql = "
     SELECT
-        d.id_docente,
-        d.id_persona,
+        d.cod_docente,
+        d.cod_persona,
         p.nombres,
         p.apellidos,
         p.telefono,
@@ -22,10 +22,10 @@ $sql = "
         GROUP_CONCAT(DISTINCT m.nombre ORDER BY m.nombre SEPARATOR ', ') AS materia,
         u.usuario
     FROM docentes d
-    INNER JOIN personas p ON p.id_persona=d.id_persona
-    LEFT JOIN usuarios u ON u.id_persona=d.id_persona
-    LEFT JOIN docente_materias dm ON dm.id_docente=d.id_docente
-    LEFT JOIN materias m ON m.id_materia=dm.id_materia
+    INNER JOIN personas p ON p.cod_persona=d.cod_persona
+    LEFT JOIN usuarios u ON u.cod_persona=d.cod_persona
+    LEFT JOIN docente_materias dm ON dm.cod_docente=d.cod_docente
+    LEFT JOIN materias m ON m.cod_materia=dm.cod_materia
 ";
 
 $parametros = [];
@@ -39,8 +39,8 @@ if ($busqueda !== '') {
         OR p.correo LIKE ?
         OR EXISTS (
             SELECT 1 FROM docente_materias dm_busqueda
-            INNER JOIN materias m_busqueda ON m_busqueda.id_materia=dm_busqueda.id_materia
-            WHERE dm_busqueda.id_docente=d.id_docente AND m_busqueda.nombre LIKE ?
+            INNER JOIN materias m_busqueda ON m_busqueda.cod_materia=dm_busqueda.cod_materia
+            WHERE dm_busqueda.cod_docente=d.cod_docente AND m_busqueda.nombre LIKE ?
         )
         OR u.usuario LIKE ?
     ";
@@ -59,7 +59,7 @@ if ($busqueda !== '') {
     $tipos = 'ssssss';
 }
 
-$sql .= " GROUP BY d.id_docente,p.id_persona,p.nombres,p.apellidos,p.telefono,p.correo,u.usuario ORDER BY p.apellidos ASC,p.nombres ASC";
+$sql .= " GROUP BY d.cod_docente,p.cod_persona,p.nombres,p.apellidos,p.telefono,p.correo,u.usuario ORDER BY p.apellidos ASC,p.nombres ASC";
 
 $stmt = $conexion->prepare($sql);
 
@@ -194,7 +194,7 @@ include '../includes/navbar.php';
 
                                         <small class="text-muted">
                                             Código: DOC-<?= str_pad(
-                                                (string) $docente['id_docente'],
+                                                (string) $docente['cod_docente'],
                                                 4,
                                                 '0',
                                                 STR_PAD_LEFT
@@ -243,14 +243,14 @@ include '../includes/navbar.php';
                                     <td>
                                         <div class="d-flex justify-content-center gap-2">
                                             <a href="ver.php?id=<?= (int)
-                                                $docente['id_docente']; ?>"
+                                                $docente['cod_docente']; ?>"
                                                class="btn btn-sm btn-outline-info"
                                                title="Ver docente">
                                                 <i class="bi bi-eye"></i>
                                             </a>
 
                                             <a href="editar.php?id=<?= (int)
-                                                $docente['id_docente']; ?>"
+                                                $docente['cod_docente']; ?>"
                                                class="btn btn-sm btn-outline-warning"
                                                title="Editar docente">
                                                 <i class="bi bi-pencil"></i>

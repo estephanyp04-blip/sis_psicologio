@@ -6,14 +6,14 @@ require_once '../config/conexion.php';
 require_once __DIR__ . '/datos.php';
 
 $datosInforme = $_SESSION['datos_informe'] ?? [];
-$datosInforme += ['id_estudiante' => (int)filter_var($_GET['id_estudiante'] ?? 0,FILTER_VALIDATE_INT)];
-$seguimientoSolicitado = (int)($datosInforme['id_seguimiento'] ?? filter_var($_GET['id_seguimiento'] ?? 0,FILTER_VALIDATE_INT));
-if (isset($_GET['id_seguimiento']) && !isset($_SESSION['datos_informe'])) {
-    $origen = flujo_fila($conexion,'SELECT s.id_seguimiento,h.id_estudiante FROM seguimientos s JOIN historias_clinicas h ON h.id_historia=s.id_historia WHERE s.id_seguimiento=?',[$seguimientoSolicitado]);
-    if (!$origen || ($datosInforme['id_estudiante'] && (int)$datosInforme['id_estudiante'] !== (int)$origen['id_estudiante'])) {
+$datosInforme += ['cod_estudiante' => (int)filter_var($_GET['cod_estudiante'] ?? 0,FILTER_VALIDATE_INT)];
+$seguimientoSolicitado = (int)($datosInforme['cod_seguimiento'] ?? filter_var($_GET['cod_seguimiento'] ?? 0,FILTER_VALIDATE_INT));
+if (isset($_GET['cod_seguimiento']) && !isset($_SESSION['datos_informe'])) {
+    $origen = flujo_fila($conexion,'SELECT s.cod_seguimiento,h.cod_estudiante FROM seguimientos s JOIN historias_clinicas h ON h.cod_historia=s.cod_historia WHERE s.cod_seguimiento=?',[$seguimientoSolicitado]);
+    if (!$origen || ($datosInforme['cod_estudiante'] && (int)$datosInforme['cod_estudiante'] !== (int)$origen['cod_estudiante'])) {
         http_response_code(404); exit('El seguimiento no corresponde al estudiante.');
     }
-    $datosInforme['id_estudiante']=(int)$origen['id_estudiante'];
+    $datosInforme['cod_estudiante']=(int)$origen['cod_estudiante'];
 }
 unset($_SESSION['datos_informe']);
 
@@ -22,7 +22,7 @@ function e($valor):string{
 }
 
 // Permisos
-$rolActual=(int)($_SESSION['id_rol']??0);
+$rolActual=(int)($_SESSION['cod_rol']??0);
 $rolesPermitidos=[1,2];
 $mensaje=$_SESSION['mensaje']??'';
 $tipoMensaje=$_SESSION['tipo_mensaje']??'info';
@@ -36,27 +36,27 @@ if($rolActual>0&&!in_array($rolActual,$rolesPermitidos,true)){
 }
 
 // Usuario
-$idUsuario=(int)($_SESSION['id_usuario']??0);
+$idUsuario=(int)($_SESSION['cod_usuario']??0);
 $nombrePsicologa='Psicóloga';
 
 if($idUsuario>0){
     $stmt=$conexion->prepare("SELECT p.nombres AS nombre,p.apellidos AS apellido
-        FROM usuarios u INNER JOIN personas p ON p.id_persona=u.id_persona
-        WHERE u.id_usuario=? LIMIT 1");
+        FROM usuarios u INNER JOIN personas p ON p.cod_persona=u.cod_persona
+        WHERE u.cod_usuario=? LIMIT 1");
     $stmt->bind_param('i',$idUsuario);
     $stmt->execute();
     $usuario=$stmt->get_result()->fetch_assoc();
     $stmt->close();
     if($usuario)$nombrePsicologa=trim($usuario['nombre'].' '.$usuario['apellido']);
 }else{
-    $stmt=$conexion->prepare("SELECT u.id_usuario,p.nombres AS nombre,p.apellidos AS apellido
-        FROM usuarios u INNER JOIN personas p ON p.id_persona=u.id_persona
-        WHERE u.id_rol=2 AND u.estado='Activo' ORDER BY u.id_usuario ASC LIMIT 1");
+    $stmt=$conexion->prepare("SELECT u.cod_usuario,p.nombres AS nombre,p.apellidos AS apellido
+        FROM usuarios u INNER JOIN personas p ON p.cod_persona=u.cod_persona
+        WHERE u.cod_rol=2 AND u.estado='Activo' ORDER BY u.cod_usuario ASC LIMIT 1");
     $stmt->execute();
     $usuario=$stmt->get_result()->fetch_assoc();
     $stmt->close();
     if($usuario){
-        $idUsuario=(int)$usuario['id_usuario'];
+        $idUsuario=(int)$usuario['cod_usuario'];
         $nombrePsicologa=trim($usuario['nombre'].' '.$usuario['apellido']);
     }
 }
@@ -65,19 +65,19 @@ if($idUsuario>0){
 $numeroFicha = 'Se asignará al guardar';
 
 // Consulta
-$sqlEstudiantes="SELECT e.id_estudiante,e.nombres,e.apellidos,e.curso,e.paralelo,
-    h.id_historia,h.motivo_consulta,h.impresion_diagnostica diagnostico,
-    s.id_seguimiento,s.recomendaciones,d.id_derivacion,d.motivo motivo_derivacion,
+$sqlEstudiantes="SELECT e.cod_estudiante,e.nombres,e.apellidos,e.curso,e.paralelo,
+    h.cod_historia,h.motivo_consulta,h.impresion_diagnostica diagnostico,
+    s.cod_seguimiento,s.recomendaciones,d.cod_derivacion,d.motivo motivo_derivacion,
     CONCAT(doc_persona.nombres,' ',doc_persona.apellidos) docente_referente,
-    (SELECT COUNT(*) FROM citas c WHERE c.id_estudiante=e.id_estudiante AND c.estado='Atendida') numero_atenciones
-    FROM vista_estudiantes e LEFT JOIN historias_clinicas h ON h.id_estudiante=e.id_estudiante
-    LEFT JOIN seguimientos s ON s.id_seguimiento=(SELECT s2.id_seguimiento FROM seguimientos s2 WHERE s2.id_historia=h.id_historia
-        ORDER BY (s2.id_seguimiento=$seguimientoSolicitado) DESC,s2.fecha DESC,s2.id_seguimiento DESC LIMIT 1)
-    LEFT JOIN citas cs ON cs.id_cita=s.id_cita
-    LEFT JOIN derivaciones d ON d.id_derivacion=COALESCE(cs.id_derivacion,h.id_derivacion_origen,
-        CASE WHEN h.id_historia IS NULL THEN (SELECT d2.id_derivacion FROM derivaciones d2 WHERE d2.id_estudiante=e.id_estudiante ORDER BY d2.fecha DESC,d2.id_derivacion DESC LIMIT 1) ELSE NULL END)
-    LEFT JOIN docentes doc ON doc.id_docente=d.id_docente
-    LEFT JOIN personas doc_persona ON doc_persona.id_persona=doc.id_persona
+    (SELECT COUNT(*) FROM citas c WHERE c.cod_estudiante=e.cod_estudiante AND c.estado='Atendida') numero_atenciones
+    FROM vista_estudiantes e LEFT JOIN historias_clinicas h ON h.cod_estudiante=e.cod_estudiante
+    LEFT JOIN seguimientos s ON s.cod_seguimiento=(SELECT s2.cod_seguimiento FROM seguimientos s2 WHERE s2.cod_historia=h.cod_historia
+        ORDER BY (s2.cod_seguimiento=$seguimientoSolicitado) DESC,s2.fecha DESC,s2.cod_seguimiento DESC LIMIT 1)
+    LEFT JOIN citas cs ON cs.cod_cita=s.cod_cita
+    LEFT JOIN derivaciones d ON d.cod_derivacion=COALESCE(cs.cod_derivacion,h.cod_derivacion_origen,
+        CASE WHEN h.cod_historia IS NULL THEN (SELECT d2.cod_derivacion FROM derivaciones d2 WHERE d2.cod_estudiante=e.cod_estudiante ORDER BY d2.fecha DESC,d2.cod_derivacion DESC LIMIT 1) ELSE NULL END)
+    LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
+    LEFT JOIN personas doc_persona ON doc_persona.cod_persona=doc.cod_persona
     WHERE e.estado='Activo' ORDER BY e.apellidos,e.nombres";
 $resultadoEstudiantes=$conexion->query($sqlEstudiantes);
 
@@ -121,8 +121,8 @@ include '../includes/navbar.php';
 
         <form action="guardar.php" method="POST" id="formInforme" autocomplete="off">
             <?= login_campo_csrf() ?>
-            <input type="hidden" name="id_historia" id="id_historia"><input type="hidden" name="id_seguimiento" id="id_seguimiento"><p id="seguimiento_origen" class="text-muted"></p>
-            <input type="hidden" name="id_derivacion" id="id_derivacion">
+            <input type="hidden" name="cod_historia" id="cod_historia"><input type="hidden" name="cod_seguimiento" id="cod_seguimiento"><p id="seguimiento_origen" class="text-muted"></p>
+            <input type="hidden" name="cod_derivacion" id="cod_derivacion">
             <input type="hidden" name="estado" value="<?= e($datosInforme['estado'] ?? 'Borrador') ?>">
 
             <!-- Datos generales -->
@@ -146,20 +146,20 @@ include '../includes/navbar.php';
                     </div>
 
                     <div class="col-lg-6">
-                        <label for="id_estudiante" class="form-label">Estudiante <span class="text-danger">*</span></label>
-                        <select name="id_estudiante" id="id_estudiante" class="form-select" required>
+                        <label for="cod_estudiante" class="form-label">Estudiante <span class="text-danger">*</span></label>
+                        <select name="cod_estudiante" id="cod_estudiante" class="form-select" required>
                             <option value="">Seleccione un estudiante...</option>
 
                             <?php while($estudiante=$resultadoEstudiantes->fetch_assoc()): ?>
                                 <?php $nombreCompleto=trim($estudiante['apellidos'].' '.$estudiante['nombres']); ?>
 
                                 <option
-                                    value="<?= (int)$estudiante['id_estudiante'] ?>"
-                                    <?= (int)($datosInforme['id_estudiante'] ?? 0) === (int)$estudiante['id_estudiante'] ? 'selected' : '' ?>
+                                    value="<?= (int)$estudiante['cod_estudiante'] ?>"
+                                    <?= (int)($datosInforme['cod_estudiante'] ?? 0) === (int)$estudiante['cod_estudiante'] ? 'selected' : '' ?>
                                     data-curso="<?= e($estudiante['curso']??'') ?>"
                                     data-paralelo="<?= e($estudiante['paralelo']??'') ?>"
-                                    data-seguimiento="<?= (int)($estudiante['id_seguimiento']??0) ?>" data-historia="<?= (int)($estudiante['id_historia']??0) ?>"
-                                    data-derivacion="<?= (int)($estudiante['id_derivacion']??0) ?>"
+                                    data-seguimiento="<?= (int)($estudiante['cod_seguimiento']??0) ?>" data-historia="<?= (int)($estudiante['cod_historia']??0) ?>"
+                                    data-derivacion="<?= (int)($estudiante['cod_derivacion']??0) ?>"
                                     data-atenciones="<?= (int)($estudiante['numero_atenciones']??0) ?>"
                                     data-docente="<?= e($estudiante['docente_referente']??'') ?>"
                                     data-motivo-derivacion="<?= e($estudiante['motivo_derivacion']??'') ?>"
@@ -321,14 +321,14 @@ include '../includes/navbar.php';
 <script>
 // JavaScript
 document.addEventListener('DOMContentLoaded',function(){
-    const estudiante=document.getElementById('id_estudiante');
+    const estudiante=document.getElementById('cod_estudiante');
     const curso=document.getElementById('curso');
     const paralelo=document.getElementById('paralelo');
     const atenciones=document.getElementById('numero_atenciones');
     const referido=document.getElementById('referido_por');
     const docente=document.getElementById('docente_referente');
-    const historia=document.getElementById('id_historia');
-    const derivacion=document.getElementById('id_derivacion');
+    const historia=document.getElementById('cod_historia');
+    const derivacion=document.getElementById('cod_derivacion');
     const historiaEstado=document.getElementById('historia_estado');
     const motivo=document.getElementById('motivo');
     const diagnostico=document.getElementById('diagnostico');
@@ -337,7 +337,7 @@ document.addEventListener('DOMContentLoaded',function(){
     const btnGuardar=document.getElementById('btnGuardar');
 
     function limpiarDatos(){
-        document.getElementById('id_seguimiento').value='0';
+        document.getElementById('cod_seguimiento').value='0';
         document.getElementById('seguimiento_origen').textContent='';
         curso.value='';
         paralelo.value='';
@@ -365,7 +365,7 @@ document.addEventListener('DOMContentLoaded',function(){
         atenciones.value=opcion.dataset.atenciones||'0';
         docente.value=opcion.dataset.docente||'';
         historia.value=opcion.dataset.historia||'';
-        document.getElementById('id_seguimiento').value=opcion.dataset.seguimiento||'0';
+        document.getElementById('cod_seguimiento').value=opcion.dataset.seguimiento||'0';
         document.getElementById('seguimiento_origen').textContent=Number(opcion.dataset.seguimiento) ? 'Seguimiento de origen #'+opcion.dataset.seguimiento : 'Sin seguimiento de origen';
         derivacion.value=opcion.dataset.derivacion||'';
 

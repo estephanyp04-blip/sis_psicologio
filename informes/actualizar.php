@@ -4,11 +4,11 @@ requerir_acceso('informes/actualizar.php');
 require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/datos.php';
 
-$idInforme = filter_var($_POST['id_informe'] ?? 0, FILTER_VALIDATE_INT) ?: 0;
+$idInforme = filter_var($_POST['cod_informe'] ?? 0, FILTER_VALIDATE_INT) ?: 0;
 if ($idInforme <= 0) { header('Location: listar.php'); exit; }
 $datos = informe_datos($_POST);
 try {
-    informe_actualizar($conexion, $idInforme, $datos, (int)$_SESSION['id_usuario']);
+    informe_actualizar($conexion, $idInforme, $datos, (int)$_SESSION['cod_usuario']);
     unset($_SESSION['edicion_informe']);
     $_SESSION['mensaje'] = 'Informe actualizado correctamente.';
     $_SESSION['tipo_mensaje'] = 'success';

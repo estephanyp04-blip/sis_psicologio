@@ -55,9 +55,9 @@ return static function (mysqli $bd): array {
         ],
     ];
 
-    $buscarGrupo = $bd->prepare('SELECT id_grupo FROM grupos_opciones_historia WHERE codigo=? LIMIT 1');
-    $buscarOpcion = $bd->prepare('SELECT o.id_opcion FROM opciones_historia o
-        INNER JOIN grupos_opciones_historia g ON g.id_grupo=o.id_grupo
+    $buscarGrupo = $bd->prepare('SELECT cod_grupo FROM grupos_opciones_historia WHERE codigo=? LIMIT 1');
+    $buscarOpcion = $bd->prepare('SELECT o.cod_opcion FROM opciones_historia o
+        INNER JOIN grupos_opciones_historia g ON g.cod_grupo=o.cod_grupo
         WHERE g.codigo=? AND o.descripcion=? LIMIT 1');
 
     foreach ($grupos as $codigo => $datos) {
@@ -77,8 +77,8 @@ return static function (mysqli $bd): array {
 
             $codigoSql = $bd->real_escape_string($codigo);
             $descripcionSql = $bd->real_escape_string($descripcion);
-            $plan[] = "INSERT IGNORE INTO opciones_historia (id_grupo,descripcion,estado) "
-                . "SELECT id_grupo,'$descripcionSql','Activo' FROM grupos_opciones_historia WHERE codigo='$codigoSql'";
+            $plan[] = "INSERT IGNORE INTO opciones_historia (cod_grupo,descripcion,estado) "
+                . "SELECT cod_grupo,'$descripcionSql','Activo' FROM grupos_opciones_historia WHERE codigo='$codigoSql'";
         }
     }
 

@@ -15,18 +15,18 @@ function escapar($valor): string
  */
 $sqlUsuarios = "
     SELECT
-        u.id_usuario,
+        u.cod_usuario,
         p.nombres AS nombre,
         p.apellidos AS apellido,
         u.usuario,
         p.telefono,
         p.correo
     FROM usuarios u
-    INNER JOIN personas p ON p.id_persona=u.id_persona
-    LEFT JOIN docentes d ON d.id_persona=u.id_persona
-    WHERE u.id_rol = 3
+    INNER JOIN personas p ON p.cod_persona=u.cod_persona
+    LEFT JOIN docentes d ON d.cod_persona=u.cod_persona
+    WHERE u.cod_rol = 3
       AND u.estado = 'Activo'
-      AND d.id_docente IS NULL
+      AND d.cod_docente IS NULL
     ORDER BY p.apellidos ASC,p.nombres ASC
 ";
 
@@ -114,13 +114,13 @@ include '../includes/navbar.php';
 
                     <div class="row g-3 mt-1">
                         <div class="col-12">
-                            <label for="id_usuario" class="form-label">
+                            <label for="cod_usuario" class="form-label">
                                 Cuenta de usuario
                                 <span class="text-danger">*</span>
                             </label>
 
-                            <select name="id_usuario"
-                                    id="id_usuario"
+                            <select name="cod_usuario"
+                                    id="cod_usuario"
                                     class="form-select"
                                     required
                                     <?= $resultadoUsuarios->num_rows === 0
@@ -136,7 +136,7 @@ include '../includes/navbar.php';
                                 ): ?>
                                     <option
                                         value="<?= (int)
-                                            $usuario['id_usuario']; ?>"
+                                            $usuario['cod_usuario']; ?>"
                                         data-nombres="<?= escapar(
                                             $usuario['nombre']
                                         ); ?>"

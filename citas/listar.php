@@ -8,13 +8,13 @@ include '../includes/sidebar.php';
 include '../includes/navbar.php';
 
 // Consultar todas las citas con datos del estudiante
-$sql = "SELECT c.id_cita, c.fecha, c.hora,
+$sql = "SELECT c.cod_cita, c.fecha, c.hora,
                c.estado, c.observaciones,
                e.nombres, e.apellidos,
                e.curso, e.paralelo
         FROM citas c
         INNER JOIN vista_estudiantes e
-            ON c.id_estudiante = e.id_estudiante
+            ON c.cod_estudiante = e.cod_estudiante
         ORDER BY c.fecha DESC, c.hora ASC";
 
 $resultado = $conexion->query($sql);
@@ -115,8 +115,9 @@ $total_citas = $resultado->num_rows;
 
     <!-- Tabla -->
     <div class="card">
-        <table class="table align-middle"
-               id="tablaCitas">
+        <div class="table-responsive" tabindex="0" role="region" aria-label="Tabla de citas">
+            <table class="table align-middle"
+                   id="tablaCitas">
             <thead>
                 <tr>
                     <th>#</th>
@@ -180,13 +181,13 @@ $total_citas = $resultado->num_rows;
                             $fila['observaciones'] ?? '—') ?>
                     </td>
                     <td class="text-center">
-                        <a href="editar.php?id=<?= $fila['id_cita'] ?>"
+                        <a href="editar.php?id=<?= $fila['cod_cita'] ?>"
                            class="btn btn-sm btn-warning"
                            title="Editar">✏</a>
                         <form action="cancelar.php" method="POST" class="d-inline"
                               onsubmit="return confirm('¿Está segura de cancelar esta cita?')">
                             <?= login_campo_csrf() ?>
-                            <input type="hidden" name="id_cita" value="<?= (int) $fila['id_cita'] ?>">
+                            <input type="hidden" name="cod_cita" value="<?= (int) $fila['cod_cita'] ?>">
                             <button type="submit" class="btn btn-sm btn-danger" title="Cancelar">❌</button>
                         </form>
                     </td>
@@ -203,7 +204,8 @@ $total_citas = $resultado->num_rows;
                 </tr>
                 <?php endif; ?>
             </tbody>
-        </table>
+            </table>
+        </div>
     </div>
 
     <!-- Pie -->

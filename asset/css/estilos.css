@@ -143,6 +143,45 @@ img, svg, video {
     font-size: 1rem;
 }
 
+.navbar-top-content {
+    gap: 16px;
+}
+
+.navbar-system-title {
+    min-width: 0;
+}
+
+.navbar-user-actions {
+    flex-shrink: 0;
+}
+
+.navbar-user-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.btn-menu-toggle {
+    display: none;
+    flex: 0 0 auto;
+    min-width: 44px;
+    min-height: 44px;
+    padding: .5rem;
+}
+
+.btn-menu-toggle i {
+    font-size: 1.25rem;
+}
+
+.sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1035;
+    border: 0;
+    background: rgba(15, 23, 42, .48);
+    cursor: pointer;
+}
+
 /* =========================================================
    5. CONTENIDO PRINCIPAL
    ========================================================= */
@@ -1899,19 +1938,60 @@ textarea.form-control {
     }
 }
 
-/* 991px - Tablets */
-@media (max-width: 991px) {
+/* Tablets and narrow screens: navigation becomes a slide-out drawer. */
+@media (max-width: 1199.98px) {
+    :root {
+        --sidebar-width: 0;
+    }
+
     .sidebar {
-        width: 220px;
+        width: min(280px, calc(100vw - 48px));
+        transform: translateX(-100%);
+        transition: transform .25s ease;
+        z-index: 1040;
+    }
+
+    .sidebar.active {
+        transform: translateX(0);
+    }
+
+    .sidebar-backdrop:not([hidden]) {
+        display: block;
     }
 
     .main-content,
     .navbar-top {
-        margin-left: 220px;
+        margin-left: 0;
     }
 
     .main-content {
-        padding: 30px;
+        padding: 24px;
+    }
+
+    .btn-menu-toggle {
+        display: inline-flex;
+    }
+
+    .navbar-top-content {
+        gap: 10px;
+    }
+
+    .navbar-system-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .navbar-user-actions {
+        gap: 10px !important;
+    }
+
+    .navbar-user-name {
+        max-width: clamp(90px, 20vw, 180px);
+    }
+
+    body.sidebar-open {
+        overflow: hidden;
     }
 }
 
@@ -1971,29 +2051,6 @@ textarea.form-control {
 
 /* 767.98px - Móviles */
 @media (max-width: 767.98px) {
-    :root {
-        --sidebar-width: 0;
-    }
-
-    .sidebar {
-        position: fixed;
-        top: 0;
-        left: -100%;
-        width: 270px;
-        height: 100vh;
-        transition: left .3s ease;
-        z-index: 1040;
-    }
-
-    .sidebar.active {
-        left: 0;
-    }
-
-    .main-content,
-    .navbar-top {
-        margin-left: 0;
-    }
-
     .main-content {
         padding: 20px 16px;
         font-size: .9rem;
@@ -2146,6 +2203,39 @@ textarea.form-control {
         padding: 16px 12px;
     }
 
+    .navbar-top {
+        padding: 10px 12px;
+    }
+
+    .navbar-top .navbar-system-title {
+        font-size: .82rem;
+    }
+
+    .navbar-user-actions {
+        gap: 6px !important;
+    }
+
+    .navbar-user-name {
+        display: none;
+    }
+
+    .navbar-logout {
+        min-width: 44px;
+        min-height: 44px;
+        padding: .5rem;
+        font-size: 0;
+    }
+
+    .navbar-logout .bi {
+        font-size: 1rem;
+    }
+
+    .btn-menu-toggle {
+        min-width: 44px;
+        min-height: 44px;
+        padding: .5rem;
+    }
+
     .encabezado-modulo {
         padding: 16px 14px;
     }
@@ -2176,6 +2266,12 @@ textarea.form-control {
 
     .table thead th {
         font-size: .65rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sidebar {
+        transition: none;
     }
 }
 

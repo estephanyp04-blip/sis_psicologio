@@ -4,10 +4,10 @@ requerir_acceso('derivaciones/actualizar.php');
 require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/datos.php';
 
-$id = filter_var($_POST['id_derivacion'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+$id = filter_var($_POST['cod_derivacion'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 if (!$id) { header('Location: listar.php'); exit; }
 try {
-    derivacion_actualizar($conexion, $id, $_POST, (int)$_SESSION['id_rol'], (int)($_SESSION['id_docente'] ?? 0), $_FILES['imagen'] ?? null);
+    derivacion_actualizar($conexion, $id, $_POST, (int)$_SESSION['cod_rol'], (int)($_SESSION['cod_docente'] ?? 0), $_FILES['imagen'] ?? null);
     unset($_SESSION['edicion_derivacion']);
     $_SESSION['mensaje'] = 'La derivación fue actualizada correctamente.';
     $_SESSION['tipo_mensaje'] = 'success';

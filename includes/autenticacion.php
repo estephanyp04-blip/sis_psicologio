@@ -46,14 +46,14 @@ function login_validar_token($token): bool
 }
 function login_rol_valido(array $u): bool
 {
-    return in_array((int) $u['id_rol'], [1, 2, 3, 4], true) && $u['rol_estado'] === 'Activo';
+    return in_array((int) $u['cod_rol'], [1, 2, 3, 4], true) && $u['rol_estado'] === 'Activo';
 }
 function login_buscar_usuario(string $usuario): ?array
 {
-    $s = login_bd()->prepare('SELECT u.id_usuario, u.usuario, p.nombres AS nombre, p.apellidos AS apellido, u.password, u.estado, u.id_rol, r.nombre AS rol, r.estado AS rol_estado
+    $s = login_bd()->prepare('SELECT u.cod_usuario, u.usuario, p.nombres AS nombre, p.apellidos AS apellido, u.password, u.estado, u.cod_rol, r.nombre AS rol, r.estado AS rol_estado
         FROM usuarios u
-        INNER JOIN personas p ON p.id_persona = u.id_persona
-        INNER JOIN roles r ON r.id_rol = u.id_rol
+        INNER JOIN personas p ON p.cod_persona = u.cod_persona
+        INNER JOIN roles r ON r.cod_rol = u.cod_rol
         WHERE u.usuario = ? LIMIT 2');
     $s->bind_param('s', $usuario);
     $s->execute();
@@ -64,14 +64,14 @@ function login_buscar_usuario(string $usuario): ?array
 }
 function login_docente(int $idUsuario): ?int
 {
-    $s = login_bd()->prepare('SELECT d.id_docente
+    $s = login_bd()->prepare('SELECT d.cod_docente
         FROM docentes d
-        INNER JOIN usuarios u ON u.id_persona = d.id_persona
-        WHERE u.id_usuario = ? LIMIT 2');
+        INNER JOIN usuarios u ON u.cod_persona = d.cod_persona
+        WHERE u.cod_usuario = ? LIMIT 2');
     $s->bind_param('i', $idUsuario);
     $s->execute();
     $r = $s->get_result();
-    $id = $r->num_rows === 1 ? (int) $r->fetch_assoc()['id_docente'] : null;
+    $id = $r->num_rows === 1 ? (int) $r->fetch_assoc()['cod_docente'] : null;
     $s->close();
     return $id;
 }
@@ -79,7 +79,7 @@ function login_docente(int $idUsuario): ?int
 function login_comprobar(string $usuario, string $clave): array
 {
     $u = login_buscar_usuario($usuario);
-    $claveLimite = $u ? 'id:' . $u['id_usuario'] : 'nombre:' . strtolower($usuario);
+    $claveLimite = $u ? 'id:' . $u['cod_usuario'] : 'nombre:' . strtolower($usuario);
     $directorio = sys_get_temp_dir() . '/sis_psicologia_login_' . substr(hash('sha256', __DIR__), 0, 16);
     if (!is_dir($directorio) && !@mkdir($directorio, 0700, true) && !is_dir($directorio)) throw new RuntimeException('No se pudo crear el directorio de intentos.');
     $archivo = $directorio . '/' . hash('sha256', $claveLimite) . '.json';
@@ -96,9 +96,9 @@ function login_comprobar(string $usuario, string $clave): array
         $hash = $u['password'] ?? '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
         $correcta = password_verify($clave, $hash);
         $valido = $u && $correcta && $u['estado'] === 'Activo' && login_rol_valido($u);
-        if ($valido && (int) $u['id_rol'] === 3) {
-            $u['id_docente'] = login_docente((int) $u['id_usuario']);
-            if (!$u['id_docente']) {
+        if ($valido && (int) $u['cod_rol'] === 3) {
+            $u['cod_docente'] = login_docente((int) $u['cod_usuario']);
+            if (!$u['cod_docente']) {
                 $valido = false;
                 $error = 'Tu usuario no tiene un único docente vinculado. Solicita al administrador que revise la relación.';
             }
@@ -106,8 +106,8 @@ function login_comprobar(string $usuario, string $clave): array
         if ($valido) {
             if (password_needs_rehash($u['password'], PASSWORD_DEFAULT)) {
                 $nuevo = password_hash($clave, PASSWORD_DEFAULT);
-                $s = login_bd()->prepare('UPDATE usuarios SET password=? WHERE id_usuario=? AND password=?');
-                $s->bind_param('sis', $nuevo, $u['id_usuario'], $u['password']);
+                $s = login_bd()->prepare('UPDATE usuarios SET password=? WHERE cod_usuario=? AND password=?');
+                $s->bind_param('sis', $nuevo, $u['cod_usuario'], $u['password']);
                 $s->execute();
                 if ($s->affected_rows === 1) $u['password'] = $nuevo;
                 $s->close();
@@ -130,8 +130,8 @@ function login_establecer(array $u): void
     $_SESSION = [];
     session_regenerate_id(true);
     $_SESSION = [
-        'autenticado' => true, 'id_usuario' => (int) $u['id_usuario'], 'id_rol' => (int) $u['id_rol'],
-        'id_docente' => isset($u['id_docente']) ? (int) $u['id_docente'] : null,
+        'autenticado' => true, 'cod_usuario' => (int) $u['cod_usuario'], 'cod_rol' => (int) $u['cod_rol'],
+        'cod_docente' => isset($u['cod_docente']) ? (int) $u['cod_docente'] : null,
         'usuario' => $u['usuario'], 'nombre' => $u['nombre'], 'apellido' => $u['apellido'],
         'nombre_completo' => trim($u['nombre'] . ' ' . $u['apellido']), 'rol' => $u['rol'],
         'login_inicio' => time(), 'login_actividad' => time(),
@@ -145,10 +145,10 @@ function login_usuario_actual(): ?array
     if (time() - ($_SESSION['login_actividad'] ?? 0) > $c['inactividad'] || time() - ($_SESSION['login_inicio'] ?? 0) > $c['duracion_maxima']) return null;
     $u = login_buscar_usuario((string) ($_SESSION['usuario'] ?? ''));
     if (!$u || $u['estado'] !== 'Activo' || !login_rol_valido($u)
-        || (int) $u['id_usuario'] !== ($_SESSION['id_usuario'] ?? 0)
-        || (int) $u['id_rol'] !== ($_SESSION['id_rol'] ?? 0)
+        || (int) $u['cod_usuario'] !== ($_SESSION['cod_usuario'] ?? 0)
+        || (int) $u['cod_rol'] !== ($_SESSION['cod_rol'] ?? 0)
         || !hash_equals($_SESSION['login_firma'] ?? '', hash('sha256', $u['password']))) return null;
-    if ((int) $u['id_rol'] === 3 && login_docente((int) $u['id_usuario']) !== ($_SESSION['id_docente'] ?? null)) return null;
+    if ((int) $u['cod_rol'] === 3 && login_docente((int) $u['cod_usuario']) !== ($_SESSION['cod_docente'] ?? null)) return null;
     $_SESSION['login_actividad'] = time();
     return $u;
 }
@@ -175,7 +175,7 @@ function requerir_roles(array $permitidos = [], bool $json = false): void
         if ($json) login_error_json(401, 'La sesión venció. Inicie sesión nuevamente.');
         login_ir('login.php');
     }
-    if ($permitidos && !in_array((int) $u['id_rol'], $permitidos, true)) {
+    if ($permitidos && !in_array((int) $u['cod_rol'], $permitidos, true)) {
         if ($json) login_error_json(403, 'No tiene permiso para realizar esta consulta.');
         http_response_code(403);
         exit('No tienes permiso para realizar esta acción.');
@@ -194,12 +194,12 @@ function login_puede(string $ruta): bool
     $permiso = login_permisos()[$ruta] ?? null;
     return $permiso !== null
         && ($_SESSION['autenticado'] ?? false) === true
-        && in_array((int) ($_SESSION['id_rol'] ?? 0), $permiso['roles'], true);
+        && in_array((int) ($_SESSION['cod_rol'] ?? 0), $permiso['roles'], true);
 }
 
 function login_inicio_url(): string
 {
-    $destino = login_config()['destinos'][(int) ($_SESSION['id_rol'] ?? 0)] ?? 'login.php';
+    $destino = login_config()['destinos'][(int) ($_SESSION['cod_rol'] ?? 0)] ?? 'login.php';
     return login_url($destino);
 }
 

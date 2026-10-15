@@ -5,12 +5,12 @@ require_once __DIR__ . '/../config/conexion.php';
 
 $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 if (!$id) { header('Location: listar.php'); exit; }
-$stmt = $conexion->prepare("SELECT e.*,c.orden AS curso,p.nombre AS paralelo,s.id_institucion,s.gestion,s.turno
-    FROM estudiantes e LEFT JOIN inscripciones i ON i.id_inscripcion=(
-        SELECT i2.id_inscripcion FROM inscripciones i2 WHERE i2.id_estudiante=e.id_estudiante
-        AND i2.estado IN ('Activo','Retirado') ORDER BY i2.id_inscripcion DESC LIMIT 1)
-    LEFT JOIN secciones s ON s.id_seccion=i.id_seccion LEFT JOIN cursos c ON c.id_curso=s.id_curso
-    LEFT JOIN paralelos p ON p.id_paralelo=s.id_paralelo WHERE e.id_estudiante=?");
+$stmt = $conexion->prepare("SELECT e.*,c.orden AS curso,p.nombre AS paralelo,s.cod_institucion,s.gestion,s.turno
+    FROM estudiantes e LEFT JOIN inscripciones i ON i.cod_inscripcion=(
+        SELECT i2.cod_inscripcion FROM inscripciones i2 WHERE i2.cod_estudiante=e.cod_estudiante
+        AND i2.estado IN ('Activo','Retirado') ORDER BY i2.cod_inscripcion DESC LIMIT 1)
+    LEFT JOIN secciones s ON s.cod_seccion=i.cod_seccion LEFT JOIN cursos c ON c.cod_curso=s.cod_curso
+    LEFT JOIN paralelos p ON p.cod_paralelo=s.cod_paralelo WHERE e.cod_estudiante=?");
 $stmt->bind_param('i', $id); $stmt->execute();
 $fila = $stmt->get_result()->fetch_assoc(); $stmt->close();
 if (!$fila) { http_response_code(404); exit('Estudiante no encontrado.'); }
@@ -38,7 +38,7 @@ include '../includes/navbar.php';
         <div class="card shadow-sm border-0"><div class="card-body p-4">
             <form id="formEditarEstudiante" action="actualizar.php" method="POST">
                 <?= login_campo_csrf() ?>
-                <input type="hidden" name="id_estudiante" value="<?= $id ?>">
+                <input type="hidden" name="cod_estudiante" value="<?= $id ?>">
                 <div class="row g-3">
                     <?php foreach (['ci' => 'CI', 'nombres' => 'Nombres', 'apellidos' => 'Apellidos'] as $campo => $etiqueta): ?>
                         <div class="col-md-4">

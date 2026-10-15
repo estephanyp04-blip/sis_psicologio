@@ -25,8 +25,8 @@ if (!$idDocente || $idDocente <= 0) {
 
 $sql = "
     SELECT
-        d.id_docente,
-        d.id_persona,
+        d.cod_docente,
+        d.cod_persona,
         p.nombres,
         p.apellidos,
         p.telefono,
@@ -35,20 +35,20 @@ $sql = "
         u.usuario,
         u.estado AS estado_usuario,
         r.nombre AS nombre_rol,
-        COUNT(DISTINCT de.id_derivacion) AS total_derivaciones
+        COUNT(DISTINCT de.cod_derivacion) AS total_derivaciones
     FROM docentes d
-    INNER JOIN personas p ON p.id_persona=d.id_persona
-    LEFT JOIN usuarios u ON u.id_persona=d.id_persona
+    INNER JOIN personas p ON p.cod_persona=d.cod_persona
+    LEFT JOIN usuarios u ON u.cod_persona=d.cod_persona
     LEFT JOIN roles r
-        ON r.id_rol = u.id_rol
-    LEFT JOIN docente_materias dm ON dm.id_docente=d.id_docente
-    LEFT JOIN materias m ON m.id_materia=dm.id_materia
+        ON r.cod_rol = u.cod_rol
+    LEFT JOIN docente_materias dm ON dm.cod_docente=d.cod_docente
+    LEFT JOIN materias m ON m.cod_materia=dm.cod_materia
     LEFT JOIN derivaciones de
-        ON de.id_docente = d.id_docente
-    WHERE d.id_docente = ?
+        ON de.cod_docente = d.cod_docente
+    WHERE d.cod_docente = ?
     GROUP BY
-        d.id_docente,
-        d.id_persona,
+        d.cod_docente,
+        d.cod_persona,
         p.nombres,
         p.apellidos,
         p.telefono,
@@ -120,7 +120,7 @@ include '../includes/navbar.php';
                 Volver
             </a>
 
-            <a href="editar.php?id=<?= (int) $docente['id_docente']; ?>"
+            <a href="editar.php?id=<?= (int) $docente['cod_docente']; ?>"
                class="btn btn-warning">
                 <i class="bi bi-pencil me-1"></i>
                 Editar
@@ -151,7 +151,7 @@ include '../includes/navbar.php';
                     <div class="text-muted">
                         Código:
                         DOC-<?= str_pad(
-                            (string) $docente['id_docente'],
+                            (string) $docente['cod_docente'],
                             4,
                             '0',
                             STR_PAD_LEFT

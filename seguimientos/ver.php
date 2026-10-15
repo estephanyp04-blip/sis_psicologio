@@ -4,12 +4,12 @@ requerir_acceso('seguimientos/ver.php');
 require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/../includes/trazabilidad_vista.php';
 $id = (int)filter_var($_GET['id'] ?? null,FILTER_VALIDATE_INT);
-$s = flujo_fila($conexion, 'SELECT s.*,h.id_estudiante,COALESCE(c.id_derivacion,h.id_derivacion_origen) id_derivacion,
+$s = flujo_fila($conexion, 'SELECT s.*,h.cod_estudiante,COALESCE(c.cod_derivacion,h.cod_derivacion_origen) cod_derivacion,
     CONCAT(p.nombres,\' \',p.apellidos) profesional
-    FROM seguimientos s JOIN historias_clinicas h ON h.id_historia=s.id_historia
-    JOIN usuarios u ON u.id_usuario=s.id_psicologa
-    JOIN personas p ON p.id_persona=u.id_persona
-    LEFT JOIN citas c ON c.id_cita=s.id_cita WHERE s.id_seguimiento=?', [$id]);
+    FROM seguimientos s JOIN historias_clinicas h ON h.cod_historia=s.cod_historia
+    JOIN usuarios u ON u.cod_usuario=s.cod_psicologa
+    JOIN personas p ON p.cod_persona=u.cod_persona
+    LEFT JOIN citas c ON c.cod_cita=s.cod_cita WHERE s.cod_seguimiento=?', [$id]);
 if (!$s) { http_response_code(404); exit('Seguimiento no encontrado.'); }
 $tituloPagina='Seguimiento #' . $id;
 include '../includes/header.php'; include '../includes/sidebar.php'; include '../includes/navbar.php';
@@ -20,6 +20,6 @@ include '../includes/header.php'; include '../includes/sidebar.php'; include '..
 <h2 class="h5"><?= $titulo ?></h2><p><?= nl2br(login_html($s[$campo] ?: 'No registrado')) ?></p>
 <?php endforeach; ?></div>
 <?php flujo_panel($conexion,'seguimiento',$s); ?>
-<a class="btn btn-primary mt-3" href="../informes/registrar.php?id_estudiante=<?= (int)$s['id_estudiante'] ?>&amp;id_seguimiento=<?= $id ?>">Crear informe desde este seguimiento</a>
+<a class="btn btn-primary mt-3" href="../informes/registrar.php?cod_estudiante=<?= (int)$s['cod_estudiante'] ?>&amp;cod_seguimiento=<?= $id ?>">Crear informe desde este seguimiento</a>
 </div></main>
 <?php include '../includes/footer.php'; ?>

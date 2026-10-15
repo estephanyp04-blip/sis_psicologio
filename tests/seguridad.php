@@ -143,7 +143,7 @@ PHP
     foreach (['vencida', 'duracion', 'inactivo', 'rol_inactivo', 'clave_cambiada', 'rol_cambiado'] as $sesion) {
         $r = peticion('index.php', 'GET', ['rol' => 1, 'sesion' => $sesion]);
         comprobar($r['codigo'] === 303, "Sesión revocada aceptada: $sesion");
-        $r = peticion('historias_clinicas/ajax_derivaciones.php?id_estudiante=1', 'GET', ['rol' => 1, 'sesion' => $sesion]);
+        $r = peticion('historias_clinicas/ajax_derivaciones.php?cod_estudiante=1', 'GET', ['rol' => 1, 'sesion' => $sesion]);
         comprobar($r['codigo'] === 401 && isset(json_decode($r['cuerpo'], true)['error']), "El endpoint no rechaza sesión revocada con JSON: $sesion");
     }
     foreach (['sin_docente', 'docente_duplicado'] as $sesion) {
@@ -169,21 +169,21 @@ PHP
             $r = peticion('derivaciones/' . $pagina . '?id=1', 'GET', ['rol' => 3, 'negocio' => true]);
             comprobar($r['codigo'] === 200 && str_contains($r['cuerpo'], 'PROPIA_PRIVADA'), "Docente no puede consultar su derivación en $pagina");
         }
-        $datos = ['csrf' => $token, 'id_derivacion' => 2, 'fecha' => date('Y-m-d'), 'materia' => 'Lenguaje y Comunicación', 'motivo' => 'CAMBIO_PRUEBA', 'observaciones' => 'OBS_PRUEBA', 'prioridad' => 'Media'];
+        $datos = ['csrf' => $token, 'cod_derivacion' => 2, 'fecha' => date('Y-m-d'), 'materia' => 'Lenguaje y Comunicación', 'motivo' => 'CAMBIO_PRUEBA', 'observaciones' => 'OBS_PRUEBA', 'prioridad' => 'Media'];
         $r = peticion('derivaciones/actualizar.php', 'POST', ['rol' => 3, 'negocio' => true], $datos);
         comprobar((estadoNegocio($r)['derivaciones'][1]['motivo'] ?? '') === 'AJENA_PRIVADA', 'Docente actualizó una derivación ajena.');
-        $datos['id_derivacion'] = 1;
+        $datos['cod_derivacion'] = 1;
         $r = peticion('derivaciones/actualizar.php', 'POST', ['rol' => 3, 'negocio' => true], $datos);
         comprobar((estadoNegocio($r)['derivaciones'][0]['motivo'] ?? '') === 'CAMBIO_PRUEBA', 'No se pudo actualizar una derivación propia con CSRF válido.');
-        $r = peticion('derivaciones/eliminar.php', 'POST', ['rol' => 3, 'negocio' => true], ['csrf' => $token, 'id_derivacion' => 2]);
+        $r = peticion('derivaciones/eliminar.php', 'POST', ['rol' => 3, 'negocio' => true], ['csrf' => $token, 'cod_derivacion' => 2]);
         comprobar(count(estadoNegocio($r)['derivaciones'] ?? []) === 2, 'Docente eliminó una derivación ajena.');
-        $r = peticion('derivaciones/eliminar.php', 'POST', ['rol' => 3, 'negocio' => true], ['csrf' => $token, 'id_derivacion' => 1]);
+        $r = peticion('derivaciones/eliminar.php', 'POST', ['rol' => 3, 'negocio' => true], ['csrf' => $token, 'cod_derivacion' => 1]);
         comprobar(count(estadoNegocio($r)['derivaciones'] ?? []) === 1, 'No se pudo eliminar una derivación propia con CSRF válido.');
         $r = peticion('citas/cancelar.php?id=1', 'GET', ['rol' => 2, 'negocio' => true]);
         comprobar($r['codigo'] === 405 && (estadoNegocio($r)['cita'] ?? '') === 'Pendiente', 'GET canceló una cita.');
-        $r = peticion('citas/cancelar.php', 'POST', ['rol' => 2, 'negocio' => true], ['id_cita' => 1]);
+        $r = peticion('citas/cancelar.php', 'POST', ['rol' => 2, 'negocio' => true], ['cod_cita' => 1]);
         comprobar($r['codigo'] === 403 && (estadoNegocio($r)['cita'] ?? '') === 'Pendiente', 'POST sin CSRF canceló una cita.');
-        $r = peticion('citas/cancelar.php', 'POST', ['rol' => 2, 'negocio' => true], ['id_cita' => 1, 'csrf' => $token]);
+        $r = peticion('citas/cancelar.php', 'POST', ['rol' => 2, 'negocio' => true], ['cod_cita' => 1, 'csrf' => $token]);
         comprobar((estadoNegocio($r)['cita'] ?? '') === 'Cancelada', 'POST válido no canceló la cita de prueba.');
         echo "Propiedad de derivaciones y cancelación de citas: correctas.\n";
 
@@ -193,7 +193,7 @@ PHP
         foreach ([1, 2] as $rol) {
             foreach (['retirar' => 'Retirado', 'reactivar' => 'Activo'] as $accion => $estado) {
                 $r = peticion('estudiantes/cambiar_estado.php', 'POST', ['rol' => $rol, 'negocio' => true, 'estudiante_retirado' => $accion === 'reactivar'],
-                    ['csrf' => $token, 'id_estudiante' => 1, 'accion' => $accion]);
+                    ['csrf' => $token, 'cod_estudiante' => 1, 'accion' => $accion]);
                 $guardado = $estadoEstudiante($r);
                 comprobar($r['codigo'] === 302, "No redirige después de $accion, rol $rol.");
                 comprobar(($guardado['estudiantes'][0]['estado'] ?? '') === $estado, "No se pudo $accion al estudiante.");
@@ -206,26 +206,26 @@ PHP
         }
         foreach ([
             ['GET', 2, []],
-            ['POST', 2, ['id_estudiante' => 1, 'accion' => 'retirar']],
-            ['POST', 3, ['csrf' => $token, 'id_estudiante' => 1, 'accion' => 'retirar']],
-            ['POST', 4, ['csrf' => $token, 'id_estudiante' => 1, 'accion' => 'retirar']],
+            ['POST', 2, ['cod_estudiante' => 1, 'accion' => 'retirar']],
+            ['POST', 3, ['csrf' => $token, 'cod_estudiante' => 1, 'accion' => 'retirar']],
+            ['POST', 4, ['csrf' => $token, 'cod_estudiante' => 1, 'accion' => 'retirar']],
         ] as [$metodo, $rol, $datos]) {
             $r = peticion('estudiantes/cambiar_estado.php', $metodo, ['rol' => $rol, 'negocio' => true], $datos);
             comprobar($r['codigo'] === ($metodo === 'GET' ? 405 : 403) && $estadoEstudiante($r) === $baseEstudiante, 'Se cambió el estado sin método, CSRF o rol permitido.');
         }
-        foreach ([['id_estudiante' => 0], ['id_estudiante' => 999], ['accion' => 'borrar'], ['accion' => ['retirar']]] as $invalido) {
+        foreach ([['cod_estudiante' => 0], ['cod_estudiante' => 999], ['accion' => 'borrar'], ['accion' => ['retirar']]] as $invalido) {
             $r = peticion('estudiantes/cambiar_estado.php', 'POST', ['rol' => 2, 'negocio' => true],
-                array_replace(['csrf' => $token, 'id_estudiante' => 1, 'accion' => 'retirar'], $invalido));
+                array_replace(['csrf' => $token, 'cod_estudiante' => 1, 'accion' => 'retirar'], $invalido));
             comprobar($r['codigo'] === 302 && $estadoEstudiante($r) === $baseEstudiante, 'Una entrada inválida modificó el estado.');
         }
         $r = peticion('estudiantes/cambiar_estado.php', 'POST', ['rol' => 2, 'negocio' => true, 'fallo_inscripcion' => true],
-            ['csrf' => $token, 'id_estudiante' => 1, 'accion' => 'retirar']);
+            ['csrf' => $token, 'cod_estudiante' => 1, 'accion' => 'retirar']);
         comprobar($r['codigo'] === 302 && $estadoEstudiante($r) === $baseEstudiante, 'El fallo de inscripción dejó al estudiante retirado parcialmente.');
         $r = peticion('estudiantes/cambiar_estado.php', 'POST', ['rol' => 2, 'negocio' => true],
-            ['csrf' => $token, 'id_estudiante' => 1, 'accion' => 'reactivar']);
+            ['csrf' => $token, 'cod_estudiante' => 1, 'accion' => 'reactivar']);
         comprobar($estadoEstudiante($r) === $baseEstudiante, 'Repetir un estado cambió registros.');
         $r = peticion('estudiantes/listar.php', 'POST', ['rol' => 2, 'negocio' => true],
-            ['csrf' => $token, 'id_estudiante' => 1, 'accion' => 'retirar']);
+            ['csrf' => $token, 'cod_estudiante' => 1, 'accion' => 'retirar']);
         comprobar($r['codigo'] === 405 && $estadoEstudiante($r) === $baseEstudiante, 'El listado todavía acepta escrituras.');
         echo "Retiro/reactivación de estudiantes, inscripción, permisos y rollback: correctos.\n";
 
@@ -258,8 +258,8 @@ PHP
             if (in_array($ruta, ['derivaciones/listar.php', 'derivaciones/mis_derivaciones.php'], true)) {
                 comprobar(!str_contains($html, 'OTRO_ESTUDIANTE'), 'El listado docente expone derivaciones ajenas.');
                 comprobar(str_contains($html, 'Lenguaje y Comunicación') && str_contains($html, 'Prioridad: Media'), 'El listado unificado perdió materia o prioridad.');
-                comprobar($xpath->query('//form[@action="eliminar.php"]//input[@name="id_derivacion" and @value="1"]')->length === 1, 'Falta la eliminación de la derivación propia.');
-                comprobar($xpath->query('//form[@action="eliminar.php"]//input[@name="id_derivacion" and @value="2"]')->length === 0, 'Se ofrece eliminar una derivación ajena.');
+                comprobar($xpath->query('//form[@action="eliminar.php"]//input[@name="cod_derivacion" and @value="1"]')->length === 1, 'Falta la eliminación de la derivación propia.');
+                comprobar($xpath->query('//form[@action="eliminar.php"]//input[@name="cod_derivacion" and @value="2"]')->length === 0, 'Se ofrece eliminar una derivación ajena.');
             }
             if ($ruta === 'estudiantes/listar.php') {
                 comprobar($xpath->query('//form[contains(@class,"formulario-retirar") and @action="cambiar_estado.php"]')->length === 2, 'El retiro no apunta al receptor centralizado.');

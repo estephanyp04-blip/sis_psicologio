@@ -127,8 +127,8 @@ function cargarSeguimientos(mysqli $conexion, int $idHistoria): array
     if (isset($campos['fecha'])) {
         $orderBy[] = $campos['fecha'] . ' ASC';
     }
-    if (in_array('id_seguimiento', $columnasReales, true)) {
-        $orderBy[] = 'id_seguimiento ASC';
+    if (in_array('cod_seguimiento', $columnasReales, true)) {
+        $orderBy[] = 'cod_seguimiento ASC';
     }
     if (empty($orderBy)) {
         $orderBy[] = '1';
@@ -136,7 +136,7 @@ function cargarSeguimientos(mysqli $conexion, int $idHistoria): array
 
     $sql = "SELECT " . implode(', ', $select) . "
             FROM seguimientos
-            WHERE id_historia = ?
+            WHERE cod_historia = ?
             ORDER BY " . implode(', ', $orderBy);
 
     $stmt = $conexion->prepare($sql);
@@ -161,7 +161,7 @@ function cargarSeguimientos(mysqli $conexion, int $idHistoria): array
 /* =========================================================
    PERMISOS
    ========================================================= */
-$rolActual       = (int)($_SESSION['id_rol'] ?? 0);
+$rolActual       = (int)($_SESSION['cod_rol'] ?? 0);
 $rolesPermitidos = [1, 2];
 
 if (!in_array($rolActual, $rolesPermitidos, true)) {
@@ -211,23 +211,23 @@ try {
             e.paralelo,
             e.turno,
             (SELECT r.nombres FROM estudiante_responsables er
-                INNER JOIN responsables r ON r.id_responsable=er.id_responsable
-                WHERE er.id_estudiante=e.id_estudiante AND er.parentesco='Tutor'
+                INNER JOIN responsables r ON r.cod_responsable=er.cod_responsable
+                WHERE er.cod_estudiante=e.cod_estudiante AND er.parentesco='Tutor'
                 ORDER BY er.es_principal DESC LIMIT 1) AS tutor,
             e.telefono,
             p.nombres AS profesional_nombre,
             p.apellidos AS profesional_apellido
         FROM historias_clinicas h
-        LEFT JOIN derivaciones d ON d.id_derivacion = h.id_derivacion_origen
-        LEFT JOIN docentes doc ON doc.id_docente = d.id_docente
-        LEFT JOIN personas dp ON dp.id_persona = doc.id_persona
+        LEFT JOIN derivaciones d ON d.cod_derivacion = h.cod_derivacion_origen
+        LEFT JOIN docentes doc ON doc.cod_docente = d.cod_docente
+        LEFT JOIN personas dp ON dp.cod_persona = doc.cod_persona
         INNER JOIN vista_estudiantes e
-            ON e.id_estudiante = h.id_estudiante
+            ON e.cod_estudiante = h.cod_estudiante
         LEFT JOIN usuarios u
-            ON u.id_usuario = h.id_psicologa
+            ON u.cod_usuario = h.cod_psicologa
         LEFT JOIN personas p
-            ON p.id_persona = u.id_persona
-        WHERE h.id_historia = ?
+            ON p.cod_persona = u.cod_persona
+        WHERE h.cod_historia = ?
         LIMIT 1
     ");
 
@@ -251,10 +251,10 @@ try {
     $stmt = $conexion->prepare("
         SELECT g.codigo AS grupo, o.descripcion AS valor
         FROM historia_opciones ho
-        INNER JOIN opciones_historia o ON o.id_opcion=ho.id_opcion
-        INNER JOIN grupos_opciones_historia g ON g.id_grupo=o.id_grupo
-        WHERE ho.id_historia = ?
-        ORDER BY ho.id_opcion ASC
+        INNER JOIN opciones_historia o ON o.cod_opcion=ho.cod_opcion
+        INNER JOIN grupos_opciones_historia g ON g.cod_grupo=o.cod_grupo
+        WHERE ho.cod_historia = ?
+        ORDER BY ho.cod_opcion ASC
     ");
 
     if ($stmt) {
@@ -274,8 +274,8 @@ try {
     $stmt = $conexion->prepare("
         SELECT nombre, edad, relacion, profesion, ocupacion, observaciones
         FROM historia_familiares
-        WHERE id_historia = ?
-        ORDER BY id_familiar ASC
+        WHERE cod_historia = ?
+        ORDER BY cod_familiar ASC
     ");
 
     if ($stmt) {
@@ -337,8 +337,8 @@ include '../includes/navbar.php';
 <div class="container-fluid">
 <?php require_once __DIR__ . '/../includes/trazabilidad_vista.php'; flujo_panel($conexion,'historia',$h); ?>
 <div class="d-flex gap-2 my-3 d-print-none">
-    <a class="btn btn-primary" href="../seguimientos/registrar.php?id_historia=<?= (int)$h['id_historia'] ?>">Registrar seguimiento</a>
-    <a class="btn btn-outline-primary" href="../informes/registrar.php?id_estudiante=<?= (int)$h['id_estudiante'] ?>">Crear informe</a>
+    <a class="btn btn-primary" href="../seguimientos/registrar.php?cod_historia=<?= (int)$h['cod_historia'] ?>">Registrar seguimiento</a>
+    <a class="btn btn-outline-primary" href="../informes/registrar.php?cod_estudiante=<?= (int)$h['cod_estudiante'] ?>">Crear informe</a>
 </div>
 
     <!-- BREADCRUMB -->

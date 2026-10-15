@@ -140,10 +140,10 @@ try {
     $copia->query('ALTER TABLE historias_clinicas DROP COLUMN tutor_curso');
     prueba_autores($copia);
     prueba_estudiantes($copia, 1);
-    $copia->query("INSERT INTO historias_clinicas (id_historia,id_estudiante,id_psicologa,fecha_apertura,motivo_consulta,observaciones) VALUES (1,1,101,'2026-01-01','Motivo previo','Conservar observaciones')");
-    $copia->query("INSERT INTO seguimientos (id_historia,id_psicologa,fecha,descripcion,acuerdos,proxima_sesion) VALUES (1,101,'2026-01-02','Descripción previa','Acuerdo previo','2026-02-01')");
-    $copia->query("INSERT INTO informes (id_informe,id_elaborado_por,titulo,numero_ficha,tipo) VALUES (1,101,'Título anterior','INF-0042','Individual')");
-    $copia->query('INSERT INTO informe_individual (id_informe,id_estudiante,id_historia) VALUES (1,1,1)');
+    $copia->query("INSERT INTO historias_clinicas (cod_historia,cod_estudiante,cod_psicologa,fecha_apertura,motivo_consulta,observaciones) VALUES (1,1,101,'2026-01-01','Motivo previo','Conservar observaciones')");
+    $copia->query("INSERT INTO seguimientos (cod_historia,cod_psicologa,fecha,descripcion,acuerdos,proxima_sesion) VALUES (1,101,'2026-01-02','Descripción previa','Acuerdo previo','2026-02-01')");
+    $copia->query("INSERT INTO informes (cod_informe,cod_elaborado_por,titulo,numero_ficha,tipo) VALUES (1,101,'Título anterior','INF-0042','Individual')");
+    $copia->query('INSERT INTO informe_individual (cod_informe,cod_estudiante,cod_historia) VALUES (1,1,1)');
     $copia->query('UPDATE informes_secuencia SET ultimo=42 WHERE id=1');
     $filasAntes = [];
     foreach (array_keys(estructura($copia)) as $tabla) $filasAntes[$tabla] = $copia->query("SELECT * FROM `$tabla` ORDER BY 1")->fetch_all(MYSQLI_ASSOC);
@@ -160,31 +160,31 @@ try {
     verificar((int)consultar($copia, 'SELECT ultimo FROM informes_secuencia WHERE id=1')['ultimo'] === 42, 'La migración altera la secuencia.');
     $planificar = require $raiz . '/database/migrations_normalizadas/001_tutor_historia.php';
     verificar($planificar($copia) === [], 'La migración no es idempotente.');
-    $copia->query('DELETE FROM materias WHERE id_materia BETWEEN 7 AND 10');
-    $copia->query("INSERT INTO materias (id_materia,nombre,estado) VALUES (77,'Fisica','Inactivo')");
-    $catalogoAntes = $copia->query('SELECT * FROM materias ORDER BY id_materia')->fetch_all(MYSQLI_ASSOC);
+    $copia->query('DELETE FROM materias WHERE cod_materia BETWEEN 7 AND 10');
+    $copia->query("INSERT INTO materias (cod_materia,nombre,estado) VALUES (77,'Fisica','Inactivo')");
+    $catalogoAntes = $copia->query('SELECT * FROM materias ORDER BY cod_materia')->fetch_all(MYSQLI_ASSOC);
     $planMaterias = require $raiz . '/database/migrations_normalizadas/002_materias_docentes.php';
     verificar(count($planMaterias($copia)) === 3, 'Duplica Física por su acento o no detecta materias faltantes.');
     ejecutar([PHP_BINARY,$raiz.'/database/migrar.php','--base='.$actualizacion,'--comprobar']);
-    verificar($catalogoAntes === $copia->query('SELECT * FROM materias ORDER BY id_materia')->fetch_all(MYSQLI_ASSOC), 'Comprobar modifica el catálogo.');
+    verificar($catalogoAntes === $copia->query('SELECT * FROM materias ORDER BY cod_materia')->fetch_all(MYSQLI_ASSOC), 'Comprobar modifica el catálogo.');
     ejecutar([PHP_BINARY,$raiz.'/database/migrar.php','--base='.$actualizacion,'--aplicar']);
-    foreach ($catalogoAntes as $materia) verificar($materia === consultar($copia,'SELECT * FROM materias WHERE id_materia='.(int)$materia['id_materia']), 'La migración cambia una materia existente.');
+    foreach ($catalogoAntes as $materia) verificar($materia === consultar($copia,'SELECT * FROM materias WHERE cod_materia='.(int)$materia['cod_materia']), 'La migración cambia una materia existente.');
     verificar($planMaterias($copia) === [] && (int)consultar($copia,'SELECT COUNT(*) n FROM materias')['n'] === 10, 'Catálogo incompleto o migración no idempotente.');
     echo "Instalación, actualización, conservación de datos e idempotencia: correctas.\n";
 
     prueba_autores($bd);
     // IDs diferentes del grado visible: detecta el antiguo fallback numérico.
-    $bd->query('UPDATE cursos SET id_curso=71 WHERE id_curso=1');
-    $bd->query("UPDATE secciones s JOIN paralelos p ON p.id_paralelo=s.id_paralelo SET s.estado='Inactivo' WHERE s.id_curso=2 AND p.nombre='D'");
+    $bd->query('UPDATE cursos SET cod_curso=71 WHERE cod_curso=1');
+    $bd->query("UPDATE secciones s JOIN paralelos p ON p.cod_paralelo=s.cod_paralelo SET s.estado='Inactivo' WHERE s.cod_curso=2 AND p.nombre='D'");
     $datos = estudiante_datos(['codigo'=>'UNO','ci'=>'CIUNO','nombres'=>'María','apellidos'=>'Prueba','fecha_nacimiento'=>'2010-02-28',
         'genero'=>'Femenino','curso'=>'1','paralelo'=>'D','turno'=>'Mañana','estado'=>'Activo']);
     $academico = estudiante_validar($datos, estudiante_catalogo($bd));
-    $seccion = consultar($bd, 'SELECT id_curso,id_paralelo FROM secciones WHERE id_seccion=' . (int)$academico['id_seccion']);
-    verificar((int)$seccion['id_curso'] === 71 && (int)$seccion['id_paralelo'] === 4, 'No resuelve IDs reales del catálogo.');
+    $seccion = consultar($bd, 'SELECT cod_curso,cod_paralelo FROM secciones WHERE cod_seccion=' . (int)$academico['cod_seccion']);
+    verificar((int)$seccion['cod_curso'] === 71 && (int)$seccion['cod_paralelo'] === 4, 'No resuelve IDs reales del catálogo.');
     estudiante_insertar($bd, $datos, $academico);
-    $idEstudiante = (int)consultar($bd, "SELECT id_estudiante FROM estudiantes WHERE codigo='UNO'")['id_estudiante'];
-    $guardado = consultar($bd, "SELECT * FROM vista_estudiantes WHERE id_estudiante=$idEstudiante");
-    verificar($guardado['curso'] === '1ro de Secundaria' && (int)$guardado['id_curso'] === 71 && $guardado['sexo'] === 'F', 'No persiste datos coherentes del estudiante.');
+    $idEstudiante = (int)consultar($bd, "SELECT cod_estudiante FROM estudiantes WHERE codigo='UNO'")['cod_estudiante'];
+    $guardado = consultar($bd, "SELECT * FROM vista_estudiantes WHERE cod_estudiante=$idEstudiante");
+    verificar($guardado['curso'] === '1ro de Secundaria' && (int)$guardado['cod_curso'] === 71 && $guardado['sexo'] === 'F', 'No persiste datos coherentes del estudiante.');
     foreach ([['curso'=>'99'], ['curso'=>'2','paralelo'=>'D'], ['estado'=>'Baja'], ['estado'=>'En seguimiento'], ['fecha_nacimiento'=>'2010-02-30'], ['codigo'=>str_repeat('x',21)]] as $cambio) {
         rechaza(fn() => estudiante_validar(array_replace($datos,$cambio), estudiante_catalogo($bd)), 'Aceptó datos inválidos del estudiante.');
     }
@@ -196,33 +196,33 @@ try {
     verificar(str_contains(implode(' ', $resultado['errores']), 'Fila 3'), 'El error de duplicado no indica su fila.');
     rechaza(fn() => importar($bd, "$encabezado;codigo\n"), 'Aceptó encabezados duplicados.');
     rechaza(fn() => importar($bd, 'codigo;ci'), 'Aceptó encabezados incompletos.');
-    verificar((int)consultar($bd,"SELECT COUNT(*) n FROM inscripciones i LEFT JOIN secciones s ON s.id_seccion=i.id_seccion WHERE s.id_seccion IS NULL")['n'] === 0, 'Se importó un paralelo ajeno al curso.');
+    verificar((int)consultar($bd,"SELECT COUNT(*) n FROM inscripciones i LEFT JOIN secciones s ON s.cod_seccion=i.cod_seccion WHERE s.cod_seccion IS NULL")['n'] === 0, 'Se importó un paralelo ajeno al curso.');
     echo "Alta manual, catálogo con IDs no consecutivos e importación parcial: correctos.\n";
 
-    $informe = informe_datos(['id_estudiante'=>$idEstudiante,'titulo'=>'Título de prueba','fecha'=>'2026-01-15','tipo_atencion'=>['Evaluación'],
+    $informe = informe_datos(['cod_estudiante'=>$idEstudiante,'titulo'=>'Título de prueba','fecha'=>'2026-01-15','tipo_atencion'=>['Evaluación'],
         'motivo'=>'Motivo','aspecto_cognitivo'=>'Cognitivo','aspectos_afectivos'=>'Afectivo','estado'=>'Borrador']);
     verificar(informe_crear($bd,$informe,101) === 'INF-0001', 'Primera ficha incorrecta.');
-    $idInforme = (int)consultar($bd,'SELECT MAX(id_informe) id FROM informes')['id'];
-    $filaInforme = consultar($bd,"SELECT i.*,d.* FROM informes i JOIN informe_individual d ON d.id_informe=i.id_informe WHERE i.id_informe=$idInforme");
-    verificar((int)$filaInforme['id_elaborado_por']===101 && $filaInforme['tipo']==='Individual' && $filaInforme['titulo']==='Título de prueba', 'No conserva el modelo individual y su autor.');
-    verificar($filaInforme['id_historia']===null && $filaInforme['id_derivacion']===null, 'No admite informe sin historia.');
+    $idInforme = (int)consultar($bd,'SELECT MAX(cod_informe) id FROM informes')['id'];
+    $filaInforme = consultar($bd,"SELECT i.*,d.* FROM informes i JOIN informe_individual d ON d.cod_informe=i.cod_informe WHERE i.cod_informe=$idInforme");
+    verificar((int)$filaInforme['cod_elaborado_por']===101 && $filaInforme['tipo']==='Individual' && $filaInforme['titulo']==='Título de prueba', 'No conserva el modelo individual y su autor.');
+    verificar($filaInforme['cod_historia']===null && $filaInforme['cod_derivacion']===null, 'No admite informe sin historia.');
     informe_actualizar($bd,$idInforme,array_replace($informe,['estado'=>'Finalizado','titulo'=>'Título editado']));
     informe_actualizar($bd,$idInforme,array_replace($informe,['estado'=>'Finalizado','titulo'=>'Título editado']));
-    verificar(consultar($bd,"SELECT estado FROM informes WHERE id_informe=$idInforme")['estado']==='Finalizado', 'No guarda el estado canónico.');
-    foreach ([['estado'=>'Emitido'],['estado'=>'Anulado'],['titulo'=>''],['titulo'=>str_repeat('x',181)],['referido_por'=>str_repeat('x',151)],['recibido_por'=>str_repeat('x',151)],['tipo_atencion'=>['Desconocida']],['numero_atenciones'=>-1],['id_historia'=>987]] as $cambio) {
+    verificar(consultar($bd,"SELECT estado FROM informes WHERE cod_informe=$idInforme")['estado']==='Finalizado', 'No guarda el estado canónico.');
+    foreach ([['estado'=>'Emitido'],['estado'=>'Anulado'],['titulo'=>''],['titulo'=>str_repeat('x',181)],['referido_por'=>str_repeat('x',151)],['recibido_por'=>str_repeat('x',151)],['tipo_atencion'=>['Desconocida']],['numero_atenciones'=>-1],['cod_historia'=>987]] as $cambio) {
         rechaza(fn() => informe_crear($bd,array_replace($informe,$cambio),101), 'Aceptó informe inválido.');
     }
     rechaza(fn()=>informe_actualizar($bd,9999,$informe),'La edición inexistente comunicó éxito.');
-    rechaza(fn()=>informe_actualizar($bd,$idInforme,array_replace($informe,['id_estudiante'=>9999])),'Aceptó cambio de estudiante.');
+    rechaza(fn()=>informe_actualizar($bd,$idInforme,array_replace($informe,['cod_estudiante'=>9999])),'Aceptó cambio de estudiante.');
     $secuenciaAntes=consultar($bd,'SELECT ultimo FROM informes_secuencia WHERE id=1');
     rechaza(fn()=>informe_crear($bd,$informe,9999),'Aceptó autor inexistente.');
     verificar($secuenciaAntes===consultar($bd,'SELECT ultimo FROM informes_secuencia WHERE id=1'),'No revirtió la numeración tras fallo SQL.');
-    $bd->query("INSERT INTO historias_clinicas (id_estudiante,id_psicologa,fecha_apertura,motivo_consulta) VALUES ($idEstudiante,101,'2026-01-01','Motivo historia')");
+    $bd->query("INSERT INTO historias_clinicas (cod_estudiante,cod_psicologa,fecha_apertura,motivo_consulta) VALUES ($idEstudiante,101,'2026-01-01','Motivo historia')");
     $idHistoria = $bd->insert_id;
-    $bd->query("INSERT INTO seguimientos (id_historia,id_psicologa,fecha,descripcion,acuerdos,recomendaciones,proxima_sesion) VALUES ($idHistoria,101,'2026-01-02','Evolución','Acuerdos separados','Recomendación verificable','2026-02-01')");
-    $informe['id_historia']=$idHistoria;
+    $bd->query("INSERT INTO seguimientos (cod_historia,cod_psicologa,fecha,descripcion,acuerdos,recomendaciones,proxima_sesion) VALUES ($idHistoria,101,'2026-01-02','Evolución','Acuerdos separados','Recomendación verificable','2026-02-01')");
+    $informe['cod_historia']=$idHistoria;
     informe_crear($bd,$informe,102);
-    verificar((int)consultar($bd,'SELECT id_historia FROM informe_individual ORDER BY id_informe DESC LIMIT 1')['id_historia']===$idHistoria,'No vincula la historia correcta.');
+    verificar((int)consultar($bd,'SELECT cod_historia FROM informe_individual ORDER BY cod_informe DESC LIMIT 1')['cod_historia']===$idHistoria,'No vincula la historia correcta.');
 
     // Cuatro conexiones independientes compiten por la misma numeración.
     $trabajadores=[];
@@ -269,13 +269,13 @@ try {
     verificar($r['codigo']===302 && str_contains($r['cabeceras'],'registrar.php'),'Alta inválida no vuelve al formulario.');
     $r=http_prueba('informes/registrar.php');
     verificar(str_contains($r['cuerpo'],'Recuperar &lt;contenido&gt;'),'No recupera/escapa el texto del informe.');
-    $r=http_prueba('informes/guardar.php',$informe+$token+['id_usuario'=>9999]);
+    $r=http_prueba('informes/guardar.php',$informe+$token+['cod_usuario'=>9999]);
     verificar($r['codigo']===302 && str_contains($r['cabeceras'],'listar.php'),'Falló el receptor de alta de informes.');
-    verificar((int)consultar($bd,'SELECT id_elaborado_por FROM informes ORDER BY id_informe DESC LIMIT 1')['id_elaborado_por']===101,'Aceptó autor desde POST.');
-    $r=http_prueba('informes/actualizar.php',array_replace($informe,['id_informe'=>$idInforme,'titulo'=>'Edición HTTP','estado'=>'Finalizado'])+$token,null,'prueba_psicologa');
+    verificar((int)consultar($bd,'SELECT cod_elaborado_por FROM informes ORDER BY cod_informe DESC LIMIT 1')['cod_elaborado_por']===101,'Aceptó autor desde POST.');
+    $r=http_prueba('informes/actualizar.php',array_replace($informe,['cod_informe'=>$idInforme,'titulo'=>'Edición HTTP','estado'=>'Finalizado'])+$token,null,'prueba_psicologa');
     verificar($r['codigo']===302 && str_contains($r['cabeceras'],'ver.php'),'Falló receptor de edición.');
-    verificar((int)consultar($bd,"SELECT id_elaborado_por FROM informes WHERE id_informe=$idInforme")['id_elaborado_por']===101,'La edición cambia el autor.');
-    $r=http_prueba('informes/actualizar.php',array_replace($informe,['id_informe'=>$idInforme,'recibido_por'=>str_repeat('x',151),'motivo'=>'Recuperar edición'])+$token);
+    verificar((int)consultar($bd,"SELECT cod_elaborado_por FROM informes WHERE cod_informe=$idInforme")['cod_elaborado_por']===101,'La edición cambia el autor.');
+    $r=http_prueba('informes/actualizar.php',array_replace($informe,['cod_informe'=>$idInforme,'recibido_por'=>str_repeat('x',151),'motivo'=>'Recuperar edición'])+$token);
     verificar(str_contains($r['cabeceras'],'editar.php'),'Edición inválida no redirige.');
     $r=http_prueba('informes/editar.php?id='.$idInforme);
     verificar(str_contains($r['cuerpo'],'Recuperar edición'),'No recupera los datos de edición.');
@@ -291,13 +291,13 @@ try {
     $r=http_prueba('estudiantes/listar.php');
     verificar(str_contains($r['cuerpo'],'1 estudiante(s); 1 fila(s) rechazadas'),'No presenta resumen de importación parcial.');
     verificar((int)consultar($bd,"SELECT COUNT(*) n FROM estudiantes WHERE codigo='HTTP'")['n']===1,'El archivo subido no persistió.');
-    $retirado = (int)consultar($bd, "SELECT id_estudiante FROM estudiantes WHERE codigo='CUATRO'")['id_estudiante'];
+    $retirado = (int)consultar($bd, "SELECT cod_estudiante FROM estudiantes WHERE codigo='CUATRO'")['cod_estudiante'];
     $r = http_prueba('estudiantes/editar.php?id=' . $retirado);
     $edicion = formulario($r['cuerpo'], 'formEditarEstudiante');
     verificar($edicion['curso'] === '3' && $edicion['paralelo'] === 'D' && $edicion['estado'] === 'Retirado', 'Editar retirado pierde curso/paralelo.');
     $fotoEstudiantes = static fn() => [
-        $bd->query('SELECT * FROM estudiantes ORDER BY id_estudiante')->fetch_all(MYSQLI_ASSOC),
-        $bd->query('SELECT * FROM inscripciones ORDER BY id_inscripcion')->fetch_all(MYSQLI_ASSOC)
+        $bd->query('SELECT * FROM estudiantes ORDER BY cod_estudiante')->fetch_all(MYSQLI_ASSOC),
+        $bd->query('SELECT * FROM inscripciones ORDER BY cod_inscripcion')->fetch_all(MYSQLI_ASSOC)
     ];
     $antesEdicion = $fotoEstudiantes();
     $r = http_prueba('estudiantes/actualizar.php', array_replace($edicion, ['ci' => 'CIDOS', 'nombres' => 'Recuperar <estudiante>', 'curso' => '5', 'paralelo' => 'B']));
@@ -315,13 +315,13 @@ try {
         rechaza(fn() => estudiante_actualizar($bd, $retirado, array_replace($edicion, ['nombres' => 'Debe revertirse', 'estado' => 'Activo'])), 'No propaga error al guardar inscripción.');
         verificar($fotoEstudiantes() === $antesEdicion, 'Fallo en inscripción deja el estudiante modificado.');
     } finally { $bd->query('DROP TRIGGER fallo_edicion_estudiante'); }
-    $inscripcionAntes = consultar($bd, "SELECT s.* FROM inscripciones i JOIN secciones s ON s.id_seccion=i.id_seccion WHERE i.id_estudiante=$retirado ORDER BY i.id_inscripcion DESC LIMIT 1");
+    $inscripcionAntes = consultar($bd, "SELECT s.* FROM inscripciones i JOIN secciones s ON s.cod_seccion=i.cod_seccion WHERE i.cod_estudiante=$retirado ORDER BY i.cod_inscripcion DESC LIMIT 1");
     $r = http_prueba('estudiantes/actualizar.php', array_replace($recuperada, ['ci' => '', 'estado' => 'Activo']), null, 'prueba_psicologa');
     verificar(str_contains($r['cabeceras'], 'listar.php'), 'No permite corregir el error y guardar.');
-    $estudianteEditado = consultar($bd, "SELECT * FROM estudiantes WHERE id_estudiante=$retirado");
-    $inscripcionEditada = consultar($bd, "SELECT s.*,i.estado AS estado_inscripcion FROM inscripciones i JOIN secciones s ON s.id_seccion=i.id_seccion WHERE i.id_estudiante=$retirado ORDER BY i.id_inscripcion DESC LIMIT 1");
+    $estudianteEditado = consultar($bd, "SELECT * FROM estudiantes WHERE cod_estudiante=$retirado");
+    $inscripcionEditada = consultar($bd, "SELECT s.*,i.estado AS estado_inscripcion FROM inscripciones i JOIN secciones s ON s.cod_seccion=i.cod_seccion WHERE i.cod_estudiante=$retirado ORDER BY i.cod_inscripcion DESC LIMIT 1");
     verificar($estudianteEditado['ci'] === null && $estudianteEditado['nombres'] === 'Recuperar <estudiante>' && $estudianteEditado['estado'] === 'Activo' && $inscripcionEditada['estado_inscripcion'] === 'Activo', 'Edición no guarda ambos estados y CI opcional.');
-    foreach (['id_institucion', 'gestion', 'turno'] as $campo) verificar($inscripcionAntes[$campo] === $inscripcionEditada[$campo], 'Edición cambia ' . $campo);
+    foreach (['cod_institucion', 'gestion', 'turno'] as $campo) verificar($inscripcionAntes[$campo] === $inscripcionEditada[$campo], 'Edición cambia ' . $campo);
     $r = http_prueba('estudiantes/editar.php?id=' . $retirado);
     $actual = formulario($r['cuerpo'], 'formEditarEstudiante');
     verificar($actual['curso'] === '5' && $actual['paralelo'] === 'B' && $actual['ci'] === '', 'No recupera la edición persistida.');
@@ -332,29 +332,29 @@ try {
     verificar(http_prueba('estudiantes/editar.php?id[]=1')['codigo'] === 302, 'No rechaza identificador como arreglo.');
     echo "Receptores HTTP, carga CSV, formularios, edición de estudiantes y recuperación de errores: correctos.\n";
 
-    $bd->query("INSERT INTO personas (id_persona,nombres,apellidos,telefono,correo) VALUES
+    $bd->query("INSERT INTO personas (cod_persona,nombres,apellidos,telefono,correo) VALUES
         (1006,'Ana','Prueba','70000000','ana@example.test'),(1007,'Bruno','Prueba',NULL,NULL),
         (1008,'Inactivo','Prueba',NULL,NULL),(1010,'María','D''Ávila','71111111','maria@example.test'),(1011,'Luis','Prueba',NULL,NULL)");
-    $bd->query("INSERT INTO usuarios (id_usuario,id_persona,usuario,password,id_rol,estado) VALUES
+    $bd->query("INSERT INTO usuarios (cod_usuario,cod_persona,usuario,password,cod_rol,estado) VALUES
         (105,1006,'docente_alta','hash-prueba',3,'Activo'),(106,1007,'docente_otro','hash-prueba',3,'Activo'),
         (107,1008,'docente_inactivo','hash-prueba',3,'Inactivo'),(109,1010,'docente_navegador','hash-prueba',3,'Activo'),
         (110,1011,'docente_sin_contacto','hash-prueba',3,'Activo')");
     $r = http_prueba('docentes/registrar.php');
     verificar($r['codigo'] === 200 && str_contains($r['cuerpo'],'data-telefono="70000000"'), 'No ofrece el contacto de la cuenta.');
     $dom = new DOMDocument(); @$dom->loadHTML('<?xml encoding="UTF-8">'.$r['cuerpo']); $xpath = new DOMXPath($dom);
-    $opciones = array_map(static fn($n)=>(int)$n->getAttribute('value'), iterator_to_array($xpath->query('//select[@id="id_usuario"]/option[@value!=""]')));
+    $opciones = array_map(static fn($n)=>(int)$n->getAttribute('value'), iterator_to_array($xpath->query('//select[@id="cod_usuario"]/option[@value!=""]')));
     verificar(in_array(105,$opciones,true) && !array_intersect([101,103,104,107],$opciones), 'Ofrece cuentas asignadas, inactivas o de otro rol.');
-    $alta = ['id_usuario'=>105,'nombres'=>'Ana','apellidos'=>'Prueba','telefono'=>'70000000','correo'=>'ana@example.test','materias'=>['Física','Química','Tecnología','Religión']] + $token;
+    $alta = ['cod_usuario'=>105,'nombres'=>'Ana','apellidos'=>'Prueba','telefono'=>'70000000','correo'=>'ana@example.test','materias'=>['Física','Química','Tecnología','Religión']] + $token;
     foreach ([[],['Materia inventada'],[['Física']]] as $invalidas) {
         $r = http_prueba('docentes/guardar.php',array_replace($alta,['materias'=>$invalidas]));
-        verificar(str_contains($r['cabeceras'],'registrar.php') && !consultar($bd,'SELECT id_docente FROM docentes WHERE id_persona=1006'), 'Guarda materias inválidas o incompletas.');
+        verificar(str_contains($r['cabeceras'],'registrar.php') && !consultar($bd,'SELECT cod_docente FROM docentes WHERE cod_persona=1006'), 'Guarda materias inválidas o incompletas.');
     }
-    $r = http_prueba('docentes/guardar.php',array_replace($alta,['id_usuario'=>107]));
-    verificar(!consultar($bd,'SELECT id_docente FROM docentes WHERE id_persona=1008'), 'Registra una cuenta inactiva.');
+    $r = http_prueba('docentes/guardar.php',array_replace($alta,['cod_usuario'=>107]));
+    verificar(!consultar($bd,'SELECT cod_docente FROM docentes WHERE cod_persona=1008'), 'Registra una cuenta inactiva.');
     $r = http_prueba('docentes/guardar.php',array_replace($alta,['materias'=>[...$alta['materias'],'Física']]));
-    $idDocente = (int)(consultar($bd,'SELECT id_docente FROM docentes WHERE id_persona=1006')['id_docente'] ?? 0);
+    $idDocente = (int)(consultar($bd,'SELECT cod_docente FROM docentes WHERE cod_persona=1006')['cod_docente'] ?? 0);
     verificar($r['codigo'] === 302 && $idDocente > 0, 'No registra el docente con varias materias.');
-    $asignadas = static fn() => array_column($bd->query("SELECT m.nombre FROM docente_materias dm JOIN materias m ON m.id_materia=dm.id_materia WHERE dm.id_docente=$idDocente ORDER BY m.nombre")->fetch_all(MYSQLI_ASSOC),'nombre');
+    $asignadas = static fn() => array_column($bd->query("SELECT m.nombre FROM docente_materias dm JOIN materias m ON m.cod_materia=dm.cod_materia WHERE dm.cod_docente=$idDocente ORDER BY m.nombre")->fetch_all(MYSQLI_ASSOC),'nombre');
     verificar($asignadas() === ['Física','Química','Religión','Tecnología'], 'Pierde o duplica materias al guardar.');
     $r = http_prueba('docentes/editar.php?id='.$idDocente);
     $editarDocente = formulario($r['cuerpo'],'formDocente');
@@ -363,11 +363,11 @@ try {
     verificar(str_contains($r['cabeceras'],'ver.php') && $asignadas() === ['Matemática','Religión'], 'No permite cambiar varias materias.');
     $r = http_prueba('docentes/listar.php?buscar='.rawurlencode('Matemática'));
     verificar(str_contains($r['cuerpo'],'Matemática, Religión'), 'Buscar por materia oculta las otras asignaciones.');
-    $personaAntes = consultar($bd,'SELECT * FROM personas WHERE id_persona=1006');
+    $personaAntes = consultar($bd,'SELECT * FROM personas WHERE cod_persona=1006');
     $bd->query("CREATE TRIGGER fallo_materias BEFORE INSERT ON docente_materias FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Fallo intencional de materias'");
     try {
         http_prueba('docentes/actualizar.php',array_replace($editarDocente,['nombres'=>'Revertir','materias'=>['Física','Química']]));
-        verificar($asignadas() === ['Matemática','Religión'] && $personaAntes === consultar($bd,'SELECT * FROM personas WHERE id_persona=1006'), 'Un fallo en materias deja cambios parciales.');
+        verificar($asignadas() === ['Matemática','Religión'] && $personaAntes === consultar($bd,'SELECT * FROM personas WHERE cod_persona=1006'), 'Un fallo en materias deja cambios parciales.');
     } finally { $bd->query('DROP TRIGGER fallo_materias'); }
     echo "Docentes: cuentas disponibles, materias múltiples, edición, búsqueda y rollback correctos.\n";
 
@@ -383,7 +383,7 @@ try {
     const comprobar=(ok,m)=>{if(!ok)throw new Error(m);total++;};
     const abrir=url=>new Promise(resolve=>{app.onload=resolve;app.src=url;});
     const campo=id=>app.contentDocument.getElementById(id);
-    const cambiar=valor=>{campo('id_usuario').value=valor;campo('id_usuario').dispatchEvent(new app.contentWindow.Event('change'));};
+    const cambiar=valor=>{campo('cod_usuario').value=valor;campo('cod_usuario').dispatchEvent(new app.contentWindow.Event('change'));};
     const casillas=()=>Array.from(app.contentDocument.querySelectorAll('.materia-check'));
     const elegir=nombres=>casillas().forEach(c=>{c.checked=nombres.includes(c.value);c.dispatchEvent(new app.contentWindow.Event('change'));});
     const enviar=()=>new Promise(resolve=>{app.onload=resolve;campo('formDocente').requestSubmit();});
@@ -420,7 +420,7 @@ HTML);
         $dom = new DOMDocument(); @$dom->loadHTML($html);
         $resultado = json_decode($dom->getElementById('resultado')?->textContent ?? '',true);
         verificar(($resultado['ok']??false)===true,'Navegador docentes: '.json_encode($resultado,JSON_UNESCAPED_UNICODE));
-        verificar((int)consultar($bd,'SELECT COUNT(*) n FROM docente_materias dm JOIN docentes d ON d.id_docente=dm.id_docente WHERE d.id_persona=1010')['n']===2,'Navegador no persistió ambas materias.');
+        verificar((int)consultar($bd,'SELECT COUNT(*) n FROM docente_materias dm JOIN docentes d ON d.cod_docente=dm.cod_docente WHERE d.cod_persona=1010')['n']===2,'Navegador no persistió ambas materias.');
         echo 'Chrome: '.$resultado['total']." comprobaciones de autocompletado y materias correctas.\n";
     }
     echo "OK: $total comprobaciones. Ninguna escritura de prueba en la base real.\n";

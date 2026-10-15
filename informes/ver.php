@@ -4,7 +4,7 @@ requerir_acceso('informes/ver.php');
 
 require_once '../config/conexion.php';
 
-$rolActual = (int)($_SESSION['id_rol'] ?? 0);
+$rolActual = (int)($_SESSION['cod_rol'] ?? 0);
 if (!in_array($rolActual, [1, 2, 4], true)) {
     header('Location: ../index.php');
     exit;
@@ -58,11 +58,11 @@ $stmt = $conexion->prepare("
         p.nombres AS psicologo_nombre,
         p.apellidos AS psicologo_apellido
     FROM informes i
-    LEFT JOIN informe_individual d ON d.id_informe=i.id_informe
-    LEFT JOIN vista_estudiantes e ON e.id_estudiante = d.id_estudiante
-    LEFT JOIN usuarios u ON u.id_usuario = i.id_elaborado_por
-    LEFT JOIN personas p ON p.id_persona=u.id_persona
-    WHERE i.id_informe = ?
+    LEFT JOIN informe_individual d ON d.cod_informe=i.cod_informe
+    LEFT JOIN vista_estudiantes e ON e.cod_estudiante = d.cod_estudiante
+    LEFT JOIN usuarios u ON u.cod_usuario = i.cod_elaborado_por
+    LEFT JOIN personas p ON p.cod_persona=u.cod_persona
+    WHERE i.cod_informe = ?
     LIMIT 1
 ");
 $stmt->bind_param('i', $idInforme);

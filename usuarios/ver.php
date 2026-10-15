@@ -17,18 +17,18 @@ if(!$id){
 
 $stmt=$conexion->prepare("
     SELECT
-        u.id_usuario,
+        u.cod_usuario,
         p.nombres AS nombre,
         p.apellidos AS apellido,
         u.usuario,
         p.correo,
         u.estado,
-        u.id_rol,
+        u.cod_rol,
         r.nombre AS rol
     FROM usuarios u
-    INNER JOIN personas p ON p.id_persona = u.id_persona
-    LEFT JOIN roles r ON u.id_rol=r.id_rol
-    WHERE u.id_usuario=?
+    INNER JOIN personas p ON p.cod_persona = u.cod_persona
+    LEFT JOIN roles r ON u.cod_rol=r.cod_rol
+    WHERE u.cod_usuario=?
     LIMIT 1
 ");
 
@@ -155,7 +155,7 @@ if(!$usuario){
                 </a>
 
                 <a
-                    href="editar.php?id=<?= (int)$usuario['id_usuario']; ?>"
+                    href="editar.php?id=<?= (int)$usuario['cod_usuario']; ?>"
                     class="btn btn-primary">
                     <i class="bi bi-pencil me-1"></i>
                     Editar Usuario

@@ -12,7 +12,7 @@ $filtros = estadisticas_filtros([]);
 $pagina = 1;
 $porPagina = 20;
 try {
-    $cursos = $conexion->query('SELECT id_curso,nombre FROM cursos ORDER BY orden,nombre')->fetch_all(MYSQLI_ASSOC);
+    $cursos = $conexion->query('SELECT cod_curso,nombre FROM cursos ORDER BY orden,nombre')->fetch_all(MYSQLI_ASSOC);
     $filtros = estadisticas_filtros($_GET);
     $pagina = filter_var($_GET['pagina'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 1000000]]);
     if ($pagina === false) throw new InvalidArgumentException('La página solicitada no es válida.');
@@ -52,7 +52,7 @@ include __DIR__ . '/../includes/navbar.php';
             <div><label for="curso">Curso actual</label><select class="form-select" id="curso" name="curso">
                 <option value="0">Todos los cursos</option>
                 <?php foreach ($cursos as $curso): ?>
-                    <option value="<?= (int)$curso['id_curso'] ?>" <?= $filtros['curso'] === (int)$curso['id_curso'] ? 'selected' : '' ?>><?= login_html($curso['nombre']) ?></option>
+                    <option value="<?= (int)$curso['cod_curso'] ?>" <?= $filtros['curso'] === (int)$curso['cod_curso'] ? 'selected' : '' ?>><?= login_html($curso['nombre']) ?></option>
                 <?php endforeach; ?>
             </select></div>
             <div><label for="estado">Estado actual de la historia</label><select class="form-select" id="estado" name="estado">
@@ -121,13 +121,13 @@ include __DIR__ . '/../includes/navbar.php';
                             <thead><tr><th scope="col">Estudiante / curso actual</th><th scope="col">Estado de la historia</th><th scope="col">Sesiones en el período</th><th scope="col">Última sesión</th><th scope="col">Próxima prevista</th><th scope="col">Consultar</th></tr></thead>
                             <tbody>
                                 <?php foreach ($filas as $fila): ?>
-                                    <tr data-historia="<?= (int)$fila['id_historia'] ?>">
+                                    <tr data-historia="<?= (int)$fila['cod_historia'] ?>">
                                         <th scope="row"><span><?= login_html(trim($fila['apellidos'] . ' ' . $fila['nombres'])) ?></span><small><?= login_html(trim(($fila['curso'] ?? 'Sin curso registrado') . ' ' . ($fila['paralelo'] ?? ''))) ?></small><?php if ($fila['estado_estudiante'] === 'Retirado'): ?><small>Estudiante retirado</small><?php endif; ?></th>
                                         <td><span class="estadisticas-estado <?= $clasesEstado[$fila['estado']] ?>"><?= login_html($fila['estado']) ?></span></td>
                                         <td><strong><?= $fila['sesiones_periodo'] ?></strong><small><?= $fila['total_sesiones'] ?> acumuladas</small></td>
                                         <td><?= $fechaVisible($fila['ultima_sesion']) ?></td>
                                         <td><?= $fila['proxima_sesion'] ? $fechaVisible($fila['proxima_sesion']) : 'Sin fecha prevista' ?><small>Según último seguimiento</small></td>
-                                        <td><a href="<?= login_html(login_url('historias_clinicas/ver.php?id=' . (int)$fila['id_historia'])) ?>">Ver historia</a><?php if ($fila['id_seguimiento']): ?><a class="estadisticas-enlace-secundario" href="<?= login_html(login_url('seguimientos/ver.php?id=' . (int)$fila['id_seguimiento'])) ?>">Último seguimiento</a><?php endif; ?></td>
+                                        <td><a href="<?= login_html(login_url('historias_clinicas/ver.php?id=' . (int)$fila['cod_historia'])) ?>">Ver historia</a><?php if ($fila['cod_seguimiento']): ?><a class="estadisticas-enlace-secundario" href="<?= login_html(login_url('seguimientos/ver.php?id=' . (int)$fila['cod_seguimiento'])) ?>">Último seguimiento</a><?php endif; ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>

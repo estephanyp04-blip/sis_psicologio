@@ -12,9 +12,9 @@ function escapar($valor): string
     return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
 }
 
-$rolActual = isset($_SESSION['id_rol']) ? (int) $_SESSION['id_rol'] : 0;
+$rolActual = isset($_SESSION['cod_rol']) ? (int) $_SESSION['cod_rol'] : 0;
 $puedeEditar = login_puede('derivaciones/editar.php');
-$idDocenteActual = (int) ($_SESSION['id_docente'] ?? 0);
+$idDocenteActual = (int) ($_SESSION['cod_docente'] ?? 0);
 
 if (!$puedeEditar) {
     $_SESSION['mensaje'] = 'No tiene permiso para editar derivaciones.';
@@ -33,11 +33,11 @@ if (!$idDerivacion || $idDerivacion <= 0) {
 }
 
 $sql = "SELECT
-            d.id_derivacion,
+            d.cod_derivacion,
             d.fecha,
-            d.id_estudiante,
-            d.id_docente,
-            d.id_materia,
+            d.cod_estudiante,
+            d.cod_docente,
+            d.cod_materia,
             m.nombre AS materia,
             d.motivo,
             d.observaciones,
@@ -51,15 +51,15 @@ $sql = "SELECT
             persona.apellidos AS docente_apellidos
         FROM derivaciones AS d
         LEFT JOIN vista_estudiantes AS e
-            ON d.id_estudiante = e.id_estudiante
+            ON d.cod_estudiante = e.cod_estudiante
         LEFT JOIN materias AS m
-            ON m.id_materia = d.id_materia
+            ON m.cod_materia = d.cod_materia
         LEFT JOIN docentes AS doc
-            ON d.id_docente = doc.id_docente
+            ON d.cod_docente = doc.cod_docente
         LEFT JOIN personas AS persona
-            ON persona.id_persona = doc.id_persona
-        WHERE d.id_derivacion = ?
-          AND (? <> 3 OR d.id_docente = ?)
+            ON persona.cod_persona = doc.cod_persona
+        WHERE d.cod_derivacion = ?
+          AND (? <> 3 OR d.cod_docente = ?)
         LIMIT 1";
 
 $stmt = $conexion->prepare($sql);
@@ -90,8 +90,8 @@ if ($derivacion['estado'] !== 'Pendiente') {
     exit;
 }
 
-$stmt = $conexion->prepare('SELECT id_evidencia,nombre_original,descripcion FROM derivacion_evidencias
-    WHERE id_derivacion=? ORDER BY id_evidencia DESC LIMIT 1');
+$stmt = $conexion->prepare('SELECT cod_evidencia,nombre_original,descripcion FROM derivacion_evidencias
+    WHERE cod_derivacion=? ORDER BY cod_evidencia DESC LIMIT 1');
 $stmt->bind_param('i', $idDerivacion);
 $stmt->execute();
 $evidenciaActual = $stmt->get_result()->fetch_assoc() ?: null;
@@ -137,8 +137,8 @@ foreach (array_unique(array_merge(array_keys($catalogoCategorias), $categoriasSe
     $categoriasEditar[] = ['valor' => $nombre, 'titulo' => $nombre,
         'detalle' => $activa ? '' : 'Categoría conservada del registro'];
 }
-$stmt = $conexion->prepare("SELECT nombre,estado FROM materias WHERE estado='Activo' OR id_materia=? ORDER BY nombre");
-$stmt->bind_param('i', $derivacion['id_materia']); $stmt->execute();
+$stmt = $conexion->prepare("SELECT nombre,estado FROM materias WHERE estado='Activo' OR cod_materia=? ORDER BY nombre");
+$stmt->bind_param('i', $derivacion['cod_materia']); $stmt->execute();
 $materiasEditar = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
 $observacionAdicional = $desglose['adicionales'];
 $descripcionImagenEdit = (string)($evidenciaActual['descripcion'] ?? '');
@@ -206,7 +206,7 @@ include '../includes/navbar.php';
                     <?= login_campo_csrf() ?>
 
                     <input type="hidden"
-                           name="id_derivacion"
+                           name="cod_derivacion"
                            value="<?= (int) $idDerivacion; ?>">
 
                     <div class="row g-3">
@@ -303,7 +303,7 @@ include '../includes/navbar.php';
                             <?php if ($evidenciaActual): ?>
                                 <div class="mb-3">
                                     <p class="form-label mb-2">Imagen adjunta actual</p>
-                                    <img src="<?= $baseUrl ?>/derivaciones/evidencia.php?id=<?= (int)$evidenciaActual['id_evidencia'] ?>"
+                                    <img src="<?= $baseUrl ?>/derivaciones/evidencia.php?id=<?= (int)$evidenciaActual['cod_evidencia'] ?>"
                                          class="img-fluid rounded border" style="max-height: 280px"
                                          alt="<?= escapar($descripcionImagenEdit ?: 'Imagen adjunta a la derivación') ?>">
                                 </div>

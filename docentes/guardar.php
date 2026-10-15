@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $idUsuario = filter_input(
     INPUT_POST,
-    'id_usuario',
+    'cod_usuario',
     FILTER_VALIDATE_INT
 );
 
@@ -171,10 +171,10 @@ foreach ($materiasRecibidas as $materiaSeleccionada) {
 /* COMPROBAR USUARIO */
 
 $sqlUsuario = "
-    SELECT u.id_persona
+    SELECT u.cod_persona
     FROM usuarios u
-    WHERE id_usuario = ?
-      AND id_rol = 3
+    WHERE cod_usuario = ?
+      AND cod_rol = 3
       AND estado = 'Activo'
     LIMIT 1
 ";
@@ -201,7 +201,7 @@ if ($resultadoUsuario->num_rows !== 1) {
         'o no tiene el rol Docente.'
     );
 }
-$idPersona = (int)$resultadoUsuario->fetch_assoc()['id_persona'];
+$idPersona = (int)$resultadoUsuario->fetch_assoc()['cod_persona'];
 $stmtUsuario->close();
 
 /* COMPROBAR QUE LA CUENTA NO ESTÉ ASIGNADA */
@@ -209,32 +209,32 @@ $correoDb = $correo !== '' ? $correo : null;
 $telefonoDb = $telefono !== '' ? $telefono : null;
 $conexion->begin_transaction();
 try {
-    $stmt = $conexion->prepare('SELECT id_docente FROM docentes WHERE id_persona=? FOR UPDATE');
+    $stmt = $conexion->prepare('SELECT cod_docente FROM docentes WHERE cod_persona=? FOR UPDATE');
     $stmt->bind_param('i', $idPersona);
     $stmt->execute();
     $ocupado = $stmt->get_result()->num_rows > 0;
     $stmt->close();
     if ($ocupado) throw new InvalidArgumentException('La cuenta seleccionada ya está asignada a un docente.');
 
-    $stmt = $conexion->prepare('UPDATE personas SET nombres=?,apellidos=?,telefono=?,correo=? WHERE id_persona=?');
+    $stmt = $conexion->prepare('UPDATE personas SET nombres=?,apellidos=?,telefono=?,correo=? WHERE cod_persona=?');
     $stmt->bind_param('ssssi', $nombres, $apellidos, $telefonoDb, $correoDb, $idPersona);
     $stmt->execute();
     $stmt->close();
 
-    $stmt = $conexion->prepare('INSERT INTO docentes (id_persona) VALUES (?)');
+    $stmt = $conexion->prepare('INSERT INTO docentes (cod_persona) VALUES (?)');
     $stmt->bind_param('i', $idPersona);
     $stmt->execute();
     $idDocente = (int)$conexion->insert_id;
     $stmt->close();
 
-    $stmtMateria = $conexion->prepare("SELECT id_materia FROM materias WHERE nombre=? AND estado='Activo' LIMIT 1");
-    $stmtVinculo = $conexion->prepare('INSERT INTO docente_materias (id_docente,id_materia) VALUES (?,?)');
+    $stmtMateria = $conexion->prepare("SELECT cod_materia FROM materias WHERE nombre=? AND estado='Activo' LIMIT 1");
+    $stmtVinculo = $conexion->prepare('INSERT INTO docente_materias (cod_docente,cod_materia) VALUES (?,?)');
     foreach ($materiasRecibidas as $materia) {
         $stmtMateria->bind_param('s', $materia);
         $stmtMateria->execute();
         $fila = $stmtMateria->get_result()->fetch_assoc();
         if (!$fila) throw new InvalidArgumentException('Una de las materias dejó de estar activa.');
-        $idMateria = (int)$fila['id_materia'];
+        $idMateria = (int)$fila['cod_materia'];
         $stmtVinculo->bind_param('ii', $idDocente, $idMateria);
         $stmtVinculo->execute();
     }

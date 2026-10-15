@@ -20,7 +20,7 @@ $nombre=trim($_POST['nombre']??'');
 $apellido=trim($_POST['apellido']??'');
 $usuario=trim($_POST['usuario']??'');
 $correo=trim($_POST['correo']??'');
-$idRol=filter_input(INPUT_POST,'id_rol',FILTER_VALIDATE_INT);
+$idRol=filter_input(INPUT_POST,'cod_rol',FILTER_VALIDATE_INT);
 $estado=trim($_POST['estado']??'');
 $password=$_POST['password']??'';
 $confirmarPassword=$_POST['confirmar_password']??'';
@@ -61,7 +61,7 @@ if($password!==$confirmarPassword){
     regresarConError('Las contraseñas no coinciden.');
 }
 
-$stmtRol=$conexion->prepare("SELECT id_rol FROM roles WHERE id_rol=? LIMIT 1");
+$stmtRol=$conexion->prepare("SELECT cod_rol FROM roles WHERE cod_rol=? LIMIT 1");
 
 if(!$stmtRol){
     regresarConError('Error al verificar el rol: '.$conexion->error);
@@ -75,7 +75,7 @@ if($resultadoRol->num_rows===0){
     regresarConError('El rol seleccionado no existe.');
 }
 
-$stmtUsuario=$conexion->prepare("SELECT id_usuario FROM usuarios WHERE usuario=? LIMIT 1");
+$stmtUsuario=$conexion->prepare("SELECT cod_usuario FROM usuarios WHERE usuario=? LIMIT 1");
 
 if(!$stmtUsuario){
     regresarConError('Error al verificar el usuario: '.$conexion->error);
@@ -103,7 +103,7 @@ try {
     $stmtPersona->close();
 
     $stmt = $conexion->prepare(
-        'INSERT INTO usuarios (id_persona, usuario, password, id_rol, estado) VALUES (?, ?, ?, ?, ?)'
+        'INSERT INTO usuarios (cod_persona, usuario, password, cod_rol, estado) VALUES (?, ?, ?, ?, ?)'
     );
     $stmt->bind_param('issis', $idPersona, $usuario, $passwordHash, $idRol, $estado);
     $stmt->execute();

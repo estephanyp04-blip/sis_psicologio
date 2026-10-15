@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('historias_clinicas/registrar.php');
 
 require_once '../config/conexion.php';
-$rol=(int)($_SESSION['id_rol']??0);
+$rol=(int)($_SESSION['cod_rol']??0);
 if(!in_array($rol,[1,2],true)){
     header('Location: listar.php');
     exit;
@@ -11,16 +11,16 @@ if(!in_array($rol,[1,2],true)){
 function escapar($v):string{
     return htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
 }
-$idDerivacion=filter_input(INPUT_GET,'id_derivacion',FILTER_VALIDATE_INT);
-$idEstudiante=filter_input(INPUT_GET,'id_estudiante',FILTER_VALIDATE_INT);
-$idCita=filter_input(INPUT_GET,'id_cita',FILTER_VALIDATE_INT);
+$idDerivacion=filter_input(INPUT_GET,'cod_derivacion',FILTER_VALIDATE_INT);
+$idEstudiante=filter_input(INPUT_GET,'cod_estudiante',FILTER_VALIDATE_INT);
+$idCita=filter_input(INPUT_GET,'cod_cita',FILTER_VALIDATE_INT);
 $citaOrigen=null;
 if ($idCita) {
     require_once __DIR__ . '/../includes/trazabilidad_datos.php';
-    $citaOrigen=flujo_fila($conexion,'SELECT * FROM citas WHERE id_cita=?',[$idCita]);
+    $citaOrigen=flujo_fila($conexion,'SELECT * FROM citas WHERE cod_cita=?',[$idCita]);
     if (!$citaOrigen || $citaOrigen['estado']==='Cancelada') { http_response_code(404); exit('Cita no disponible.'); }
-    $idEstudiante=(int)$citaOrigen['id_estudiante'];
-    $idDerivacion=(int)($citaOrigen['id_derivacion'] ?? 0);
+    $idEstudiante=(int)$citaOrigen['cod_estudiante'];
+    $idDerivacion=(int)($citaOrigen['cod_derivacion'] ?? 0);
 }
 $historia=[];
 $estudiantes=[];
@@ -32,8 +32,8 @@ $datosIniciales=[
 if($idDerivacion){
     $stmt=$conexion->prepare("
         SELECT
-            d.id_derivacion,
-            d.id_estudiante,
+            d.cod_derivacion,
+            d.cod_estudiante,
             d.fecha AS fecha_derivacion,
             d.motivo,
             m.nombre AS materia,
@@ -47,19 +47,19 @@ if($idDerivacion){
             e.lugar_nacimiento,
             e.telefono,
             (SELECT r.nombres FROM estudiante_responsables er
-                INNER JOIN responsables r ON r.id_responsable=er.id_responsable
-                WHERE er.id_estudiante=e.id_estudiante AND er.parentesco='Tutor'
+                INNER JOIN responsables r ON r.cod_responsable=er.cod_responsable
+                WHERE er.cod_estudiante=e.cod_estudiante AND er.parentesco='Tutor'
                 ORDER BY er.es_principal DESC LIMIT 1) AS nombre_tutor,
             dp.nombres AS docente_nombres,
             dp.apellidos AS docente_apellidos,
-            h.id_historia
+            h.cod_historia
         FROM derivaciones d
-        INNER JOIN vista_estudiantes e ON e.id_estudiante=d.id_estudiante
-        LEFT JOIN docentes doc ON doc.id_docente=d.id_docente
-        LEFT JOIN personas dp ON dp.id_persona=doc.id_persona
-        LEFT JOIN materias m ON m.id_materia=d.id_materia
-        LEFT JOIN historias_clinicas h ON h.id_estudiante=e.id_estudiante
-        WHERE d.id_derivacion=?
+        INNER JOIN vista_estudiantes e ON e.cod_estudiante=d.cod_estudiante
+        LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
+        LEFT JOIN personas dp ON dp.cod_persona=doc.cod_persona
+        LEFT JOIN materias m ON m.cod_materia=d.cod_materia
+        LEFT JOIN historias_clinicas h ON h.cod_estudiante=e.cod_estudiante
+        WHERE d.cod_derivacion=?
         AND e.estado='Activo'
         LIMIT 1
     ");
@@ -76,16 +76,16 @@ if($idDerivacion){
         header('Location: listar.php');
         exit;
     }
-    if(!empty($derivacion['id_historia'])){
+    if(!empty($derivacion['cod_historia'])){
         $_SESSION['mensaje']='Este estudiante ya tiene una historia clínica.';
         $_SESSION['tipo_mensaje']='warning';
-        header('Location: ver.php?id='.(int)$derivacion['id_historia']);
+        header('Location: ver.php?id='.(int)$derivacion['cod_historia']);
         exit;
     }
-    $idEstudiante=(int)$derivacion['id_estudiante'];
+    $idEstudiante=(int)$derivacion['cod_estudiante'];
     $datosIniciales=array_merge($datosIniciales,[
-        'id_derivacion'=>(int)$derivacion['id_derivacion'],
-        'id_estudiante'=>$idEstudiante,
+        'cod_derivacion'=>(int)$derivacion['cod_derivacion'],
+        'cod_estudiante'=>$idEstudiante,
         'lugar_nacimiento'=>$derivacion['lugar_nacimiento']??'',
         'celular_estudiante'=>$derivacion['telefono']??'',
         'padre_madre'=>$derivacion['nombre_tutor']??'',
@@ -101,15 +101,15 @@ if($idDerivacion){
 elseif($idEstudiante){
     $stmt=$conexion->prepare("
         SELECT
-            e.id_estudiante,
+            e.cod_estudiante,
             e.fecha_nacimiento,
             e.lugar_nacimiento,
             e.telefono,
             (SELECT r.nombres FROM estudiante_responsables er
-                INNER JOIN responsables r ON r.id_responsable=er.id_responsable
-                WHERE er.id_estudiante=e.id_estudiante AND er.parentesco='Tutor'
+                INNER JOIN responsables r ON r.cod_responsable=er.cod_responsable
+                WHERE er.cod_estudiante=e.cod_estudiante AND er.parentesco='Tutor'
                 ORDER BY er.es_principal DESC LIMIT 1) AS nombre_tutor,
-            d.id_derivacion,
+            d.cod_derivacion,
             d.fecha AS fecha_derivacion,
             d.motivo,
             m.nombre AS materia,
@@ -117,20 +117,20 @@ elseif($idEstudiante){
             d.observaciones AS observaciones_derivacion,
             dp.nombres AS docente_nombres,
             dp.apellidos AS docente_apellidos,
-            h.id_historia
+            h.cod_historia
         FROM vista_estudiantes e
-        LEFT JOIN historias_clinicas h ON h.id_estudiante=e.id_estudiante
-        LEFT JOIN derivaciones d ON d.id_derivacion=(
-            SELECT d2.id_derivacion
+        LEFT JOIN historias_clinicas h ON h.cod_estudiante=e.cod_estudiante
+        LEFT JOIN derivaciones d ON d.cod_derivacion=(
+            SELECT d2.cod_derivacion
             FROM derivaciones d2
-            WHERE d2.id_estudiante=e.id_estudiante
-            ORDER BY d2.fecha DESC,d2.id_derivacion DESC
+            WHERE d2.cod_estudiante=e.cod_estudiante
+            ORDER BY d2.fecha DESC,d2.cod_derivacion DESC
             LIMIT 1
         )
-        LEFT JOIN docentes doc ON doc.id_docente=d.id_docente
-        LEFT JOIN personas dp ON dp.id_persona=doc.id_persona
-        LEFT JOIN materias m ON m.id_materia=d.id_materia
-        WHERE e.id_estudiante=?
+        LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
+        LEFT JOIN personas dp ON dp.cod_persona=doc.cod_persona
+        LEFT JOIN materias m ON m.cod_materia=d.cod_materia
+        WHERE e.cod_estudiante=?
         AND e.estado='Activo'
         LIMIT 1
     ");
@@ -147,15 +147,15 @@ elseif($idEstudiante){
         header('Location: listar.php');
         exit;
     }
-    if(!empty($estudianteActual['id_historia'])){
+    if(!empty($estudianteActual['cod_historia'])){
         $_SESSION['mensaje']='Este estudiante ya tiene una historia clínica.';
         $_SESSION['tipo_mensaje']='warning';
-        header('Location: ver.php?id='.(int)$estudianteActual['id_historia']);
+        header('Location: ver.php?id='.(int)$estudianteActual['cod_historia']);
         exit;
     }
     $datosIniciales=array_merge($datosIniciales,[
-        'id_estudiante'=>(int)$estudianteActual['id_estudiante'],
-        'id_derivacion'=>(int)($estudianteActual['id_derivacion']??0),
+        'cod_estudiante'=>(int)$estudianteActual['cod_estudiante'],
+        'cod_derivacion'=>(int)($estudianteActual['cod_derivacion']??0),
         'lugar_nacimiento'=>$estudianteActual['lugar_nacimiento']??'',
         'celular_estudiante'=>$estudianteActual['telefono']??'',
         'padre_madre'=>$estudianteActual['nombre_tutor']??'',
@@ -169,15 +169,15 @@ elseif($idEstudiante){
 }
 /* ESTUDIANTES ACTIVOS QUE AÚN NO TIENEN HISTORIA */
 if ($citaOrigen) {
-    $datosIniciales['id_cita']=(int)$citaOrigen['id_cita'];
-    $datosIniciales['id_derivacion']=(int)($citaOrigen['id_derivacion'] ?? 0);
-    if (!$datosIniciales['id_derivacion']) {
+    $datosIniciales['cod_cita']=(int)$citaOrigen['cod_cita'];
+    $datosIniciales['cod_derivacion']=(int)($citaOrigen['cod_derivacion'] ?? 0);
+    if (!$datosIniciales['cod_derivacion']) {
         foreach (['derivado_por','fecha_derivacion','materia_derivacion','prioridad_derivacion','observaciones_derivacion','motivo_consulta'] as $campo) $datosIniciales[$campo]='';
     }
 }
 $sql="
     SELECT
-        e.id_estudiante,
+        e.cod_estudiante,
         e.nombres,
         e.apellidos,
         e.curso,
@@ -185,11 +185,11 @@ $sql="
         e.fecha_nacimiento,
         e.lugar_nacimiento,
         (SELECT r.nombres FROM estudiante_responsables er
-            INNER JOIN responsables r ON r.id_responsable=er.id_responsable
-            WHERE er.id_estudiante=e.id_estudiante AND er.parentesco='Tutor'
+            INNER JOIN responsables r ON r.cod_responsable=er.cod_responsable
+            WHERE er.cod_estudiante=e.cod_estudiante AND er.parentesco='Tutor'
             ORDER BY er.es_principal DESC LIMIT 1) AS nombre_tutor,
         e.telefono,
-        d.id_derivacion,
+        d.cod_derivacion,
         d.fecha AS fecha_derivacion,
         d.motivo AS motivo_derivacion,
         m.nombre AS materia_derivacion,
@@ -197,19 +197,19 @@ $sql="
         d.observaciones AS observaciones_derivacion,
         TRIM(CONCAT(COALESCE(dp.nombres,''),' ',COALESCE(dp.apellidos,''))) AS derivado_por
     FROM vista_estudiantes e
-    LEFT JOIN historias_clinicas h ON h.id_estudiante=e.id_estudiante
-    LEFT JOIN derivaciones d ON d.id_derivacion=(
-        SELECT d2.id_derivacion
+    LEFT JOIN historias_clinicas h ON h.cod_estudiante=e.cod_estudiante
+    LEFT JOIN derivaciones d ON d.cod_derivacion=(
+        SELECT d2.cod_derivacion
         FROM derivaciones d2
-        WHERE d2.id_estudiante=e.id_estudiante
-        ORDER BY d2.fecha DESC,d2.id_derivacion DESC
+        WHERE d2.cod_estudiante=e.cod_estudiante
+        ORDER BY d2.fecha DESC,d2.cod_derivacion DESC
         LIMIT 1
     )
-    LEFT JOIN docentes doc ON doc.id_docente=d.id_docente
-    LEFT JOIN personas dp ON dp.id_persona=doc.id_persona
-    LEFT JOIN materias m ON m.id_materia=d.id_materia
+    LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
+    LEFT JOIN personas dp ON dp.cod_persona=doc.cod_persona
+    LEFT JOIN materias m ON m.cod_materia=d.cod_materia
     WHERE e.estado='Activo'
-    AND h.id_historia IS NULL
+    AND h.cod_historia IS NULL
     ORDER BY e.curso,e.paralelo,e.apellidos,e.nombres
 ";
 $rs=$conexion->query($sql);

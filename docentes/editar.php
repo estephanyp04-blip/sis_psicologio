@@ -23,15 +23,15 @@ if (!$idDocente || $idDocente <= 0) {
 
 $sqlDocente = "
     SELECT
-        d.id_docente,u.id_usuario,d.id_persona,p.nombres,p.apellidos,p.telefono,p.correo,
+        d.cod_docente,u.cod_usuario,d.cod_persona,p.nombres,p.apellidos,p.telefono,p.correo,
         GROUP_CONCAT(DISTINCT m.nombre ORDER BY m.nombre SEPARATOR ', ') AS materia
     FROM docentes d
-    INNER JOIN personas p ON p.id_persona=d.id_persona
-    LEFT JOIN usuarios u ON u.id_persona=d.id_persona
-    LEFT JOIN docente_materias dm ON dm.id_docente=d.id_docente
-    LEFT JOIN materias m ON m.id_materia=dm.id_materia
-    WHERE d.id_docente=?
-    GROUP BY d.id_docente,u.id_usuario,d.id_persona,p.nombres,p.apellidos,p.telefono,p.correo
+    INNER JOIN personas p ON p.cod_persona=d.cod_persona
+    LEFT JOIN usuarios u ON u.cod_persona=d.cod_persona
+    LEFT JOIN docente_materias dm ON dm.cod_docente=d.cod_docente
+    LEFT JOIN materias m ON m.cod_materia=dm.cod_materia
+    WHERE d.cod_docente=?
+    GROUP BY d.cod_docente,u.cod_usuario,d.cod_persona,p.nombres,p.apellidos,p.telefono,p.correo
 ";
 
 $stmtDocente = $conexion->prepare($sqlDocente);
@@ -60,21 +60,21 @@ if (!$docente) {
 
 $sqlUsuarios = "
     SELECT
-        u.id_usuario,
+        u.cod_usuario,
         p.nombres AS nombre,
         p.apellidos AS apellido,
         u.usuario,
         p.telefono,
         p.correo
     FROM usuarios u
-    INNER JOIN personas p ON p.id_persona=u.id_persona
-    LEFT JOIN docentes d ON d.id_persona=u.id_persona
-    WHERE u.id_rol = 3
+    INNER JOIN personas p ON p.cod_persona=u.cod_persona
+    LEFT JOIN docentes d ON d.cod_persona=u.cod_persona
+    WHERE u.cod_rol = 3
       AND (
-          u.id_usuario = ?
+          u.cod_usuario = ?
           OR (
               u.estado = 'Activo'
-              AND d.id_docente IS NULL
+              AND d.cod_docente IS NULL
           )
       )
     ORDER BY p.apellidos,p.nombres
@@ -86,7 +86,7 @@ if (!$stmtUsuarios) {
     die('Error al consultar usuarios: ' . $conexion->error);
 }
 
-$stmtUsuarios->bind_param('i', $docente['id_usuario']);
+$stmtUsuarios->bind_param('i', $docente['cod_usuario']);
 $stmtUsuarios->execute();
 
 $resultadoUsuarios = $stmtUsuarios->get_result();
@@ -157,8 +157,8 @@ include '../includes/navbar.php';
                 <?= login_campo_csrf() ?>
 
                 <input type="hidden"
-                       name="id_docente"
-                       value="<?= (int) $docente['id_docente']; ?>">
+                       name="cod_docente"
+                       value="<?= (int) $docente['cod_docente']; ?>">
 
                 <div class="mb-4">
                     <h5 class="border-bottom pb-3">
@@ -168,13 +168,13 @@ include '../includes/navbar.php';
                     </h5>
 
                     <div class="mt-3">
-                        <label for="id_usuario" class="form-label">
+                        <label for="cod_usuario" class="form-label">
                             Cuenta de usuario
                             <span class="text-danger">*</span>
                         </label>
 
-                        <select name="id_usuario"
-                                id="id_usuario"
+                        <select name="cod_usuario"
+                                id="cod_usuario"
                                 class="form-select"
                                 required>
 
@@ -187,7 +187,7 @@ include '../includes/navbar.php';
                             ): ?>
                                 <option
                                     value="<?= (int)
-                                        $usuario['id_usuario']; ?>"
+                                        $usuario['cod_usuario']; ?>"
                                     data-nombres="<?= escapar(
                                         $usuario['nombre']
                                     ); ?>"
@@ -200,8 +200,8 @@ include '../includes/navbar.php';
                                     data-telefono="<?= escapar(
                                         $usuario['telefono']
                                     ); ?>"
-                                    <?= (int) $usuario['id_usuario'] ===
-                                        (int) $docente['id_usuario']
+                                    <?= (int) $usuario['cod_usuario'] ===
+                                        (int) $docente['cod_usuario']
                                             ? 'selected'
                                             : ''; ?>>
 
@@ -353,7 +353,7 @@ include '../includes/navbar.php';
                             justify-content-end gap-2">
 
                     <a href="ver.php?id=<?= (int)
-                        $docente['id_docente']; ?>"
+                        $docente['cod_docente']; ?>"
                        class="btn btn-outline-secondary">
 
                         <i class="bi bi-x-circle me-1"></i>

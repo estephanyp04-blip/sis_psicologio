@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$idUsuario = filter_input(INPUT_POST, 'id_usuario', FILTER_VALIDATE_INT);
+$idUsuario = filter_input(INPUT_POST, 'cod_usuario', FILTER_VALIDATE_INT);
 $idUsuario = $idUsuario !== false && $idUsuario !== null
     ? (int) $idUsuario
     : 0;
@@ -42,7 +42,7 @@ $nombre = trim($_POST['nombre'] ?? '');
 $apellido = trim($_POST['apellido'] ?? '');
 $usuario = trim($_POST['usuario'] ?? '');
 $correo = trim($_POST['correo'] ?? '');
-$idRol = filter_input(INPUT_POST, 'id_rol', FILTER_VALIDATE_INT);
+$idRol = filter_input(INPUT_POST, 'cod_rol', FILTER_VALIDATE_INT);
 $idRol = $idRol !== false && $idRol !== null ? (int) $idRol : 0;
 $estado = trim($_POST['estado'] ?? '');
 $password = $_POST['password'] ?? '';
@@ -121,7 +121,7 @@ if ($cambiarPassword) {
 
 try {
     $stmtUsuario = $conexion->prepare(
-        'SELECT id_usuario FROM usuarios WHERE id_usuario = ? LIMIT 1'
+        'SELECT cod_usuario FROM usuarios WHERE cod_usuario = ? LIMIT 1'
     );
     $stmtUsuario->bind_param('i', $idUsuario);
     $stmtUsuario->execute();
@@ -131,7 +131,7 @@ try {
     }
 
     $stmtRol = $conexion->prepare(
-        'SELECT id_rol FROM roles WHERE id_rol = ? LIMIT 1'
+        'SELECT cod_rol FROM roles WHERE cod_rol = ? LIMIT 1'
     );
     $stmtRol->bind_param('i', $idRol);
     $stmtRol->execute();
@@ -141,9 +141,9 @@ try {
     }
 
     $stmtDuplicado = $conexion->prepare(
-        'SELECT id_usuario
+        'SELECT cod_usuario
          FROM usuarios
-         WHERE usuario = ? AND id_usuario <> ?
+         WHERE usuario = ? AND cod_usuario <> ?
          LIMIT 1'
     );
     $stmtDuplicado->bind_param('si', $usuario, $idUsuario);
@@ -161,9 +161,9 @@ try {
     $conexion->begin_transaction();
     $stmtPersona = $conexion->prepare(
         'UPDATE personas p
-         INNER JOIN usuarios u ON u.id_persona = p.id_persona
+         INNER JOIN usuarios u ON u.cod_persona = p.cod_persona
          SET p.nombres = ?, p.apellidos = ?, p.correo = ?
-         WHERE u.id_usuario = ?'
+         WHERE u.cod_usuario = ?'
     );
     $stmtPersona->bind_param('sssi', $nombre, $apellido, $correoBaseDatos, $idUsuario);
     $stmtPersona->execute();
@@ -181,8 +181,8 @@ try {
 
         $stmtActualizar = $conexion->prepare(
             'UPDATE usuarios
-             SET usuario = ?, password = ?, estado = ?, id_rol = ?
-             WHERE id_usuario = ?'
+             SET usuario = ?, password = ?, estado = ?, cod_rol = ?
+             WHERE cod_usuario = ?'
         );
         $stmtActualizar->bind_param(
             'sssii',
@@ -195,8 +195,8 @@ try {
     } else {
         $stmtActualizar = $conexion->prepare(
             'UPDATE usuarios
-             SET usuario = ?, estado = ?, id_rol = ?
-             WHERE id_usuario = ?'
+             SET usuario = ?, estado = ?, cod_rol = ?
+             WHERE cod_usuario = ?'
         );
         $stmtActualizar->bind_param(
             'ssii',
@@ -219,11 +219,11 @@ try {
     );
 }
 
-if ((int) ($_SESSION['id_usuario'] ?? 0) === $idUsuario) {
+if ((int) ($_SESSION['cod_usuario'] ?? 0) === $idUsuario) {
     $_SESSION['nombre'] = $nombre;
     $_SESSION['apellido'] = $apellido;
     $_SESSION['nombre_completo'] = trim($nombre . ' ' . $apellido);
-    $_SESSION['id_rol'] = $idRol;
+    $_SESSION['cod_rol'] = $idRol;
 }
 
 $_SESSION['mensaje'] = 'Usuario actualizado correctamente.';

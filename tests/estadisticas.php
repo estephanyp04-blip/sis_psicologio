@@ -78,20 +78,20 @@ try {
         $idHistoria = 100 + $n;
         $fecha = $n === 1 ? "$anterior-12-01" : ($n === 24 ? "$anio-04-01" : "$anio-01-01");
         $estado = $n === 1 ? 'En seguimiento' : ($n === 2 ? 'Cerrada' : 'Activa');
-        $bd->query("INSERT INTO historias_clinicas (id_historia,id_estudiante,id_psicologa,fecha_apertura,motivo_consulta,estado)
+        $bd->query("INSERT INTO historias_clinicas (cod_historia,cod_estudiante,cod_psicologa,fecha_apertura,motivo_consulta,estado)
             VALUES ($idHistoria,$n,102,'$fecha','NOTA_CLINICA_NO_DEBE_EXHIBIRSE','$estado')");
     }
-    $bd->query("UPDATE estudiantes SET nombres='Ana <prueba>',apellidos='Alumno' WHERE id_estudiante=1");
-    $bd->query("UPDATE estudiantes SET estado='Retirado' WHERE id_estudiante=3");
-    $bd->query("UPDATE inscripciones SET estado='Retirado' WHERE id_estudiante=3");
-    $bd->query('DELETE FROM inscripciones WHERE id_estudiante=2');
-    $bd->query("INSERT INTO inscripciones (id_estudiante,id_seccion,fecha_inscripcion,estado)
-        SELECT 1,se.id_seccion,CURRENT_DATE(),'Activo' FROM secciones se JOIN cursos c ON c.id_curso=se.id_curso
-        JOIN paralelos p ON p.id_paralelo=se.id_paralelo WHERE c.orden=2 AND p.nombre='B' AND se.turno='Mañana' LIMIT 1");
-    $bd->query("INSERT INTO secciones (id_seccion,id_institucion,id_curso,id_paralelo,turno,gestion,estado)
+    $bd->query("UPDATE estudiantes SET nombres='Ana <prueba>',apellidos='Alumno' WHERE cod_estudiante=1");
+    $bd->query("UPDATE estudiantes SET estado='Retirado' WHERE cod_estudiante=3");
+    $bd->query("UPDATE inscripciones SET estado='Retirado' WHERE cod_estudiante=3");
+    $bd->query('DELETE FROM inscripciones WHERE cod_estudiante=2');
+    $bd->query("INSERT INTO inscripciones (cod_estudiante,cod_seccion,fecha_inscripcion,estado)
+        SELECT 1,se.cod_seccion,CURRENT_DATE(),'Activo' FROM secciones se JOIN cursos c ON c.cod_curso=se.cod_curso
+        JOIN paralelos p ON p.cod_paralelo=se.cod_paralelo WHERE c.orden=2 AND p.nombre='B' AND se.turno='Mañana' LIMIT 1");
+    $bd->query("INSERT INTO secciones (cod_seccion,cod_institucion,cod_curso,cod_paralelo,turno,gestion,estado)
         VALUES (101,1,3,1,'Mañana',$anterior,'Activo')");
-    $bd->query("INSERT INTO inscripciones (id_estudiante,id_seccion,fecha_inscripcion,estado) VALUES (1,101,'$anterior-02-01','Finalizado')");
-    $bd->query("INSERT INTO seguimientos (id_seguimiento,id_historia,id_psicologa,fecha,descripcion,proxima_sesion) VALUES
+    $bd->query("INSERT INTO inscripciones (cod_estudiante,cod_seccion,fecha_inscripcion,estado) VALUES (1,101,'$anterior-02-01','Finalizado')");
+    $bd->query("INSERT INTO seguimientos (cod_seguimiento,cod_historia,cod_psicologa,fecha,descripcion,proxima_sesion) VALUES
         (1,101,102,'$anio-01-01','DETALLE_PRIVADO',NULL),
         (2,101,102,'$anio-02-10','DETALLE_PRIVADO','$anio-03-15'),
         (3,101,102,'$anio-02-10','DETALLE_PRIVADO',NULL),
@@ -99,21 +99,21 @@ try {
         (5,103,102,'$anio-02-20','DETALLE_PRIVADO',NULL),
         (6,101,102,'$anterior-12-31','DETALLE_PRIVADO',NULL),
         (7,101,102,'$anio-04-02','DETALLE_PRIVADO','$anio-04-16')");
-    $bd->query("INSERT INTO citas (id_estudiante,id_psicologa,fecha,hora,estado) VALUES
+    $bd->query("INSERT INTO citas (cod_estudiante,cod_psicologa,fecha,hora,estado) VALUES
         (1,102,'$anio-03-10','10:00','Atendida'),(1,102,'$anio-03-11','10:00','Cancelada')");
     $filtros = estadisticas_filtros(['desde'=>"$anio-01-01",'hasta'=>"$anio-03-31"]);
     $datos = estadisticas_datos($bd, $filtros);
     verificar($datos['resumen'] === ['historias'=>23,'sesiones'=>5,'con_sesiones'=>3,'sin_sesiones'=>20], 'Conteos incorrectos o duplicados por inscripciones/citas.');
     verificar($datos['meses'] === ["$anio-01"=>1,"$anio-02"=>3,"$anio-03"=>1], 'Serie mensual incorrecta.');
     verificar($datos['estados'] === ['Activa'=>21,'En seguimiento'=>1,'Cerrada'=>1], 'Estados no reconcilian.');
-    $porEstudiante = array_column($datos['historias'], null, 'id_estudiante');
+    $porEstudiante = array_column($datos['historias'], null, 'cod_estudiante');
     verificar(count($porEstudiante) === 23 && !isset($porEstudiante[24]) && !isset($porEstudiante[25]), 'Incluye historia posterior al corte o estudiante sin historia.');
     verificar($porEstudiante[1]['total_sesiones'] === 4 && $porEstudiante[1]['sesiones_periodo'] === 3, 'Total acumulado se confunde con período.');
-    verificar((int)$porEstudiante[1]['id_seguimiento'] === 3 && $porEstudiante[1]['proxima_sesion'] === null, 'No elige el último seguimiento o restaura una fecha antigua.');
+    verificar((int)$porEstudiante[1]['cod_seguimiento'] === 3 && $porEstudiante[1]['proxima_sesion'] === null, 'No elige el último seguimiento o restaura una fecha antigua.');
     verificar($porEstudiante[1]['curso'] === '2do de Secundaria' && $porEstudiante[1]['paralelo'] === 'B', 'No resuelve la inscripción vigente de mayor gestión.');
     verificar($porEstudiante[2]['curso'] === null && $porEstudiante[3]['estado_estudiante'] === 'Retirado', 'Excluye fichas retiradas o sin inscripción.');
     verificar($porEstudiante[4]['total_sesiones'] === 0 && $porEstudiante[4]['ultima_sesion'] === null, 'Inventa sesiones o fechas para una historia vacía.');
-    $curso2 = (int)fila($bd, 'SELECT id_curso FROM cursos WHERE orden=2')['id_curso'];
+    $curso2 = (int)fila($bd, 'SELECT cod_curso FROM cursos WHERE orden=2')['cod_curso'];
     $porCurso = estadisticas_datos($bd, array_replace($filtros,['curso'=>$curso2]));
     verificar($porCurso['resumen'] === ['historias'=>1,'sesiones'=>3,'con_sesiones'=>1,'sin_sesiones'=>0], 'Filtro de curso duplica o pierde historia.');
     $cerradas = estadisticas_datos($bd, array_replace($filtros,['estado'=>'Cerrada']));
@@ -133,9 +133,9 @@ try {
     verificar(array_sum($sinDatos['resumen']) === 0 && !$sinDatos['prioritarios'] && !$sinDatos['agenda'], 'Panel sin datos inventa actividad.');
     $hoy = new DateTimeImmutable('today');
     $fecha = static fn(string $cambio): string => $hoy->modify($cambio)->format('Y-m-d');
-    $bd->query("UPDATE historias_clinicas SET estado='En seguimiento' WHERE id_historia=104");
-    $bd->query("UPDATE historias_clinicas SET estado='En seguimiento',fecha_apertura='".$fecha('+1 day')."' WHERE id_historia=124");
-    $bd->query("INSERT INTO seguimientos (id_historia,id_psicologa,fecha,descripcion) VALUES
+    $bd->query("UPDATE historias_clinicas SET estado='En seguimiento' WHERE cod_historia=104");
+    $bd->query("UPDATE historias_clinicas SET estado='En seguimiento',fecha_apertura='".$fecha('+1 day')."' WHERE cod_historia=124");
+    $bd->query("INSERT INTO seguimientos (cod_historia,cod_psicologa,fecha,descripcion) VALUES
         (101,102,'".$fecha('-29 days')."','DETALLE_PRIVADO'),(101,102,'".$fecha('0 days')."','DETALLE_PRIVADO'),
         (101,102,'".$fecha('+1 day')."','DETALLE_PRIVADO'),(101,102,'".$fecha('-30 days')."','DETALLE_PRIVADO'),
         (104,102,'".$fecha('-4 days')."','DETALLE_PRIVADO')");
@@ -143,22 +143,22 @@ try {
         [903,2,'Media','Pendiente','-7 days'],[904,3,'Alta','Pendiente','-8 days'],[905,4,'Baja','En seguimiento','-7 days'],
         [906,5,'Alta','Atendido','-10 days'],[907,6,'Alta','Pendiente','+1 day'],[908,7,'Alta','Pendiente','-6 days'],
         [909,25,'Media','Pendiente','-2 days'],[910,8,'Baja','Pendiente','-3 days']] as [$id,$estudiante,$prioridad,$estado,$cuando]) {
-        $bd->query("INSERT INTO derivaciones (id_derivacion,id_estudiante,id_docente,fecha,motivo,prioridad,estado)
+        $bd->query("INSERT INTO derivaciones (cod_derivacion,cod_estudiante,cod_docente,fecha,motivo,prioridad,estado)
             VALUES ($id,$estudiante,201,'".$fecha($cuando)."','DETALLE_PRIVADO','$prioridad','$estado')");
     }
     foreach ([[901,1,'09:00','Pendiente','0 days'],[902,2,'10:00','Reprogramada','0 days'],
         [903,4,'11:00','Atendida','0 days'],[904,7,'12:00','Cancelada','0 days'],[905,2,'09:00','Pendiente','+6 days'],
         [906,2,'09:00','Pendiente','+7 days'],[907,2,'09:00','Pendiente','-1 day'],[908,2,'09:00','Atendida','+1 day']] as [$id,$estudiante,$hora,$estado,$cuando]) {
-        $bd->query("INSERT INTO citas (id_cita,id_estudiante,id_psicologa,fecha,hora,estado)
+        $bd->query("INSERT INTO citas (cod_cita,cod_estudiante,cod_psicologa,fecha,hora,estado)
             VALUES ($id,$estudiante,102,'".$fecha($cuando)."','$hora','$estado')");
     }
     $panel = estadisticas_panel($bd);
     verificar($panel['resumen'] === ['en_seguimiento'=>2,'prioridad_alta'=>2,'citas_pendientes'=>3,'sesiones'=>11,'sesiones_recientes'=>3,'por_atender'=>6], 'Panel: totales, estados o límites de 7/30 días incorrectos.');
-    verificar(array_map('intval',array_column($panel['prioritarios'],'id_estudiante')) === [7,1,25,2,8], 'Panel: repite estudiantes, omite sin historia o no respeta prioridad/antigüedad.');
+    verificar(array_map('intval',array_column($panel['prioritarios'],'cod_estudiante')) === [7,1,25,2,8], 'Panel: repite estudiantes, omite sin historia o no respeta prioridad/antigüedad.');
     $prioritario = $panel['prioritarios'][1];
-    verificar((int)$prioritario['id_derivacion'] === 901 && $prioritario['curso'] === '2do de Secundaria' && $prioritario['paralelo'] === 'B', 'Panel no elige derivación abierta más antigua o última inscripción.');
-    verificar($prioritario['ultima_sesion'] === $fecha('0 days') && $panel['prioritarios'][2]['id_historia'] === null, 'Panel incluye sesión futura o inventa historia.');
-    verificar(array_map('intval',array_column($panel['agenda'],'id_cita')) === [901,902,903], 'Agenda no respeta horario, día o cancelaciones.');
+    verificar((int)$prioritario['cod_derivacion'] === 901 && $prioritario['curso'] === '2do de Secundaria' && $prioritario['paralelo'] === 'B', 'Panel no elige derivación abierta más antigua o última inscripción.');
+    verificar($prioritario['ultima_sesion'] === $fecha('0 days') && $panel['prioritarios'][2]['cod_historia'] === null, 'Panel incluye sesión futura o inventa historia.');
+    verificar(array_map('intval',array_column($panel['agenda'],'cod_cita')) === [901,902,903], 'Agenda no respeta horario, día o cancelaciones.');
     echo "Panel: tarjetas, prioridad por estudiante, agenda y límites de fechas correctos.\n";
     mkdir($temporal . '/app', 0700); mkdir($temporal . '/sesiones', 0700);
     foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($raiz, FilesystemIterator::SKIP_DOTS)) as $archivo) {

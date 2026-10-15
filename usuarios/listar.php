@@ -9,18 +9,18 @@ include '../includes/sidebar.php';
 include '../includes/navbar.php';
 
 $sql="SELECT
-        u.id_usuario,
+        u.cod_usuario,
         p.nombres AS nombre,
         p.apellidos AS apellido,
         u.usuario,
         p.correo,
         u.estado,
-        u.id_rol,
+        u.cod_rol,
         r.nombre AS rol
       FROM usuarios u
-      INNER JOIN personas p ON p.id_persona = u.id_persona
-      LEFT JOIN roles r ON u.id_rol=r.id_rol
-      ORDER BY u.id_usuario DESC";
+      INNER JOIN personas p ON p.cod_persona = u.cod_persona
+      LEFT JOIN roles r ON u.cod_rol=r.cod_rol
+      ORDER BY u.cod_usuario DESC";
 
 $resultado=$conexion->query($sql);
 
@@ -68,7 +68,7 @@ if(!$resultado){
                         <?php if($resultado->num_rows>0): ?>
                             <?php while($fila=$resultado->fetch_assoc()): ?>
                                 <tr>
-                                    <td><?= (int)$fila['id_usuario']; ?></td>
+                                    <td><?= (int)$fila['cod_usuario']; ?></td>
 
                                     <td>
                                         <?= htmlspecialchars(
@@ -118,14 +118,14 @@ if(!$resultado){
 
                                     <td class="text-center">
                                         <a
-                                            href="ver.php?id=<?= (int)$fila['id_usuario']; ?>"
+                                            href="ver.php?id=<?= (int)$fila['cod_usuario']; ?>"
                                             class="btn btn-sm btn-outline-secondary"
                                             title="Ver">
                                             <i class="bi bi-eye"></i>
                                         </a>
 
                                         <a
-                                            href="editar.php?id=<?= (int)$fila['id_usuario']; ?>"
+                                            href="editar.php?id=<?= (int)$fila['cod_usuario']; ?>"
                                             class="btn btn-sm btn-outline-primary"
                                             title="Editar">
                                             <i class="bi bi-pencil"></i>
@@ -133,7 +133,7 @@ if(!$resultado){
                                         
                                         <form action="cambiar_estado.php" method="POST" class="d-inline" onsubmit="return confirm('¿Está seguro de cambiar el estado de este usuario?');">
                                             <?= login_campo_csrf() ?>
-                                            <input type="hidden" name="id_usuario" value="<?= (int)$fila['id_usuario']; ?>">
+                                            <input type="hidden" name="cod_usuario" value="<?= (int)$fila['cod_usuario']; ?>">
 
                                             <?php if($fila['estado']==='Activo'): ?>
                                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Inactivar">

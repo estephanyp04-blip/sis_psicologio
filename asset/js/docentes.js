@@ -2,7 +2,7 @@
     const formulario = document.getElementById('formDocente');
     if (!formulario) return;
 
-    const cuenta = formulario.querySelector('#id_usuario');
+    const cuenta = formulario.querySelector('#cod_usuario');
     const materias = Array.from(formulario.querySelectorAll('.materia-check'));
     const errorMaterias = document.getElementById('errorMaterias');
 

@@ -5,26 +5,26 @@ require_once __DIR__ . '/../config/conexion.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, private');
-$idEstudiante = filter_var($_GET['id_estudiante'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+$idEstudiante = filter_var($_GET['cod_estudiante'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 if (!$idEstudiante) login_error_json(400, 'Indique un estudiante válido.');
 
 try {
     $conexion = login_bd();
-    $stmt = $conexion->prepare('SELECT id_estudiante FROM estudiantes WHERE id_estudiante = ?');
+    $stmt = $conexion->prepare('SELECT cod_estudiante FROM estudiantes WHERE cod_estudiante = ?');
     $stmt->bind_param('i', $idEstudiante);
     $stmt->execute();
     $existe = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     if (!$existe) login_error_json(404, 'El estudiante no existe.');
 
-    $stmt = $conexion->prepare("SELECT d.id_derivacion AS id, d.fecha, m.nombre AS materia, d.prioridad,
+    $stmt = $conexion->prepare("SELECT d.cod_derivacion AS id, d.fecha, m.nombre AS materia, d.prioridad,
         d.motivo, d.observaciones, d.estado,
         TRIM(CONCAT(COALESCE(p.nombres, ''), ' ', COALESCE(p.apellidos, ''))) AS docente
         FROM derivaciones d
-        LEFT JOIN materias m ON m.id_materia=d.id_materia
-        LEFT JOIN docentes doc ON doc.id_docente=d.id_docente
-        LEFT JOIN personas p ON p.id_persona=doc.id_persona
-        WHERE d.id_estudiante = ? ORDER BY d.fecha DESC, d.id_derivacion DESC");
+        LEFT JOIN materias m ON m.cod_materia=d.cod_materia
+        LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
+        LEFT JOIN personas p ON p.cod_persona=doc.cod_persona
+        WHERE d.cod_estudiante = ? ORDER BY d.fecha DESC, d.cod_derivacion DESC");
     $stmt->bind_param('i', $idEstudiante);
     $stmt->execute();
     $derivaciones = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);

@@ -44,15 +44,15 @@ function historia_cargar_hijos(mysqli $bd, int $id): array
     $datos = array_fill_keys(array_keys(HISTORIA_OPCIONES), []);
     $stmt = $bd->prepare('SELECT g.codigo AS grupo, o.descripcion AS valor
         FROM historia_opciones ho
-        INNER JOIN opciones_historia o ON o.id_opcion = ho.id_opcion
-        INNER JOIN grupos_opciones_historia g ON g.id_grupo = o.id_grupo
-        WHERE ho.id_historia = ? ORDER BY ho.id_opcion');
+        INNER JOIN opciones_historia o ON o.cod_opcion = ho.cod_opcion
+        INNER JOIN grupos_opciones_historia g ON g.cod_grupo = o.cod_grupo
+        WHERE ho.cod_historia = ? ORDER BY ho.cod_opcion');
     $stmt->bind_param('i', $id); $stmt->execute();
     foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $opcion) {
         if (array_key_exists($opcion['grupo'], $datos)) $datos[$opcion['grupo']][] = $opcion['valor'];
     }
     $stmt->close();
-    $stmt = $bd->prepare('SELECT nombre, edad, relacion, profesion, ocupacion, observaciones FROM historia_familiares WHERE id_historia = ? ORDER BY id_familiar');
+    $stmt = $bd->prepare('SELECT nombre, edad, relacion, profesion, ocupacion, observaciones FROM historia_familiares WHERE cod_historia = ? ORDER BY cod_familiar');
     $stmt->bind_param('i', $id); $stmt->execute();
     $datos['familiares'] = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
@@ -128,7 +128,7 @@ function historia_validar(array $entrada, array $anterior = []): array
 
 function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistoria = null): int
 {
-    $idEstudiante = filter_var($entrada['id_estudiante'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    $idEstudiante = filter_var($entrada['cod_estudiante'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
     if (!$idEstudiante || $autor <= 0) throw new InvalidArgumentException('El estudiante o usuario no es válido.');
     // Ubicado al final del formulario: rechaza POST truncados por max_input_vars.
     if (($entrada['formulario_completo'] ?? '') !== '1') throw new InvalidArgumentException('El formulario está incompleto. Recargue la página antes de guardar.');
@@ -136,54 +136,54 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
     try {
         $anterior = [];
         if ($idHistoria !== null) {
-            $stmt = $bd->prepare('SELECT * FROM historias_clinicas WHERE id_historia = ? AND id_estudiante = ? FOR UPDATE');
+            $stmt = $bd->prepare('SELECT * FROM historias_clinicas WHERE cod_historia = ? AND cod_estudiante = ? FOR UPDATE');
             $stmt->bind_param('ii', $idHistoria, $idEstudiante); $stmt->execute();
             $anterior = $stmt->get_result()->fetch_assoc(); $stmt->close();
             if (!$anterior) throw new InvalidArgumentException('La historia no existe o no corresponde al estudiante.');
-            $idEnviado = array_key_exists('id_derivacion', $entrada)
-                ? filter_var($entrada['id_derivacion'] === '' ? 0 : $entrada['id_derivacion'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]])
-                : (int)($anterior['id_derivacion_origen'] ?? 0);
-            if ($idEnviado === false || $idEnviado !== (int)($anterior['id_derivacion_origen'] ?? 0)) {
+            $idEnviado = array_key_exists('cod_derivacion', $entrada)
+                ? filter_var($entrada['cod_derivacion'] === '' ? 0 : $entrada['cod_derivacion'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]])
+                : (int)($anterior['cod_derivacion_origen'] ?? 0);
+            if ($idEnviado === false || $idEnviado !== (int)($anterior['cod_derivacion_origen'] ?? 0)) {
                 throw new InvalidArgumentException('La derivación de origen de la historia no puede cambiarse en esta edición.');
             }
             $anterior = array_merge($anterior, historia_cargar_hijos($bd, $idHistoria));
         } else {
-            $stmt = $bd->prepare("SELECT id_estudiante FROM estudiantes WHERE id_estudiante = ? AND estado = 'Activo' FOR UPDATE");
+            $stmt = $bd->prepare("SELECT cod_estudiante FROM estudiantes WHERE cod_estudiante = ? AND estado = 'Activo' FOR UPDATE");
             $stmt->bind_param('i', $idEstudiante); $stmt->execute();
             $existe = $stmt->get_result()->fetch_assoc(); $stmt->close();
             if (!$existe) throw new InvalidArgumentException('El estudiante no existe o no está activo.');
         }
         $datos = historia_validar($entrada, $anterior);
-        $idCitaAnterior = (int)($anterior['id_cita_origen'] ?? 0);
-        $idCita = flujo_id($entrada['id_cita'] ?? $idCitaAnterior, true);
+        $idCitaAnterior = (int)($anterior['cod_cita_origen'] ?? 0);
+        $idCita = flujo_id($entrada['cod_cita'] ?? $idCitaAnterior, true);
         if ($anterior && $idCita !== $idCitaAnterior) throw new InvalidArgumentException('La cita de origen no puede cambiarse.');
         $columnas = array_keys(HISTORIA_TEXTOS);
         $valores = array_map(static fn($campo) => $datos[$campo], $columnas);
         $tipos = str_repeat('s', count(HISTORIA_TEXTOS));
         if ($idHistoria === null) {
-            $derivacionEnviada = $entrada['id_derivacion'] ?? 0;
+            $derivacionEnviada = $entrada['cod_derivacion'] ?? 0;
             $idDerivacion = filter_var($derivacionEnviada === '' ? 0 : $derivacionEnviada, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
             if ($idDerivacion === false) throw new InvalidArgumentException('La derivación no es válida.');
             if ($idDerivacion > 0) {
-                $stmt = $bd->prepare('SELECT id_derivacion FROM derivaciones WHERE id_derivacion = ? AND id_estudiante = ?');
+                $stmt = $bd->prepare('SELECT cod_derivacion FROM derivaciones WHERE cod_derivacion = ? AND cod_estudiante = ?');
                 $stmt->bind_param('ii', $idDerivacion, $idEstudiante); $stmt->execute();
                 $existe = $stmt->get_result()->fetch_assoc(); $stmt->close();
                 if (!$existe) throw new InvalidArgumentException('La derivación no corresponde al estudiante.');
             }
             if ($idCita) {
-                $cita = flujo_fila($bd, 'SELECT * FROM citas WHERE id_cita=? FOR UPDATE', [$idCita]);
-                if (!$cita || (int)$cita['id_estudiante'] !== $idEstudiante || $cita['estado'] === 'Cancelada'
-                    || (int)($cita['id_derivacion'] ?? 0) !== $idDerivacion || $cita['fecha'] > $datos['fecha_apertura']) {
+                $cita = flujo_fila($bd, 'SELECT * FROM citas WHERE cod_cita=? FOR UPDATE', [$idCita]);
+                if (!$cita || (int)$cita['cod_estudiante'] !== $idEstudiante || $cita['estado'] === 'Cancelada'
+                    || (int)($cita['cod_derivacion'] ?? 0) !== $idDerivacion || $cita['fecha'] > $datos['fecha_apertura']) {
                     throw new InvalidArgumentException('La cita no coincide con el estudiante, la derivación o la fecha de apertura.');
                 }
             }
-            $columnas = array_merge(['id_estudiante', 'id_psicologa', 'id_derivacion_origen', 'id_cita_origen'], $columnas);
+            $columnas = array_merge(['cod_estudiante', 'cod_psicologa', 'cod_derivacion_origen', 'cod_cita_origen'], $columnas);
             $valores = array_merge([$idEstudiante, $autor, $idDerivacion ?: null, $idCita ?: null], $valores);
             $tipos = 'iiii' . $tipos;
             $stmt = $bd->prepare('INSERT INTO historias_clinicas (' . implode(',', $columnas) . ') VALUES (' . implode(',', array_fill(0, count($columnas), '?')) . ')');
         } else {
             $asignaciones = array_map(static fn($campo) => "$campo = ?", $columnas);
-            $stmt = $bd->prepare('UPDATE historias_clinicas SET ' . implode(',', $asignaciones) . ', fecha_actualizacion = CURRENT_TIMESTAMP WHERE id_historia = ?');
+            $stmt = $bd->prepare('UPDATE historias_clinicas SET ' . implode(',', $asignaciones) . ', fecha_actualizacion = CURRENT_TIMESTAMP WHERE cod_historia = ?');
             $valores[] = $idHistoria; $tipos .= 'i';
         }
         $stmt->bind_param($tipos, ...$valores); $stmt->execute();
@@ -193,34 +193,34 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
             // Solo reemplaza grupos enviados, conservando los omitidos y grupos históricos desconocidos.
             if ($anterior && !array_key_exists($grupo, $entrada) && !isset($entrada['opciones_presentes'][$grupo])) continue;
             $stmt = $bd->prepare('DELETE ho FROM historia_opciones ho
-                INNER JOIN opciones_historia o ON o.id_opcion = ho.id_opcion
-                INNER JOIN grupos_opciones_historia g ON g.id_grupo = o.id_grupo
-                WHERE ho.id_historia = ? AND g.codigo = ?');
+                INNER JOIN opciones_historia o ON o.cod_opcion = ho.cod_opcion
+                INNER JOIN grupos_opciones_historia g ON g.cod_grupo = o.cod_grupo
+                WHERE ho.cod_historia = ? AND g.codigo = ?');
             $stmt->bind_param('is', $idHistoria, $grupo); $stmt->execute(); $stmt->close();
             foreach ($datos[$grupo] as $valor) {
-                $stmt = $bd->prepare('SELECT o.id_opcion FROM opciones_historia o
-                    INNER JOIN grupos_opciones_historia g ON g.id_grupo = o.id_grupo
+                $stmt = $bd->prepare('SELECT o.cod_opcion FROM opciones_historia o
+                    INNER JOIN grupos_opciones_historia g ON g.cod_grupo = o.cod_grupo
                     WHERE g.codigo = ? AND o.descripcion = ? AND (o.estado = \'Activo\' OR ? = 1) LIMIT 1');
                 $conservada = in_array($valor, $anterior[$grupo] ?? [], true) ? 1 : 0;
                 $stmt->bind_param('ssi', $grupo, $valor, $conservada); $stmt->execute();
                 $opcion = $stmt->get_result()->fetch_assoc(); $stmt->close();
                 if (!$opcion) throw new InvalidArgumentException('Una opción clínica ya no está disponible en el catálogo.');
-                $stmt = $bd->prepare('INSERT INTO historia_opciones (id_historia,id_opcion) VALUES (?,?)');
-                $idOpcion = (int)$opcion['id_opcion'];
+                $stmt = $bd->prepare('INSERT INTO historia_opciones (cod_historia,cod_opcion) VALUES (?,?)');
+                $idOpcion = (int)$opcion['cod_opcion'];
                 $stmt->bind_param('ii', $idHistoria, $idOpcion); $stmt->execute(); $stmt->close();
             }
         }
         if (!$anterior || array_key_exists('familiares', $entrada) || isset($entrada['familiares_presentes'])) {
-            $stmt = $bd->prepare('DELETE FROM historia_familiares WHERE id_historia = ?');
+            $stmt = $bd->prepare('DELETE FROM historia_familiares WHERE cod_historia = ?');
             $stmt->bind_param('i', $idHistoria); $stmt->execute(); $stmt->close();
             foreach ($datos['familiares'] as $fila) {
-                $stmt = $bd->prepare('INSERT INTO historia_familiares (id_historia,nombre,edad,relacion,profesion,ocupacion,observaciones) VALUES (?,?,?,?,?,?,?)');
+                $stmt = $bd->prepare('INSERT INTO historia_familiares (cod_historia,nombre,edad,relacion,profesion,ocupacion,observaciones) VALUES (?,?,?,?,?,?,?)');
                 $stmt->bind_param('isissss', $idHistoria, $fila['nombre'], $fila['edad'], $fila['relacion'], $fila['profesion'], $fila['ocupacion'], $fila['observaciones']);
                 $stmt->execute(); $stmt->close();
             }
         }
         $accion = $anterior ? 'Actualizar' : 'Crear';
-        $stmt = $bd->prepare("INSERT INTO auditoria (id_usuario,modulo,accion,registro_id,detalle) VALUES (?,'historias_clinicas',?,?,'Guardado del expediente clínico')");
+        $stmt = $bd->prepare("INSERT INTO auditoria (cod_usuario,modulo,accion,registro_id,detalle) VALUES (?,'historias_clinicas',?,?,'Guardado del expediente clínico')");
         $stmt->bind_param('isi', $autor, $accion, $idHistoria); $stmt->execute(); $stmt->close();
         $bd->commit();
         return $idHistoria;
@@ -234,9 +234,9 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
 function historia_recuperar_entrada(array $entrada): array
 {
     $permitidos = array_merge(array_keys(HISTORIA_TEXTOS), array_keys(HISTORIA_OPCIONES),
-        ['talla', 'peso', 'valoracion', 'id_historia', 'id_estudiante', 'id_derivacion', 'id_cita', 'familiares', 'opciones_presentes', 'familiares_presentes']);
+        ['talla', 'peso', 'valoracion', 'cod_historia', 'cod_estudiante', 'cod_derivacion', 'cod_cita', 'familiares', 'opciones_presentes', 'familiares_presentes']);
     $datos = array_intersect_key($entrada, array_flip($permitidos));
-    foreach (array_merge(array_keys(HISTORIA_TEXTOS), ['talla', 'peso', 'valoracion', 'id_historia', 'id_estudiante', 'id_derivacion', 'id_cita']) as $campo) {
+    foreach (array_merge(array_keys(HISTORIA_TEXTOS), ['talla', 'peso', 'valoracion', 'cod_historia', 'cod_estudiante', 'cod_derivacion', 'cod_cita']) as $campo) {
         if (array_key_exists($campo, $datos) && !is_scalar($datos[$campo])) unset($datos[$campo]);
     }
     foreach (HISTORIA_OPCIONES as $grupo => $_) {

@@ -19,8 +19,8 @@ if (!function_exists('escapar')) {
 }
 
 /* Permisos de consulta y alcance del docente autenticado. */
-$rolActual = isset($_SESSION['id_rol'])
-    ? (int) $_SESSION['id_rol']
+$rolActual = isset($_SESSION['cod_rol'])
+    ? (int) $_SESSION['cod_rol']
     : 0;
 
 if (
@@ -53,12 +53,12 @@ if (!$idDerivacion || $idDerivacion <= 0) {
 }
 
 /* Consultar únicamente las derivaciones del docente cuando corresponde. */
-$idDocenteSesion = (int) ($_SESSION['id_docente'] ?? 0);
+$idDocenteSesion = (int) ($_SESSION['cod_docente'] ?? 0);
 $sql = "SELECT
-            d.id_derivacion,
+            d.cod_derivacion,
             d.fecha,
-            d.id_estudiante,
-            d.id_docente AS derivacion_id_docente,
+            d.cod_estudiante,
+            d.cod_docente AS derivacion_id_docente,
             m.nombre AS materia,
             d.motivo,
             d.observaciones,
@@ -72,15 +72,15 @@ $sql = "SELECT
             persona.apellidos AS docente_apellidos
         FROM derivaciones d
         LEFT JOIN vista_estudiantes e
-            ON e.id_estudiante = d.id_estudiante
+            ON e.cod_estudiante = d.cod_estudiante
         LEFT JOIN materias m
-            ON m.id_materia = d.id_materia
+            ON m.cod_materia = d.cod_materia
         LEFT JOIN docentes doc
-            ON doc.id_docente = d.id_docente
+            ON doc.cod_docente = d.cod_docente
         LEFT JOIN personas persona
-            ON persona.id_persona = doc.id_persona
-        WHERE d.id_derivacion = ?
-          AND (? <> 3 OR d.id_docente = ?)
+            ON persona.cod_persona = doc.cod_persona
+        WHERE d.cod_derivacion = ?
+          AND (? <> 3 OR d.cod_docente = ?)
         LIMIT 1";
 
 $stmt = $conexion->prepare($sql);
@@ -118,7 +118,7 @@ if (!$derivacion) {
 }
 
 /* Validar que el docente solo vea sus derivaciones */
-$idDocenteSesion = (int) ($_SESSION['id_docente'] ?? 0);
+$idDocenteSesion = (int) ($_SESSION['cod_docente'] ?? 0);
 
 $esPropietario = $idDocenteSesion > 0 &&
     $idDocenteSesion ===
@@ -147,8 +147,8 @@ $puedeEditar =
         ($rolActual === 3 && $esPropietario)
     );
 
-$stmt = $conexion->prepare('SELECT id_evidencia,nombre_original,descripcion FROM derivacion_evidencias
-    WHERE id_derivacion=? ORDER BY id_evidencia DESC LIMIT 1');
+$stmt = $conexion->prepare('SELECT cod_evidencia,nombre_original,descripcion FROM derivacion_evidencias
+    WHERE cod_derivacion=? ORDER BY cod_evidencia DESC LIMIT 1');
 $stmt->bind_param('i', $idDerivacion);
 $stmt->execute();
 $evidencia = $stmt->get_result()->fetch_assoc() ?: null;
@@ -238,11 +238,11 @@ include '../includes/navbar.php';
         <?php require_once __DIR__ . '/../includes/trazabilidad_vista.php'; flujo_panel($conexion,'derivacion',$derivacion); ?>
         <div class="card p-3 my-3 d-print-none">
             <div class="d-flex gap-2 mb-3">
-                <a class="btn btn-primary" href="../citas/registrar.php?id_derivacion=<?= (int)$idDerivacion ?>">Programar cita</a>
-                <a class="btn btn-outline-primary" href="../historias_clinicas/registrar.php?id_derivacion=<?= (int)$idDerivacion ?>">Abrir historia</a>
+                <a class="btn btn-primary" href="../citas/registrar.php?cod_derivacion=<?= (int)$idDerivacion ?>">Programar cita</a>
+                <a class="btn btn-outline-primary" href="../historias_clinicas/registrar.php?cod_derivacion=<?= (int)$idDerivacion ?>">Abrir historia</a>
             </div>
             <form action="cambiar_estado.php" method="POST">
-                <?= login_campo_csrf() ?><input type="hidden" name="id_derivacion" value="<?= (int)$idDerivacion ?>">
+                <?= login_campo_csrf() ?><input type="hidden" name="cod_derivacion" value="<?= (int)$idDerivacion ?>">
                 <input type="hidden" name="estado" value="<?= $derivacion['estado']==='En seguimiento' ? 'Atendido' : 'En seguimiento' ?>">
                 <p>Para cerrar la atención se requiere un seguimiento registrado de esta derivación. Emitir un informe no cambia su estado.</p>
                 <button class="btn btn-outline-success"><?= $derivacion['estado']==='En seguimiento' ? 'Cerrar atención: Atendido' : ($derivacion['estado']==='Atendido' ? 'Reabrir seguimiento' : 'Iniciar seguimiento') ?></button>
@@ -452,9 +452,9 @@ include '../includes/navbar.php';
                     <?php if ($evidencia): ?>
                         <div class="mt-4">
                             <h6>Imagen adjunta</h6>
-                            <a href="<?= $baseUrl ?>/derivaciones/evidencia.php?id=<?= (int)$evidencia['id_evidencia'] ?>"
+                            <a href="<?= $baseUrl ?>/derivaciones/evidencia.php?id=<?= (int)$evidencia['cod_evidencia'] ?>"
                                target="_blank" rel="noopener">
-                                <img src="<?= $baseUrl ?>/derivaciones/evidencia.php?id=<?= (int)$evidencia['id_evidencia'] ?>"
+                                <img src="<?= $baseUrl ?>/derivaciones/evidencia.php?id=<?= (int)$evidencia['cod_evidencia'] ?>"
                                      class="img-fluid rounded border" style="max-height: 420px"
                                      alt="<?= escapar($evidencia['descripcion'] ?: 'Imagen de referencia') ?>">
                             </a>
