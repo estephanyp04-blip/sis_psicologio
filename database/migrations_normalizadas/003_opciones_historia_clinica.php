@@ -55,9 +55,13 @@ return static function (mysqli $bd): array {
         ],
     ];
 
-    $buscarGrupo = $bd->prepare('SELECT cod_grupo FROM grupos_opciones_historia WHERE codigo=? LIMIT 1');
-    $buscarOpcion = $bd->prepare('SELECT o.cod_opcion FROM opciones_historia o
-        INNER JOIN grupos_opciones_historia g ON g.cod_grupo=o.cod_grupo
+    $camposGrupo = array_column($bd->query('SHOW COLUMNS FROM grupos_opciones_historia')->fetch_all(MYSQLI_ASSOC), 'Field');
+    $camposOpcion = array_column($bd->query('SHOW COLUMNS FROM opciones_historia')->fetch_all(MYSQLI_ASSOC), 'Field');
+    $idGrupo = in_array('cod_grupo', $camposGrupo, true) ? 'cod_grupo' : 'id_grupo';
+    $idOpcion = in_array('cod_opcion', $camposOpcion, true) ? 'cod_opcion' : 'id_opcion';
+    $buscarGrupo = $bd->prepare("SELECT `$idGrupo` FROM grupos_opciones_historia WHERE codigo=? LIMIT 1");
+    $buscarOpcion = $bd->prepare("SELECT o.`$idOpcion` FROM opciones_historia o
+        INNER JOIN grupos_opciones_historia g ON g.`$idGrupo`=o.`$idGrupo`
         WHERE g.codigo=? AND o.descripcion=? LIMIT 1');
 
     foreach ($grupos as $codigo => $datos) {

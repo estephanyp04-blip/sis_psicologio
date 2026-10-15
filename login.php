@@ -31,13 +31,16 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Iniciar sesión | Sistema Psicológico</title>
-    <link href="<?= login_html(login_url('asset/css/login.css?v=3')) ?>" rel="stylesheet">
+    <link rel="icon" type="image/png" sizes="512x512" href="<?= login_html(login_url('asset/img/favicon.png')) ?>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?= login_html(login_url('asset/img/apple-touch-icon.png')) ?>">
+    <meta name="theme-color" content="#0f172a">
+    <link href="<?= login_html(login_url('asset/css/login.css?v=4')) ?>" rel="stylesheet">
 </head>
 <body class="login-page">
 <main class="login-card" aria-labelledby="titulo-login">
     <header class="login-cabecera">
-        <span class="login-simbolo" aria-hidden="true">Ψ</span>
-        <h1 id="titulo-login"><span aria-hidden="true">Ψ</span> Sistema Psicológico <span aria-hidden="true">Ψ</span></h1>
+        <img class="login-simbolo" src="<?= login_html(login_url('asset/img/logo-sistema.svg')) ?>" alt="">
+        <h1 id="titulo-login">Sistema Psicol&oacute;gico</h1>
 
     </header>
     <section class="login-formulario" aria-label="Acceso al sistema">

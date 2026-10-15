@@ -25,11 +25,15 @@ $tituloPagina = $tituloPagina ?? 'Sistema Psicológico - U.E. Cañada Pailita "B
 
     <title><?= htmlspecialchars($tituloPagina, ENT_QUOTES, 'UTF-8') ?></title>
 
+    <link rel="icon" type="image/png" sizes="512x512" href="<?= login_html(login_url('asset/img/favicon.png')) ?>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?= login_html(login_url('asset/img/apple-touch-icon.png')) ?>">
+    <meta name="theme-color" content="#0f172a">
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
 
     <!-- CSS propio con ruta dinámica -->
-    <link rel="stylesheet" href="<?= login_html(login_url('asset/css/estilos.css?v=9')) ?>">
+    <link rel="stylesheet" href="<?= login_html(login_url('asset/css/estilos.css?v=10')) ?>">
 </head>
 <body>

@@ -29,7 +29,7 @@ $gruposMenu = [
 
 <aside class="sidebar" id="sidebar-navigation" aria-label="Menú de navegación" tabindex="-1">
     <a href="<?= login_html(login_inicio_url()) ?>" class="logo">
-        <i class="bi bi-heart-pulse"></i>
+        <img class="logo-marca" src="<?= login_html(login_url('asset/img/logo-sistema.svg')) ?>" alt="">
         <h5>Sistema Psicológico</h5>
     </a>
 

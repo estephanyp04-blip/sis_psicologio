@@ -34,18 +34,11 @@
 .login-cabecera { text-align: center; }
 
 .login-simbolo {
-    display: grid;
-    width: 48px;
-    height: 48px;
+    display: block;
+    width: 72px;
+    height: 72px;
     margin: 0 auto 15px;
-    place-items: center;
-    border: 1px solid rgba(147, 197, 253, .28);
-    border-radius: 14px;
-    color: #bfdbfe;
-    background: rgba(37, 99, 235, .15);
-    font-family: Georgia, serif;
-    font-size: 30px;
-    line-height: 1;
+    object-fit: contain;
 }
 
 .login-cabecera h1 {

@@ -87,8 +87,11 @@ img, svg, video {
     border-bottom: 1px solid rgba(255, 255, 255, .16);
 }
 
-.sidebar .logo i {
-    font-size: 1.8rem !important;
+.sidebar .logo-marca {
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
 }
 
 .sidebar .logo h5 {

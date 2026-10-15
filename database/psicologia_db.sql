@@ -772,7 +772,7 @@ CREATE TABLE `usuarios` (
 --
 
 INSERT INTO `usuarios` (`cod_usuario`, `cod_persona`, `usuario`, `password`, `cod_rol`, `estado`, `ultimo_acceso`, `fecha_registro`, `fecha_actualizacion`) VALUES
-(1, 1, 'admin', '$2y$12$yNjW5ahkIFUDxm0bdij8LeM0AFthoNOtDSOFGD2wEDQeQ76x0zwSu', 1, 'Activo', NULL, '2026-10-06 05:12:57', '2026-10-06 05:12:57');
+(1, 1, 'admin', '$2y$10$FdwXgTBRFXMgmS89Q50zEexUysvoaLGBIeNgWJeOzsQyANXXm6D8.', 1, 'Activo', NULL, '2026-10-06 05:12:57', '2026-10-06 05:12:57');
 
 -- --------------------------------------------------------
 

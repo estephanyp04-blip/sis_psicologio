@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="titulo">
+  <title id="titulo">Sistema Psicol&#243;gico Estudiantil</title>
+  <rect width="512" height="512" rx="116" fill="#0f172a"/>
+  <circle cx="256" cy="256" r="188" fill="#172554" stroke="#294477" stroke-width="6"/>
+  <path d="M151 119v57c0 49 41 83 105 83s105-34 105-83v-57M256 259v92" fill="none" stroke="#f8fafc" stroke-linecap="round" stroke-linejoin="round" stroke-width="28"/>
+  <path d="M129 356c45-14 88-6 127 21 39-27 82-35 127-21v51c-45-15-88-10-127 18-39-28-82-33-127-18z" fill="#1e3a8a" stroke="#93c5fd" stroke-linejoin="round" stroke-width="12"/>
+  <path d="M256 378v47" fill="none" stroke="#f6c66b" stroke-linecap="round" stroke-width="9"/>
+</svg>

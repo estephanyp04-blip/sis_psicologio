@@ -3,7 +3,9 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 
 return static function (mysqli $bd): array {
     $plan = [];
-    $consulta = $bd->prepare('SELECT cod_materia FROM materias WHERE nombre=?');
+    $campos = array_column($bd->query('SHOW COLUMNS FROM materias')->fetch_all(MYSQLI_ASSOC), 'Field');
+    $identificador = in_array('cod_materia', $campos, true) ? 'cod_materia' : 'id_materia';
+    $consulta = $bd->prepare("SELECT `$identificador` FROM materias WHERE nombre=?");
     foreach (['Física', 'Química', 'Tecnología', 'Religión'] as $nombre) {
         $consulta->bind_param('s', $nombre);
         $consulta->execute();
