@@ -47,11 +47,11 @@ return [
 
     'usuario_bd' => $dbUser !== false && $dbUser !== ''
         ? $dbUser
-        : 'if0_43141647',
+        : 'root',
 
     'clave_bd' => $dbPass !== false
         ? $dbPass
-        : 'x9SZxlDRhTaTA',
+        : '',
 
     // Seguridad de las cookies de sesión
     // En producción con HTTPS debe ser true
