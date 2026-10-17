@@ -2,16 +2,17 @@
 // Ejecutar únicamente desde la terminal local; no permite cambiar roles.
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 require_once __DIR__ . '/../includes/autenticacion.php';
+require_once __DIR__ . '/../includes/claves.php';
 if ($argc !== 2) exit("Uso: php herramientas/establecer_clave.php nombre_usuario\n");
 try {
     $u = login_buscar_usuario($argv[1]);
     if (!$u) exit("No existe un usuario único con ese nombre. Revisa usuarios.usuario.\n");
     echo 'Cuenta: ' . $u['usuario'] . ' | ' . $u['nombre'] . ' ' . $u['apellido'] . ' | ' . $u['rol'] . "\n";
-    echo "Nueva contraseña (8 a 72 bytes; será visible al escribir): ";
+    echo "Nueva contraseña (mínimo 15 caracteres, máximo 72 bytes; será visible al escribir): ";
     $clave = rtrim(fgets(STDIN), "\r\n");
     echo "Repítela: ";
     $confirmacion = rtrim(fgets(STDIN), "\r\n");
-    if (strlen($clave) < 8 || strlen($clave) > 72 || strpos($clave, "\0") !== false || !hash_equals($clave, $confirmacion)) exit("Las contraseñas no coinciden o no cumplen la longitud. No se cambió nada.\n");
+    if (!login_clave_valida($clave) || !hash_equals($clave, $confirmacion)) exit("Las contraseñas no coinciden o no cumplen la longitud. No se cambió nada.\n");
     $hash = password_hash($clave, PASSWORD_DEFAULT);
     $s = login_bd()->prepare('UPDATE usuarios SET password=? WHERE cod_usuario=?');
     $s->bind_param('si', $hash, $u['cod_usuario']);

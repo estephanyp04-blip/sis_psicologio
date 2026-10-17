@@ -48,113 +48,22 @@ function calcularEdad(?string $fechaNacimiento): string
     }
 }
 
-/**
- * Carga los seguimientos de una historia clínica adaptándose a la
- * estructura real de la tabla (los nombres de columnas pueden variar).
- */
+/** Carga los seguimientos usando las columnas del esquema vigente. */
 function cargarSeguimientos(mysqli $conexion, int $idHistoria): array
 {
-    $resultado = [];
-
-    /* 1. Verificar que la tabla exista */
-    $rsTabla = $conexion->query("SHOW TABLES LIKE 'seguimientos'");
-    if (!$rsTabla || $rsTabla->num_rows === 0) {
-        return $resultado;
-    }
-
-    /* 2. Listar columnas reales */
-    $columnasReales = [];
-    $rsCols = $conexion->query("SHOW COLUMNS FROM seguimientos");
-    if ($rsCols) {
-        while ($c = $rsCols->fetch_assoc()) {
-            $columnasReales[] = $c['Field'];
-        }
-    }
-
-    if (empty($columnasReales)) {
-        return $resultado;
-    }
-
-    /* 3. Mapear conceptos a columnas reales */
-    $campos = [];
-
-    $opcionesFecha = ['fecha', 'fecha_seguimiento', 'fecha_registro', 'fecha_creacion'];
-    foreach ($opcionesFecha as $cand) {
-        if (in_array($cand, $columnasReales, true)) {
-            $campos['fecha'] = $cand;
-            break;
-        }
-    }
-
-    $opcionesEvolucion = ['evolucion', 'observaciones', 'descripcion', 'notas', 'detalle', 'comentario', 'texto'];
-    foreach ($opcionesEvolucion as $cand) {
-        if (in_array($cand, $columnasReales, true)) {
-            $campos['evolucion'] = $cand;
-            break;
-        }
-    }
-
-    $opcionesRecomendaciones = ['recomendaciones', 'recomendacion', 'sugerencias'];
-    foreach ($opcionesRecomendaciones as $cand) {
-        if (in_array($cand, $columnasReales, true)) {
-            $campos['recomendaciones'] = $cand;
-            break;
-        }
-    }
-
-    $opcionesProxima = ['proxima_sesion', 'proxima_cita', 'siguiente_cita', 'proxima', 'fecha_proxima'];
-    foreach ($opcionesProxima as $cand) {
-        if (in_array($cand, $columnasReales, true)) {
-            $campos['proxima_cita'] = $cand;
-            break;
-        }
-    }
-
-    if (empty($campos)) {
-        return $resultado;
-    }
-
-    /* 4. Armar SELECT dinámico */
-    $select = [];
-    foreach ($campos as $alias => $columnaReal) {
-        $select[] = ($columnaReal === $alias)
-            ? $columnaReal
-            : "{$columnaReal} AS {$alias}";
-    }
-
-    /* 5. ORDER BY dinámico */
-    $orderBy = [];
-    if (isset($campos['fecha'])) {
-        $orderBy[] = $campos['fecha'] . ' ASC';
-    }
-    if (in_array('cod_seguimiento', $columnasReales, true)) {
-        $orderBy[] = 'cod_seguimiento ASC';
-    }
-    if (empty($orderBy)) {
-        $orderBy[] = '1';
-    }
-
-    $sql = "SELECT " . implode(', ', $select) . "
-            FROM seguimientos
-            WHERE cod_historia = ?
-            ORDER BY " . implode(', ', $orderBy);
-
-    $stmt = $conexion->prepare($sql);
-    if (!$stmt) {
-        error_log('Error al preparar seguimientos: ' . $conexion->error);
-        return $resultado;
-    }
-
+    $stmt = $conexion->prepare("SELECT s.cod_seguimiento,s.cod_historia,s.cod_psicologa,s.cod_cita,
+            s.fecha,s.descripcion,s.tecnicas_aplicadas,s.acuerdos,s.recomendaciones,s.proxima_sesion,s.fecha_registro,
+            CONCAT_WS(' ',p.nombres,p.apellidos) AS profesional,c.fecha AS fecha_cita,c.hora AS hora_cita
+        FROM seguimientos s
+        LEFT JOIN usuarios u ON u.cod_usuario=s.cod_psicologa
+        LEFT JOIN personas p ON p.cod_persona=u.cod_persona
+        LEFT JOIN citas c ON c.cod_cita=s.cod_cita
+        WHERE s.cod_historia=?
+        ORDER BY s.fecha ASC,s.cod_seguimiento ASC");
     $stmt->bind_param('i', $idHistoria);
-
-    if ($stmt->execute()) {
-        $resultado = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    } else {
-        error_log('Error al ejecutar seguimientos: ' . $stmt->error);
-    }
-
+    $stmt->execute();
+    $resultado = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
-
     return $resultado;
 }
 
@@ -694,26 +603,31 @@ include '../includes/navbar.php';
                 </div>
 
                 <div>
-                    <strong>Evolución</strong>
+                    <strong>Seguimiento #<?= (int)$s['cod_seguimiento'] ?></strong>
                     <p>
-                        <?= nl2br(escapar(
-                            !empty($s['evolucion'])
-                                ? $s['evolucion']
-                                : 'Sin detalle registrado.'
-                        )) ?>
+                        Profesional: <?= escapar($s['profesional'] ?: 'No registrado') ?>
+                        <?php if (!empty($s['cod_cita'])): ?>
+                            · Cita #<?= (int)$s['cod_cita'] ?>
+                            <?php if (!empty($s['fecha_cita'])): ?>
+                                (<?= escapar(fechaMostrar($s['fecha_cita'])) ?><?= !empty($s['hora_cita']) ? ' ' . escapar(substr($s['hora_cita'], 0, 5)) : '' ?>)
+                            <?php endif; ?>
+                        <?php else: ?>
+                            · Sin cita asociada
+                        <?php endif; ?>
+                        · Registrado: <?= escapar($s['fecha_registro'] ?? 'Sin fecha') ?>
                     </p>
+                    <p><b>Descripción:</b><br><?= nl2br(escapar($s['descripcion'] ?: 'Sin detalle registrado.')) ?></p>
+                    <p><b>Técnicas aplicadas:</b><br><?= nl2br(escapar($s['tecnicas_aplicadas'] ?: 'No registrado')) ?></p>
+                    <p><b>Acuerdos:</b><br><?= nl2br(escapar($s['acuerdos'] ?: 'No registrado')) ?></p>
 
                     <?php if (!empty($s['recomendaciones'])): ?>
-                        <small>
-                            <b>Recomendaciones:</b>
-                            <?= escapar($s['recomendaciones']) ?>
-                        </small>
+                        <p><b>Recomendaciones:</b><br><?= nl2br(escapar($s['recomendaciones'])) ?></p>
                     <?php endif; ?>
 
-                    <?php if (!empty($s['proxima_cita'])): ?>
+                    <?php if (!empty($s['proxima_sesion'])): ?>
                         <small>
-                            <b>Próxima cita:</b>
-                            <?= escapar(fechaMostrar($s['proxima_cita'])) ?>
+                            <b>Próxima sesión prevista:</b>
+                            <?= escapar(fechaMostrar($s['proxima_sesion'])) ?>
                         </small>
                     <?php endif; ?>
                 </div>

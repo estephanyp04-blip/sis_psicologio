@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('usuarios/actualizar.php');
 
 require_once '../config/conexion.php';
+require_once __DIR__ . '/../includes/claves.php';
 
 function regresarAEdicion(string $mensaje, int $idUsuario): void
 {
@@ -107,9 +108,9 @@ if ($cambiarPassword) {
         );
     }
 
-    if (strlen($password) < 6) {
+    if (!login_clave_valida($password)) {
         regresarAEdicion(
-            'La contraseña debe tener al menos 6 caracteres.',
+            'La contraseña debe tener al menos 15 caracteres y no superar 72 bytes.',
             $idUsuario
         );
     }

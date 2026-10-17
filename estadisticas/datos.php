@@ -80,12 +80,13 @@ function estadisticas_datos(mysqli $bd, array $filtros): array
         throw $error;
     }
 
-    $resumen = ['historias' => count($historias), 'sesiones' => 0, 'con_sesiones' => 0, 'sin_sesiones' => 0];
+    $resumen = ['historias' => count($historias), 'sesiones' => 0, 'acumuladas' => 0, 'con_sesiones' => 0, 'sin_sesiones' => 0];
     $estados = ['Activa' => 0, 'En seguimiento' => 0, 'Cerrada' => 0];
     foreach ($historias as &$historia) {
         $historia['sesiones_periodo'] = (int)$historia['sesiones_periodo'];
         $historia['total_sesiones'] = (int)$historia['total_sesiones'];
         $resumen['sesiones'] += $historia['sesiones_periodo'];
+        $resumen['acumuladas'] += $historia['total_sesiones'];
         $resumen[$historia['sesiones_periodo'] > 0 ? 'con_sesiones' : 'sin_sesiones']++;
         $estados[$historia['estado']]++;
     }

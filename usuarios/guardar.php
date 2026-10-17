@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('usuarios/guardar.php');
 
 require_once '../config/conexion.php';
+require_once __DIR__ . '/../includes/claves.php';
 
 function regresarConError(string $mensaje):void{
     $_SESSION['mensaje']=$mensaje;
@@ -53,8 +54,8 @@ if(!in_array($estado,['Activo','Inactivo'],true)){
     regresarConError('El estado seleccionado no es válido.');
 }
 
-if(strlen($password)<6){
-    regresarConError('La contraseña debe tener al menos 6 caracteres.');
+if(!login_clave_valida($password)){
+    regresarConError('La contraseña debe tener al menos 15 caracteres y no superar 72 bytes.');
 }
 
 if($password!==$confirmarPassword){

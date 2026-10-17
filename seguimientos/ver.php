@@ -5,7 +5,7 @@ require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/../includes/trazabilidad_vista.php';
 $id = (int)filter_var($_GET['id'] ?? null,FILTER_VALIDATE_INT);
 $s = flujo_fila($conexion, 'SELECT s.*,h.cod_estudiante,COALESCE(c.cod_derivacion,h.cod_derivacion_origen) cod_derivacion,
-    CONCAT(p.nombres,\' \',p.apellidos) profesional
+    CONCAT(p.nombres,\' \',p.apellidos) profesional,c.fecha AS fecha_cita,c.hora AS hora_cita
     FROM seguimientos s JOIN historias_clinicas h ON h.cod_historia=s.cod_historia
     JOIN usuarios u ON u.cod_usuario=s.cod_psicologa
     JOIN personas p ON p.cod_persona=u.cod_persona
@@ -16,6 +16,8 @@ include '../includes/header.php'; include '../includes/sidebar.php'; include '..
 ?>
 <main class="main-content"><div class="container-fluid"><h1><?= login_html($tituloPagina) ?></h1>
 <p><?= login_html($s['fecha'] . ' · ' . $s['profesional']) ?></p><div class="card p-4">
+<p><a href="../historias_clinicas/ver.php?id=<?= (int)$s['cod_historia'] ?>">Historia #<?= (int)$s['cod_historia'] ?></a> · Registrado: <?= login_html($s['fecha_registro']) ?></p>
+<p><?php if ($s['cod_cita']): ?><a href="../citas/editar.php?id=<?= (int)$s['cod_cita'] ?>">Cita #<?= (int)$s['cod_cita'] ?></a><?= $s['fecha_cita'] ? ' · ' . login_html($s['fecha_cita'] . ' ' . substr($s['hora_cita'], 0, 5)) : '' ?><?php else: ?>Sin cita asociada<?php endif; ?></p>
 <?php foreach (['descripcion'=>'Descripción','tecnicas_aplicadas'=>'Técnicas aplicadas','acuerdos'=>'Acuerdos','recomendaciones'=>'Recomendaciones','proxima_sesion'=>'Próxima sesión'] as $campo=>$titulo): ?>
 <h2 class="h5"><?= $titulo ?></h2><p><?= nl2br(login_html($s[$campo] ?: 'No registrado')) ?></p>
 <?php endforeach; ?></div>

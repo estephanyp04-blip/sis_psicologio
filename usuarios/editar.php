@@ -187,7 +187,7 @@ include '../includes/navbar.php';
                                     name="password"
                                     id="password"
                                     class="form-control"
-                                    minlength="6"
+                                    minlength="15"
                                     placeholder="Dejar vacío para mantener la actual"
                                     autocomplete="new-password">
 
@@ -197,7 +197,7 @@ include '../includes/navbar.php';
                             </div>
 
                             <small class="text-muted">
-                                Solo complete este campo si desea cambiar la contraseña.
+                                Solo complete este campo si desea cambiarla; use al menos 15 caracteres.
                             </small>
                         </div>
 
@@ -212,7 +212,7 @@ include '../includes/navbar.php';
                                     name="confirmar_password"
                                     id="confirmar_password"
                                     class="form-control"
-                                    minlength="6"
+                                    minlength="15"
                                     placeholder="Repita la nueva contraseña"
                                     autocomplete="new-password">
 

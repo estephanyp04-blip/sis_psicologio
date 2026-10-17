@@ -261,7 +261,7 @@ CREATE TABLE `historias_clinicas` (
   `valoracion_familiar` text DEFAULT NULL,
   `evaluacion_inicial` text DEFAULT NULL,
   `impresion_diagnostica` text DEFAULT NULL,
-  `plan_intervencion` text DEFAULT NULL,a
+  `plan_intervencion` text DEFAULT NULL,
   `observaciones` text DEFAULT NULL,
   `talla_cm` decimal(5,2) DEFAULT NULL,
   `peso_kg` decimal(5,2) DEFAULT NULL,

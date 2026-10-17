@@ -71,7 +71,8 @@ include __DIR__ . '/../includes/navbar.php';
             <section class="estadisticas-tarjetas" aria-label="Resumen del período">
                 <?php foreach ([
                     'historias' => ['Historias clínicas', 'Estudiantes con historia incluida'],
-                    'sesiones' => ['Sesiones registradas', 'Seguimientos guardados en el período'],
+                    'sesiones' => ['Sesiones en el período', 'Seguimientos entre las fechas seleccionadas'],
+                    'acumuladas' => ['Sesiones acumuladas', 'Hasta la fecha final, con los mismos filtros'],
                     'con_sesiones' => ['Estudiantes con sesiones', 'Al menos un seguimiento en el período'],
                     'sin_sesiones' => ['Sin sesiones en el período', 'Historias sin seguimiento en estas fechas'],
                 ] as $campo => [$etiqueta, $detalle]): ?>

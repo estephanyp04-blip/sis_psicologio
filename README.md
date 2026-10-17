@@ -60,6 +60,8 @@ Los roles y métodos HTTP se declaran en [config/permisos.php](config/permisos.p
 
 Al registrar un docente, seleccionar una cuenta activa con rol Docente completa nombres, apellidos, correo y teléfono disponible. Los campos se pueden corregir antes de guardar; comparten la persona de la cuenta. Las casillas permiten asignar varias materias y recuperarlas al editar. El catálogo incluye Física, Química, Tecnología y Religión; para una base existente se agregan con la migración normalizada de materias.
 
+Las contraseñas se guardan como hash y no se pueden recuperar para mostrarlas. El administrador puede reemplazarlas desde la edición del usuario. Las nuevas contraseñas requieren al menos 15 caracteres y se aceptan hasta 72 bytes; las cuentas existentes conservan su clave hasta que se cambie.
+
 ## Panel principal
 
 Disponible para administrador y psicóloga. Sus tarjetas muestran estudiantes activos con historia en seguimiento, estudiantes activos con derivaciones abiertas de prioridad alta, citas pendientes o reprogramadas de hoy a seis días después y sesiones acumuladas hasta hoy, con el subtotal de los últimos 30 días (hoy y los 29 anteriores).
@@ -73,6 +75,8 @@ La agenda muestra todas las citas del día salvo las canceladas, ordenadas por h
 Disponible en el menú **Estadísticas** para administrador y psicóloga. Cada seguimiento guardado cuenta como una sesión; las citas no se suman al conteo. La pantalla muestra sesiones por mes, estado de las historias y detalle por estudiante, con enlaces a la historia y al último seguimiento.
 
 Los filtros de fechas admiten hasta 366 días y comienzan, por defecto, en enero del año actual. Se incluyen historias abiertas hasta la fecha final, aunque no tengan sesiones en el período. El curso corresponde a la última inscripción según gestión, fecha e identificador; el estado de la historia es el actual. Se conservan en la consulta estudiantes retirados o sin inscripción.
+
+El resumen separa las sesiones del período de las sesiones acumuladas hasta la fecha final. Con todos los cursos y estados seleccionados, el acumulado debe coincidir con `SELECT COUNT(*) FROM seguimientos WHERE fecha <= 'AAAA-MM-DD'` usando la misma fecha final. El panel principal muestra ese acumulado hasta hoy; su cifra puede diferir del conteo del período.
 
 La última sesión y el acumulado se calculan hasta la fecha final seleccionada. La próxima fecha es la prevista en ese último seguimiento, no una confirmación de cita. El número de sesiones no determina una mejoría clínica: las observaciones y acuerdos se consultan en la historia. Sin registros se muestran mensajes de ausencia de datos; los errores de consulta se presentan por separado.
 

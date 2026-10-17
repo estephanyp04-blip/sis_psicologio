@@ -199,7 +199,7 @@ if(!$resultadoRoles){
                                     name="password"
                                     id="password"
                                     class="form-control"
-                                    minlength="6"
+                                    minlength="15"
                                     placeholder="Ingrese una contraseña"
                                     autocomplete="new-password"
                                     required>
@@ -218,7 +218,7 @@ if(!$resultadoRoles){
                             </div>
 
                             <small class="text-muted">
-                                Mínimo 6 caracteres.
+                                Use al menos 15 caracteres; una frase larga es más fácil de recordar.
                             </small>
                         </div>
 
@@ -234,7 +234,7 @@ if(!$resultadoRoles){
                                     name="confirmar_password"
                                     id="confirmar_password"
                                     class="form-control"
-                                    minlength="6"
+                                    minlength="15"
                                     placeholder="Repita la contraseña"
                                     autocomplete="new-password"
                                     required>

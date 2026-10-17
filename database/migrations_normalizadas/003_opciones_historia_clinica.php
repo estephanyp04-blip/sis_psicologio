@@ -62,7 +62,7 @@ return static function (mysqli $bd): array {
     $buscarGrupo = $bd->prepare("SELECT `$idGrupo` FROM grupos_opciones_historia WHERE codigo=? LIMIT 1");
     $buscarOpcion = $bd->prepare("SELECT o.`$idOpcion` FROM opciones_historia o
         INNER JOIN grupos_opciones_historia g ON g.`$idGrupo`=o.`$idGrupo`
-        WHERE g.codigo=? AND o.descripcion=? LIMIT 1');
+        WHERE g.codigo=? AND o.descripcion=? LIMIT 1");
 
     foreach ($grupos as $codigo => $datos) {
         $buscarGrupo->bind_param('s', $codigo);
