@@ -10,8 +10,8 @@ function escapar($valor): string
 }
 
 /*
- * Obtener usuarios con rol Docente que todavía
- * no estén relacionados con otro docente.
+ * Obtener cuentas activas con rol Docente que todavía
+ * no estén relacionadas con otro perfil docente.
  */
 $sqlUsuarios = "
     SELECT
@@ -95,7 +95,7 @@ include '../includes/navbar.php';
                 <div class="alert alert-warning mb-4">
                     <i class="bi bi-exclamation-triangle me-2"></i>
 
-                    No existen cuentas disponibles con el rol Docente.
+                    No existen cuentas activas con rol Docente disponibles para vincular.
                     Primero debe registrar una cuenta de usuario con ese rol.
                 </div>
             <?php endif; ?>
@@ -160,8 +160,7 @@ include '../includes/navbar.php';
                             </select>
 
                             <div class="form-text">
-                                Solo aparecen usuarios activos con rol Docente
-                                que todavía no están asignados.
+                                Solo aparecen cuentas activas con rol Docente que aún no están vinculadas a un perfil docente.
                                 Al elegir una cuenta se completan sus datos personales;
                                 puede revisarlos y corregirlos antes de guardar.
                             </div>

@@ -202,7 +202,7 @@ try {
     $stmt->execute();
     $cuenta = $stmt->get_result()->fetch_assoc();
     $stmt->close();
-    if (!$cuenta) throw new InvalidArgumentException('La cuenta seleccionada no está activa o no pertenece a un docente.');
+    if (!$cuenta) throw new InvalidArgumentException('La cuenta seleccionada no está activa o no tiene el rol Docente.');
     $idPersona = (int)$cuenta['cod_persona'];
 
     $stmt = $conexion->prepare('SELECT cod_docente FROM docentes WHERE cod_persona=? AND cod_docente<>? LIMIT 1');

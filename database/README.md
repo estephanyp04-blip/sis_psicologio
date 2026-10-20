@@ -49,6 +49,10 @@ La migración `004_descripcion_evidencia_derivacion.php` agrega la descripción 
 
 La migración `005_categorias_derivacion_completas.php` incorpora Dinámica Familiar, Social / Emocional y Otro únicamente si no existen. Las descripciones de apoyo de las seis categorías se muestran en el formulario de registro.
 
+La migración `007_permisos_cambio_estado.php` separa la autorización para cambiar estados de la edición general. También alinea los permisos iniciales de Dashboard y Estudiantes para Docente/Director y conserva la política de estado de los cuatro roles originales. Los roles personalizados reciben ese permiso desactivado hasta que el administrador lo habilite.
+
+La migración `008_limites_permisos_datos_estudiantiles.php` limpia permisos previamente concedidos a Docente y Director en Dashboard, Estadísticas y Estudiantes. La aplicación también hace cumplir ese límite en sus rutas y en el formulario de permisos.
+
 Después de respaldar una base existente, aplicar las operaciones pendientes:
 
 ```powershell

@@ -110,7 +110,7 @@ if ($cambiarPassword) {
 
     if (!login_clave_valida($password)) {
         regresarAEdicion(
-            'La contraseña debe tener al menos 15 caracteres y no superar 72 bytes.',
+            'La contraseña debe tener al menos 8 caracteres y no superar 72 bytes.',
             $idUsuario
         );
     }
@@ -122,17 +122,25 @@ if ($cambiarPassword) {
 
 try {
     $stmtUsuario = $conexion->prepare(
-        'SELECT cod_usuario FROM usuarios WHERE cod_usuario = ? LIMIT 1'
+        'SELECT cod_usuario,cod_rol FROM usuarios WHERE cod_usuario = ? LIMIT 1'
     );
     $stmtUsuario->bind_param('i', $idUsuario);
     $stmtUsuario->execute();
 
-    if ($stmtUsuario->get_result()->num_rows === 0) {
+    $usuarioObjetivo = $stmtUsuario->get_result()->fetch_assoc();
+    if (!$usuarioObjetivo) {
         regresarAEdicion('El usuario que desea actualizar no existe.', 0);
+    }
+    if ((int)($_SESSION['cod_rol'] ?? 0) !== 1
+        && ((int)$usuarioObjetivo['cod_rol'] === 1
+            || (int)$usuarioObjetivo['cod_rol'] !== (int)($_SESSION['cod_rol'] ?? 0)
+            || $idRol !== (int)($_SESSION['cod_rol'] ?? 0))) {
+        http_response_code(403);
+        exit('Solo puedes editar cuentas de tu mismo rol.');
     }
 
     $stmtRol = $conexion->prepare(
-        'SELECT cod_rol FROM roles WHERE cod_rol = ? LIMIT 1'
+        "SELECT cod_rol FROM roles WHERE cod_rol = ? AND estado='Activo' LIMIT 1"
     );
     $stmtRol->bind_param('i', $idRol);
     $stmtRol->execute();
@@ -230,5 +238,9 @@ if ((int) ($_SESSION['cod_usuario'] ?? 0) === $idUsuario) {
 $_SESSION['mensaje'] = 'Usuario actualizado correctamente.';
 $_SESSION['tipo_mensaje'] = 'success';
 
-header('Location: listar.php');
+if (login_puede('usuarios/listar.php')) {
+    header('Location: listar.php');
+} else {
+    login_ir(login_destino_ruta());
+}
 exit;

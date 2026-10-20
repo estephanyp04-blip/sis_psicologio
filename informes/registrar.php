@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('informes/registrar.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/datos.php';
 
 $datosInforme = $_SESSION['datos_informe'] ?? [];
@@ -21,19 +21,9 @@ function e($valor):string{
     return htmlspecialchars((string)$valor,ENT_QUOTES,'UTF-8');
 }
 
-// Permisos
-$rolActual=(int)($_SESSION['cod_rol']??0);
-$rolesPermitidos=[1,2];
 $mensaje=$_SESSION['mensaje']??'';
 $tipoMensaje=$_SESSION['tipo_mensaje']??'info';
 unset($_SESSION['mensaje'],$_SESSION['tipo_mensaje']);
-
-if($rolActual>0&&!in_array($rolActual,$rolesPermitidos,true)){
-    $_SESSION['mensaje']='No tiene permiso para registrar informes.';
-    $_SESSION['tipo_mensaje']='danger';
-    header('Location: listar.php');
-    exit;
-}
 
 // Usuario
 $idUsuario=(int)($_SESSION['cod_usuario']??0);
@@ -86,9 +76,9 @@ if(!$resultadoEstudiantes){
 }
 
 // HTML
-include '../includes/header.php';
-include '../includes/sidebar.php';
-include '../includes/navbar.php';
+include __DIR__ . '/../includes/header.php';
+include __DIR__ . '/../includes/sidebar.php';
+include __DIR__ . '/../includes/navbar.php';
 ?>
 
 <div class="main-content">

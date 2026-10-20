@@ -19,9 +19,61 @@ $sql = "SELECT c.cod_cita, c.fecha, c.hora,
 
 $resultado = $conexion->query($sql);
 $total_citas = $resultado->num_rows;
+$rolUsuarioSesion = (int) ($_SESSION['cod_rol'] ?? 0);
+$idUsuarioSesion = (int) ($_SESSION['cod_usuario'] ?? 0);
+$solicitudesSql = "SELECT d.cod_derivacion,d.fecha_registro,d.prioridad,
+        e.nombres,e.apellidos,ve.curso,ve.paralelo,
+        pd.nombres AS docente_nombres,pd.apellidos AS docente_apellidos,
+        pp.nombres AS psicologa_nombres,pp.apellidos AS psicologa_apellidos
+    FROM derivaciones d
+    INNER JOIN estudiantes e ON e.cod_estudiante=d.cod_estudiante
+    LEFT JOIN vista_estudiantes ve ON ve.cod_estudiante=e.cod_estudiante
+    LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
+    LEFT JOIN personas pd ON pd.cod_persona=doc.cod_persona
+    LEFT JOIN usuarios pu ON pu.cod_usuario=d.cod_psicologa_solicitada
+    LEFT JOIN personas pp ON pp.cod_persona=pu.cod_persona
+    WHERE d.solicitar_cita=1
+      AND NOT EXISTS (SELECT 1 FROM citas c WHERE c.cod_derivacion=d.cod_derivacion AND c.estado<>'Cancelada')";
+if ($rolUsuarioSesion === 2) {
+    $solicitudesSql .= " AND (d.cod_psicologa_solicitada IS NULL OR d.cod_psicologa_solicitada=?)";
+}
+$solicitudesSql .= " ORDER BY FIELD(d.prioridad,'Alta','Media','Baja'),d.fecha_registro ASC,d.cod_derivacion ASC";
+$stmtSolicitudes = $conexion->prepare($solicitudesSql);
+if ($rolUsuarioSesion === 2) {
+    $stmtSolicitudes->bind_param('i', $idUsuarioSesion);
+}
+$stmtSolicitudes->execute();
+$solicitudesPendientes = $stmtSolicitudes->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmtSolicitudes->close();
 ?>
 
 <div class="main-content">
+    <?php if ($solicitudesPendientes): ?>
+    <section class="card border-warning shadow-sm mb-4">
+        <div class="card-header bg-warning-subtle d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h2 class="h5 mb-0"><i class="bi bi-calendar2-plus me-2"></i>Solicitudes de cita pendientes</h2>
+            <span class="badge bg-warning text-dark"><?= count($solicitudesPendientes) ?></span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Estudiante</th><th>Curso</th><th>Docente</th><th>Psicóloga solicitada</th><th>Prioridad</th><th>Acción</th></tr></thead>
+                <tbody>
+                <?php foreach ($solicitudesPendientes as $solicitud): ?>
+                    <tr>
+                        <td><?= login_html(trim($solicitud['apellidos'] . ' ' . $solicitud['nombres'])) ?></td>
+                        <td><?= login_html(trim(($solicitud['curso'] ?? '') . ' ' . ($solicitud['paralelo'] ?? ''))) ?></td>
+                        <td><?= login_html(trim(($solicitud['docente_apellidos'] ?? '') . ' ' . ($solicitud['docente_nombres'] ?? ''))) ?></td>
+                        <td><?= login_html(trim(($solicitud['psicologa_nombres'] ?? '') . ' ' . ($solicitud['psicologa_apellidos'] ?? '')) ?: 'Sin asignar') ?></td>
+                        <td><?= login_html($solicitud['prioridad']) ?></td>
+                        <td><a class="btn btn-sm btn-primary" href="registrar.php?cod_derivacion=<?= (int)$solicitud['cod_derivacion'] ?>">Programar cita</a></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </section>
+    <?php endif; ?>
+
     <?php if (!empty($_SESSION['mensaje_cita'])): ?>
         <div class="alert alert-danger"><?= login_html($_SESSION['mensaje_cita']) ?></div>
         <?php unset($_SESSION['mensaje_cita']); ?>
@@ -68,10 +120,10 @@ $total_citas = $resultado->num_rows;
         </div>
 
         <div class="mt-3">
-            <a href="registrar.php" 
+            <?php if (login_puede('citas/registrar.php')): ?><a href="registrar.php"
                class="btn btn-primary">
                 + Nueva Cita
-            </a>
+            </a><?php endif; ?>
         </div>
     </div>
 
@@ -181,15 +233,17 @@ $total_citas = $resultado->num_rows;
                             $fila['observaciones'] ?? '—') ?>
                     </td>
                     <td class="text-center">
-                        <a href="editar.php?id=<?= $fila['cod_cita'] ?>"
+                        <?php if (login_puede('citas/editar.php')): ?><a href="editar.php?id=<?= $fila['cod_cita'] ?>"
                            class="btn btn-sm btn-warning"
-                           title="Editar">✏</a>
+                           title="Editar">✏</a><?php endif; ?>
+                        <?php if (login_puede('citas/cancelar.php')): ?>
                         <form action="cancelar.php" method="POST" class="d-inline"
                               onsubmit="return confirm('¿Está segura de cancelar esta cita?')">
                             <?= login_campo_csrf() ?>
                             <input type="hidden" name="cod_cita" value="<?= (int) $fila['cod_cita'] ?>">
                             <button type="submit" class="btn btn-sm btn-danger" title="Cancelar">❌</button>
                         </form>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php

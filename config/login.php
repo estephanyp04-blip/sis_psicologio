@@ -68,12 +68,4 @@ return [
     // Duración máxima de sesión: 8 horas
     'duracion_maxima' => 28800,
 
-    // Destinos según el tipo de usuario
-    'destinos' => [
-        1 => 'index.php',
-        2 => 'index.php',
-        3 => 'derivaciones/listar.php',
-        4 => 'informes/listar.php',
-    ],
-
 ];

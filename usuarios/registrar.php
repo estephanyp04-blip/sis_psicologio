@@ -8,7 +8,9 @@ include '../includes/header.php';
 include '../includes/sidebar.php';
 include '../includes/navbar.php';
 
-$sqlRoles="SELECT cod_rol,nombre FROM roles ORDER BY cod_rol ASC";
+$rolActual = (int) ($_SESSION['cod_rol'] ?? 0);
+$condicionRoles = $rolActual === 1 ? '' : ' AND cod_rol=' . $rolActual . ' AND cod_rol<>1';
+$sqlRoles="SELECT cod_rol,nombre FROM roles WHERE estado='Activo'$condicionRoles ORDER BY cod_rol ASC";
 $resultadoRoles=$conexion->query($sqlRoles);
 
 if(!$resultadoRoles){
@@ -164,6 +166,8 @@ if(!$resultadoRoles){
                             </select>
                         </div>
 
+                        <?php if ($rolActual === 3): ?><div class="col-12"><p class="form-text mb-0">Las cuentas con rol Docente deben vincularse a un perfil en <strong>Docentes</strong> antes de poder iniciar sesión.</p></div><?php endif; ?>
+
                         <div class="col-md-3">
                             <label for="estado" class="form-label">
                                 Estado
@@ -199,7 +203,7 @@ if(!$resultadoRoles){
                                     name="password"
                                     id="password"
                                     class="form-control"
-                                    minlength="15"
+                                    minlength="8"
                                     placeholder="Ingrese una contraseña"
                                     autocomplete="new-password"
                                     required>
@@ -218,7 +222,7 @@ if(!$resultadoRoles){
                             </div>
 
                             <small class="text-muted">
-                                Use al menos 15 caracteres; una frase larga es más fácil de recordar.
+                                Use al menos 8 caracteres.
                             </small>
                         </div>
 
@@ -234,7 +238,7 @@ if(!$resultadoRoles){
                                     name="confirmar_password"
                                     id="confirmar_password"
                                     class="form-control"
-                                    minlength="15"
+                                    minlength="8"
                                     placeholder="Repita la contraseña"
                                     autocomplete="new-password"
                                     required>

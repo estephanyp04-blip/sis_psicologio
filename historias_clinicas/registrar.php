@@ -3,11 +3,6 @@ require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('historias_clinicas/registrar.php');
 
 require_once '../config/conexion.php';
-$rol=(int)($_SESSION['cod_rol']??0);
-if(!in_array($rol,[1,2],true)){
-    header('Location: listar.php');
-    exit;
-}
 function escapar($v):string{
     return htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
 }

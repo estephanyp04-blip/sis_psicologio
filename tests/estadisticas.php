@@ -103,7 +103,7 @@ try {
         (1,102,'$anio-03-10','10:00','Atendida'),(1,102,'$anio-03-11','10:00','Cancelada')");
     $filtros = estadisticas_filtros(['desde'=>"$anio-01-01",'hasta'=>"$anio-03-31"]);
     $datos = estadisticas_datos($bd, $filtros);
-    verificar($datos['resumen'] === ['historias'=>23,'sesiones'=>5,'con_sesiones'=>3,'sin_sesiones'=>20], 'Conteos incorrectos o duplicados por inscripciones/citas.');
+    verificar($datos['resumen'] === ['historias'=>23,'sesiones'=>5,'acumuladas'=>6,'con_sesiones'=>3,'sin_sesiones'=>20], 'Conteos del período y acumulados incorrectos o duplicados por inscripciones/citas.');
     verificar($datos['meses'] === ["$anio-01"=>1,"$anio-02"=>3,"$anio-03"=>1], 'Serie mensual incorrecta.');
     verificar($datos['estados'] === ['Activa'=>21,'En seguimiento'=>1,'Cerrada'=>1], 'Estados no reconcilian.');
     $porEstudiante = array_column($datos['historias'], null, 'cod_estudiante');
@@ -115,7 +115,7 @@ try {
     verificar($porEstudiante[4]['total_sesiones'] === 0 && $porEstudiante[4]['ultima_sesion'] === null, 'Inventa sesiones o fechas para una historia vacía.');
     $curso2 = (int)fila($bd, 'SELECT cod_curso FROM cursos WHERE orden=2')['cod_curso'];
     $porCurso = estadisticas_datos($bd, array_replace($filtros,['curso'=>$curso2]));
-    verificar($porCurso['resumen'] === ['historias'=>1,'sesiones'=>3,'con_sesiones'=>1,'sin_sesiones'=>0], 'Filtro de curso duplica o pierde historia.');
+    verificar($porCurso['resumen'] === ['historias'=>1,'sesiones'=>3,'acumuladas'=>4,'con_sesiones'=>1,'sin_sesiones'=>0], 'Filtro de curso duplica o pierde historia.');
     $cerradas = estadisticas_datos($bd, array_replace($filtros,['estado'=>'Cerrada']));
     verificar($cerradas['resumen']['historias'] === 1 && $cerradas['resumen']['sesiones'] === 1, 'Filtro de estado no afecta a los conteos.');
     $febrero = estadisticas_datos($bd, array_replace($filtros,['desde'=>"$anio-02-01",'hasta'=>"$anio-02-28"]));
@@ -127,7 +127,7 @@ try {
     }
     rechaza(fn()=>estadisticas_datos($bd,array_replace($filtros,['curso'=>999999])), 'Acepta curso inexistente.');
     $baseVacia = estadisticas_datos($bd, ['desde'=>'1900-01-01','hasta'=>'1900-01-31']);
-    verificar($baseVacia['resumen'] === ['historias'=>0,'sesiones'=>0,'con_sesiones'=>0,'sin_sesiones'=>0], 'No maneja un período sin historias.');
+    verificar($baseVacia['resumen'] === ['historias'=>0,'sesiones'=>0,'acumuladas'=>0,'con_sesiones'=>0,'sin_sesiones'=>0], 'No maneja un período sin historias.');
     echo "Conteos clínicos, inscripciones múltiples, límites de fechas y filtros: correctos.\n";
     $sinDatos = estadisticas_panel($bd,'1900-01-01');
     verificar(array_sum($sinDatos['resumen']) === 0 && !$sinDatos['prioritarios'] && !$sinDatos['agenda'], 'Panel sin datos inventa actividad.');
@@ -252,7 +252,8 @@ try {
         campo('desde').value=campo('desde').value.slice(0,4)+'-02-01'; campo('hasta').value=campo('hasta').value.slice(0,4)+'-02-28'; await enviar();
         comprobar(valor('sesiones')===3 && app.contentDocument.querySelectorAll('[data-mes]').length===1,'El período no actualiza el gráfico.');
         await abrir(ruta);
-        const siguiente=Array.from(app.contentDocument.querySelectorAll('.estadisticas-paginacion a')).find(a=>a.textContent==='Siguiente');
+        const paginacionHistorias=app.contentDocument.querySelector('.estadisticas-paginacion[aria-label="Páginas de estudiantes"]');
+        const siguiente=Array.from(paginacionHistorias.querySelectorAll('a')).find(a=>a.textContent==='Siguiente');
         await abrir(siguiente.href);
         comprobar(app.contentDocument.querySelectorAll('tr[data-historia]').length===3 && valor('sesiones')===5,'Paginación incorrecta.');
         await abrir(ruta);

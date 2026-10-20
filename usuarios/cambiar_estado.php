@@ -18,7 +18,7 @@ if(!$id){
     exit;
 }
 
-$stmt=$conexion->prepare("SELECT estado FROM usuarios WHERE cod_usuario=? LIMIT 1");
+$stmt=$conexion->prepare("SELECT estado,cod_rol FROM usuarios WHERE cod_usuario=? LIMIT 1");
 
 if(!$stmt){
     $_SESSION['mensaje']='Error al consultar el usuario.';
@@ -37,6 +37,11 @@ if(!$usuario){
     $_SESSION['tipo_mensaje']='danger';
     header('Location: listar.php');
     exit;
+}
+if ((int)($_SESSION['cod_rol'] ?? 0) !== 1
+    && ((int)$usuario['cod_rol'] === 1 || (int)$usuario['cod_rol'] !== (int)($_SESSION['cod_rol'] ?? 0))) {
+    http_response_code(403);
+    exit('Solo puedes cambiar el estado de cuentas de tu mismo rol.');
 }
 
 $nuevoEstado=$usuario['estado']==='Activo'?'Inactivo':'Activo';
@@ -62,6 +67,10 @@ if(!$stmtActualizar->execute()){
 $_SESSION['mensaje']='Estado del usuario actualizado correctamente.';
 $_SESSION['tipo_mensaje']='success';
 
-header('Location: listar.php');
+if (login_puede('usuarios/listar.php')) {
+    header('Location: listar.php');
+} else {
+    login_ir(login_destino_ruta());
+}
 exit;
 ?>

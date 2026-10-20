@@ -70,17 +70,7 @@ function cargarSeguimientos(mysqli $conexion, int $idHistoria): array
 /* =========================================================
    PERMISOS
    ========================================================= */
-$rolActual       = (int)($_SESSION['cod_rol'] ?? 0);
-$rolesPermitidos = [1, 2];
-
-if (!in_array($rolActual, $rolesPermitidos, true)) {
-    $_SESSION['mensaje']      = 'No tiene permiso para consultar historias clínicas.';
-    $_SESSION['tipo_mensaje'] = 'danger';
-    header('Location: ../index.php');
-    exit;
-}
-
-$puedeEditar = in_array($rolActual, [1, 2], true);
+$puedeEditar = login_puede('historias_clinicas/editar.php');
 
 /* =========================================================
    VALIDACIÓN DE ID
@@ -124,8 +114,8 @@ try {
                 WHERE er.cod_estudiante=e.cod_estudiante AND er.parentesco='Tutor'
                 ORDER BY er.es_principal DESC LIMIT 1) AS tutor,
             e.telefono,
-            p.nombres AS profesional_nombre,
-            p.apellidos AS profesional_apellido
+            p.nombres AS autor_nombre,
+            p.apellidos AS autor_apellido
         FROM historias_clinicas h
         LEFT JOIN derivaciones d ON d.cod_derivacion = h.cod_derivacion_origen
         LEFT JOIN docentes doc ON doc.cod_docente = d.cod_docente
@@ -212,9 +202,9 @@ try {
    ========================================================= */
 $edad = calcularEdad($h['fecha_nacimiento'] ?? null);
 
-$profesional = trim(
-    ($h['profesional_nombre'] ?? '') . ' ' .
-    ($h['profesional_apellido'] ?? '')
+$registradoPor = trim(
+    ($h['autor_nombre'] ?? '') . ' ' .
+    ($h['autor_apellido'] ?? '')
 );
 
 $nombreCompleto = trim(
@@ -246,8 +236,12 @@ include '../includes/navbar.php';
 <div class="container-fluid">
 <?php require_once __DIR__ . '/../includes/trazabilidad_vista.php'; flujo_panel($conexion,'historia',$h); ?>
 <div class="d-flex gap-2 my-3 d-print-none">
+    <?php if (login_puede('seguimientos/registrar.php')): ?>
     <a class="btn btn-primary" href="../seguimientos/registrar.php?cod_historia=<?= (int)$h['cod_historia'] ?>">Registrar seguimiento</a>
+    <?php endif; ?>
+    <?php if (login_puede('informes/registrar.php')): ?>
     <a class="btn btn-outline-primary" href="../informes/registrar.php?cod_estudiante=<?= (int)$h['cod_estudiante'] ?>">Crear informe</a>
+    <?php endif; ?>
 </div>
 
     <!-- BREADCRUMB -->
@@ -322,8 +316,8 @@ include '../includes/navbar.php';
         </div>
 
         <div>
-            <span>Profesional</span>
-            <strong><?= $profesional !== '' ? escapar($profesional) : 'Sin asignar' ?></strong>
+            <span>Registrado por</span>
+            <strong><?= $registradoPor !== '' ? escapar($registradoPor) : 'No registrado' ?></strong>
         </div>
     </section>
 

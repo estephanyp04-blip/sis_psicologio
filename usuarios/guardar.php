@@ -55,14 +55,15 @@ if(!in_array($estado,['Activo','Inactivo'],true)){
 }
 
 if(!login_clave_valida($password)){
-    regresarConError('La contraseña debe tener al menos 15 caracteres y no superar 72 bytes.');
+    regresarConError('La contraseña debe tener al menos 8 caracteres y no superar 72 bytes.');
 }
 
 if($password!==$confirmarPassword){
     regresarConError('Las contraseñas no coinciden.');
 }
 
-$stmtRol=$conexion->prepare("SELECT cod_rol FROM roles WHERE cod_rol=? LIMIT 1");
+$rolActual = (int) ($_SESSION['cod_rol'] ?? 0);
+$stmtRol=$conexion->prepare("SELECT cod_rol FROM roles WHERE cod_rol=? AND estado='Activo' LIMIT 1");
 
 if(!$stmtRol){
     regresarConError('Error al verificar el rol: '.$conexion->error);
@@ -74,6 +75,10 @@ $resultadoRol=$stmtRol->get_result();
 
 if($resultadoRol->num_rows===0){
     regresarConError('El rol seleccionado no existe.');
+}
+$stmtRol->close();
+if ($rolActual !== 1 && $idRol !== $rolActual) {
+    regresarConError('Solo puedes asignar a la cuenta el mismo rol que tienes.');
 }
 
 $stmtUsuario=$conexion->prepare("SELECT cod_usuario FROM usuarios WHERE usuario=? LIMIT 1");
@@ -119,6 +124,10 @@ try {
 $_SESSION['mensaje']='Usuario registrado correctamente.';
 $_SESSION['tipo_mensaje']='success';
 
-header('Location: listar.php');
+if (login_puede('usuarios/listar.php')) {
+    header('Location: listar.php');
+} else {
+    login_ir(login_destino_ruta());
+}
 exit;
 ?>

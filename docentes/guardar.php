@@ -197,8 +197,7 @@ if ($resultadoUsuario->num_rows !== 1) {
     $stmtUsuario->close();
 
     regresarConError(
-        'La cuenta seleccionada no existe, está inactiva ' .
-        'o no tiene el rol Docente.'
+        'La cuenta seleccionada no existe, no está activa o no tiene el rol Docente.'
     );
 }
 $idPersona = (int)$resultadoUsuario->fetch_assoc()['cod_persona'];

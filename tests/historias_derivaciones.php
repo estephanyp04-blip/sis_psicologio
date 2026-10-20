@@ -244,7 +244,9 @@ try {
     verificar((int)fila($bd, 'SELECT cod_psicologa FROM historias_clinicas WHERE cod_estudiante=4')['cod_psicologa'] === 101, 'Alta acepta autor de POST.');
     $bd->query("INSERT INTO categorias_derivacion (nombre,estado) VALUES ('Categoría nueva de catálogo','Activo'),('Categoría inactiva','Inactivo')");
     $r = http('derivaciones/editar.php?id=1');
-    verificar(str_contains($r['cuerpo'], 'Categoría nueva de catálogo') && !str_contains($r['cuerpo'], 'Categoría inactiva') && !str_contains($r['cuerpo'], 'Social / Emocional'), 'Edición no usa el catálogo activo.');
+    verificar(str_contains($r['cuerpo'], 'Categoría nueva de catálogo')
+        && !str_contains($r['cuerpo'], 'Categoría inactiva')
+        && str_contains($r['cuerpo'], 'Social / Emocional'), 'Edición no refleja el estado de las categorías del catálogo.');
     $postDerivacion = formulario($r['cuerpo'], 'formEditarDerivacion');
     $r = http('derivaciones/actualizar.php', $postDerivacion);
     verificar(str_contains($r['cabeceras'], 'listar.php') && fila($bd, 'SELECT observaciones FROM derivaciones WHERE cod_derivacion=1')['observaciones'] === $observaciones, 'Guardar derivación sin JS altera observaciones.');
@@ -262,7 +264,7 @@ try {
     $r = http('derivaciones/actualizar.php', $conservada);
     verificar(str_contains($r['cabeceras'], 'listar.php'), 'No guarda categorías y materia históricas conservadas.');
     $antes = foto($bd);
-    foreach (['Categoría inactiva', 'Social / Emocional', 'Inventada'] as $categoria) {
+    foreach (['Categoría inactiva', 'Inventada'] as $categoria) {
         rechaza(fn() => derivacion_actualizar($bd, 1, array_replace($postDerivacion, ['categorias' => [$categoria]]), 1, 0), 'Acepta categoría ausente/inactiva no vinculada.');
         verificar(foto($bd) === $antes, 'Categoría rechazada modifica la derivación.');
     }

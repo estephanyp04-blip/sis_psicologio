@@ -59,6 +59,7 @@ function estadisticas_datos(mysqli $bd, array $filtros): array
     $bd->begin_transaction(MYSQLI_TRANS_START_READ_ONLY | MYSQLI_TRANS_START_WITH_CONSISTENT_SNAPSHOT);
     try {
         $historias = estadisticas_consultar($bd, "SELECT h.cod_historia,h.cod_estudiante,h.fecha_apertura,h.estado,
+            h.situacion_escolar,h.valoracion_familiar,
             e.nombres,e.apellidos,e.estado AS estado_estudiante,c.nombre AS curso,p.nombre AS paralelo,
             COALESCE(s.total,0) AS total_sesiones,COALESCE(s.periodo,0) AS sesiones_periodo,
             ultimo.cod_seguimiento,ultimo.fecha AS ultima_sesion,ultimo.proxima_sesion
@@ -74,6 +75,29 @@ function estadisticas_datos(mysqli $bd, array $filtros): array
             $uniones INNER JOIN seguimientos s ON s.cod_historia=h.cod_historia
             WHERE $condicion AND s.fecha BETWEEN ? AND ? GROUP BY mes ORDER BY mes",
             array_merge($valores, [$f['desde'], $f['hasta']]));
+        $catalogoOpciones = $bd->query("SELECT g.codigo AS grupo,g.nombre AS nombre_grupo,
+                o.cod_opcion,o.descripcion
+            FROM grupos_opciones_historia g
+            INNER JOIN opciones_historia o ON o.cod_grupo=g.cod_grupo
+            WHERE o.estado='Activo' ORDER BY g.cod_grupo,o.cod_opcion")->fetch_all(MYSQLI_ASSOC);
+        $selecciones = estadisticas_consultar($bd, "SELECT h.cod_historia,h.cod_estudiante,
+                g.codigo AS grupo,g.nombre AS nombre_grupo,o.cod_opcion,o.descripcion
+            $uniones
+            INNER JOIN historia_opciones ho ON ho.cod_historia=h.cod_historia
+            INNER JOIN opciones_historia o ON o.cod_opcion=ho.cod_opcion
+            INNER JOIN grupos_opciones_historia g ON g.cod_grupo=o.cod_grupo
+            WHERE $condicion ORDER BY g.cod_grupo,o.cod_opcion,h.cod_historia",
+            $valores);
+        $motivos = estadisticas_consultar($bd, "SELECT cd.nombre AS motivo,
+                COUNT(DISTINCT h.cod_historia) AS historias,
+                COUNT(DISTINCT h.cod_estudiante) AS estudiantes
+            $uniones
+            INNER JOIN derivaciones d ON d.cod_derivacion=h.cod_derivacion_origen
+            INNER JOIN derivacion_categorias dc ON dc.cod_derivacion=d.cod_derivacion
+            INNER JOIN categorias_derivacion cd ON cd.cod_categoria=dc.cod_categoria
+            WHERE $condicion
+            GROUP BY cd.cod_categoria,cd.nombre
+            ORDER BY historias DESC,cd.nombre LIMIT 8", $valores);
         $bd->commit();
     } catch (Throwable $error) {
         $bd->rollback();
@@ -99,7 +123,127 @@ function estadisticas_datos(mysqli $bd, array $filtros): array
         $meses[$clave] = (int)($porMes[$clave] ?? 0);
         $mes = $mes->modify('+1 month');
     }
-    return ['resumen' => $resumen, 'estados' => $estados, 'meses' => $meses, 'historias' => $historias];
+
+    $distribuciones = [];
+    foreach ($catalogoOpciones as $opcion) {
+        $grupo = $opcion['grupo'];
+        $idOpcion = (int)$opcion['cod_opcion'];
+        if (!isset($distribuciones[$grupo])) {
+            $distribuciones[$grupo] = [
+                'nombre' => $opcion['nombre_grupo'], 'historias' => 0, 'estudiantes' => 0,
+                'opciones' => [], '_historias' => [], '_estudiantes' => [],
+            ];
+        }
+        $distribuciones[$grupo]['opciones'][$idOpcion] = [
+            'nombre' => $opcion['descripcion'], 'historias' => 0, 'estudiantes' => 0, '_estudiantes' => [],
+        ];
+    }
+
+    $estudiantes = [];
+    foreach ($historias as $historia) {
+        $idEstudiante = (int)$historia['cod_estudiante'];
+        if (!isset($estudiantes[$idEstudiante])) {
+            $estudiantes[$idEstudiante] = [
+                'cod_estudiante' => $idEstudiante,
+                'nombres' => $historia['nombres'], 'apellidos' => $historia['apellidos'],
+                'curso' => $historia['curso'], 'paralelo' => $historia['paralelo'],
+                'historias' => 0, 'cod_historia' => (int)$historia['cod_historia'],
+                'fecha_apertura' => $historia['fecha_apertura'],
+                'situacion_escolar' => $historia['situacion_escolar'] ?? null,
+                'valoracion_familiar' => $historia['valoracion_familiar'] ?? null,
+                'opciones' => [],
+            ];
+        }
+        ++$estudiantes[$idEstudiante]['historias'];
+        if ($historia['fecha_apertura'] > $estudiantes[$idEstudiante]['fecha_apertura']
+            || ($historia['fecha_apertura'] === $estudiantes[$idEstudiante]['fecha_apertura']
+                && (int)$historia['cod_historia'] > $estudiantes[$idEstudiante]['cod_historia'])) {
+            $estudiantes[$idEstudiante]['curso'] = $historia['curso'];
+            $estudiantes[$idEstudiante]['paralelo'] = $historia['paralelo'];
+            $estudiantes[$idEstudiante]['cod_historia'] = (int)$historia['cod_historia'];
+            $estudiantes[$idEstudiante]['fecha_apertura'] = $historia['fecha_apertura'];
+            $estudiantes[$idEstudiante]['situacion_escolar'] = $historia['situacion_escolar'] ?? null;
+            $estudiantes[$idEstudiante]['valoracion_familiar'] = $historia['valoracion_familiar'] ?? null;
+        }
+    }
+
+    $porGrupoHistoria = [];
+    $porGrupoEstudiante = [];
+    foreach ($selecciones as $seleccion) {
+        $grupo = $seleccion['grupo'];
+        $idOpcion = (int)$seleccion['cod_opcion'];
+        $idHistoria = (int)$seleccion['cod_historia'];
+        $idEstudiante = (int)$seleccion['cod_estudiante'];
+        if (!isset($distribuciones[$grupo])) {
+            $distribuciones[$grupo] = [
+                'nombre' => $seleccion['nombre_grupo'], 'historias' => 0, 'estudiantes' => 0,
+                'opciones' => [], '_historias' => [], '_estudiantes' => [],
+            ];
+        }
+        if (!isset($distribuciones[$grupo]['opciones'][$idOpcion])) {
+            $distribuciones[$grupo]['opciones'][$idOpcion] = [
+                'nombre' => $seleccion['descripcion'], 'historias' => 0, 'estudiantes' => 0, '_estudiantes' => [],
+            ];
+        }
+        ++$distribuciones[$grupo]['opciones'][$idOpcion]['historias'];
+        $distribuciones[$grupo]['opciones'][$idOpcion]['_estudiantes'][$idEstudiante] = true;
+        $distribuciones[$grupo]['_historias'][$idHistoria] = true;
+        $distribuciones[$grupo]['_estudiantes'][$idEstudiante] = true;
+        $porGrupoHistoria[$grupo][$idHistoria] = true;
+        $porGrupoEstudiante[$grupo][$idEstudiante] = true;
+        $estudiantes[$idEstudiante]['opciones'][$grupo][$seleccion['descripcion']] = true;
+    }
+
+    foreach ($distribuciones as &$grupo) {
+        $grupo['historias'] = count($grupo['_historias']);
+        $grupo['estudiantes'] = count($grupo['_estudiantes']);
+        unset($grupo['_historias'], $grupo['_estudiantes']);
+        foreach ($grupo['opciones'] as &$opcion) {
+            $opcion['estudiantes'] = count($opcion['_estudiantes']);
+            unset($opcion['_estudiantes']);
+        }
+        unset($opcion);
+    }
+    unset($grupo);
+
+    foreach ($estudiantes as &$estudiante) {
+        foreach ($estudiante['opciones'] as &$opcionesEstudiante) {
+            $opcionesEstudiante = array_keys($opcionesEstudiante);
+            sort($opcionesEstudiante, SORT_NATURAL | SORT_FLAG_CASE);
+        }
+        unset($opcionesEstudiante);
+        foreach (['conductas_riesgo', 'dificultades_socioemocionales'] as $grupo) {
+            $estudiante[$grupo] = $estudiante['opciones'][$grupo] ?? [];
+        }
+        unset($estudiante['opciones']);
+    }
+    unset($estudiante);
+    uasort($estudiantes, static fn(array $a, array $b): int =>
+        strcasecmp(trim($a['apellidos'] . ' ' . $a['nombres']), trim($b['apellidos'] . ' ' . $b['nombres'])));
+
+    $valoraciones = [
+        'situacion_escolar' => ['Muy buena' => 0, 'Buena' => 0, 'Regular' => 0, 'Deficiente' => 0],
+        'valoracion_familiar' => ['Muy buena' => 0, 'Buena' => 0, 'Regular' => 0, 'Conflictiva' => 0],
+    ];
+    foreach ($historias as $historia) {
+        foreach (array_keys($valoraciones) as $campo) {
+            $valor = $historia[$campo] ?? '';
+            if ($valor !== '' && isset($valoraciones[$campo][$valor])) ++$valoraciones[$campo][$valor];
+        }
+    }
+
+    return [
+        'resumen' => $resumen, 'estados' => $estados, 'meses' => $meses, 'historias' => $historias,
+        'distribuciones' => $distribuciones, 'motivos_derivacion' => $motivos,
+        'estudiantes' => array_values($estudiantes), 'valoraciones' => $valoraciones,
+        'resumen_clinico' => [
+            'estudiantes' => count($estudiantes),
+            'estudiantes_riesgo' => count($porGrupoEstudiante['conductas_riesgo'] ?? []),
+            'estudiantes_socioemocionales' => count($porGrupoEstudiante['dificultades_socioemocionales'] ?? []),
+            'historias_riesgo' => count($porGrupoHistoria['conductas_riesgo'] ?? []),
+            'historias_socioemocionales' => count($porGrupoHistoria['dificultades_socioemocionales'] ?? []),
+        ],
+    ];
 }
 
 function estadisticas_panel(mysqli $bd, ?string $hoy = null): array

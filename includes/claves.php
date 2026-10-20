@@ -10,7 +10,7 @@ function login_clave_valida(mixed $clave): bool
         return false;
     }
     return mb_check_encoding($clave, 'UTF-8')
-        && mb_strlen($clave, 'UTF-8') >= 15
+        && mb_strlen($clave, 'UTF-8') >= 8
         && strlen($clave) <= 72
         && strpos($clave, "\0") === false;
 }

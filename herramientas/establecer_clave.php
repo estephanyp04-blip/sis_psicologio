@@ -8,7 +8,7 @@ try {
     $u = login_buscar_usuario($argv[1]);
     if (!$u) exit("No existe un usuario único con ese nombre. Revisa usuarios.usuario.\n");
     echo 'Cuenta: ' . $u['usuario'] . ' | ' . $u['nombre'] . ' ' . $u['apellido'] . ' | ' . $u['rol'] . "\n";
-    echo "Nueva contraseña (mínimo 15 caracteres, máximo 72 bytes; será visible al escribir): ";
+    echo "Nueva contraseña (mínimo 8 caracteres, máximo 72 bytes; será visible al escribir): ";
     $clave = rtrim(fgets(STDIN), "\r\n");
     echo "Repítela: ";
     $confirmacion = rtrim(fgets(STDIN), "\r\n");

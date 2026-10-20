@@ -9,6 +9,7 @@ include '../includes/sidebar.php';
 include '../includes/navbar.php';
 
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
+$rolActual = (int) ($_SESSION['cod_rol'] ?? 0);
 
 if(!$id){
     header('Location: listar.php');
@@ -28,7 +29,7 @@ $stmt=$conexion->prepare("
     FROM usuarios u
     INNER JOIN personas p ON p.cod_persona = u.cod_persona
     LEFT JOIN roles r ON u.cod_rol=r.cod_rol
-    WHERE u.cod_usuario=?
+    WHERE u.cod_usuario=? AND (?=1 OR u.cod_rol=?)
     LIMIT 1
 ");
 
@@ -36,7 +37,7 @@ if(!$stmt){
     die('Error al preparar la consulta: '.$conexion->error);
 }
 
-$stmt->bind_param('i',$id);
+$stmt->bind_param('iii',$id,$rolActual,$rolActual);
 $stmt->execute();
 
 $resultado=$stmt->get_result();

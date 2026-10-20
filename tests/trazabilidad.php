@@ -105,9 +105,11 @@ try {
     $bd->set_charset('utf8mb4');
     $bd->query("SET SESSION sql_mode='STRICT_ALL_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
     prueba_autores($bd);
+    $bd->query("INSERT INTO personas (cod_persona,nombres,apellidos) VALUES (1006,'Psicologa','Dos')");
+    $bd->query("INSERT INTO usuarios (cod_usuario,cod_persona,usuario,password,cod_rol) VALUES (105,1006,'prueba_psicologa_dos','hash-prueba',2)");
     prueba_estudiantes($bd, 4);
     $hoy=date('Y-m-d');
-    $bd->query("INSERT INTO derivaciones (cod_derivacion,fecha,cod_estudiante,cod_docente,motivo) VALUES (1,'$hoy',1,201,'Origen primero'),(2,'$hoy',1,201,'Nuevo motivo distinto'),(3,'$hoy',2,202,'Ajena')");
+    $bd->query("INSERT INTO derivaciones (cod_derivacion,fecha,cod_estudiante,cod_docente,motivo,solicitar_cita,cod_psicologa_solicitada) VALUES (1,'$hoy',1,201,'Origen primero',1,102),(2,'$hoy',1,201,'Nuevo motivo distinto',0,NULL),(3,'$hoy',2,202,'Ajena',0,NULL)");
     mkdir($temporal . '/app', 0700); mkdir($temporal . '/sesiones', 0700);
     foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($raiz, FilesystemIterator::SKIP_DOTS)) as $archivo) {
         if ($archivo->getExtension() !== 'php') continue;
@@ -130,14 +132,36 @@ try {
     for ($i = 0; $i < 40; ++$i) { $s = @fsockopen('127.0.0.1', $puerto, $errno, $error, 0.1); if ($s) { fclose($s); break; } usleep(100000); }
 
     $token=['csrf'=>str_repeat('c',64)];
+    $r=http('derivaciones/registrar.php',null,'prueba_admin');
+    verificar($r['codigo']===200 && str_contains($r['cuerpo'],'id="solicitar_cita"'),'El formulario de derivacion no muestra la solicitud de cita.');
+    $r=http('derivaciones/registrar.php',null,'prueba_docente');
+    $nuevaDerivacion=formulario($r['cuerpo'],'formDerivacion');
+    $materiaPrueba=$bd->query("SELECT nombre FROM materias WHERE estado='Activo' ORDER BY cod_materia LIMIT 1")->fetch_assoc()['nombre'];
+    $categoriaPrueba=$bd->query("SELECT nombre FROM categorias_derivacion WHERE estado='Activo' ORDER BY cod_categoria LIMIT 1")->fetch_assoc()['nombre'];
+    $nuevaDerivacion=array_replace($nuevaDerivacion,['cod_estudiante'=>4,'fecha'=>$hoy,'materia'=>$materiaPrueba,
+        'categorias'=>[$categoriaPrueba],'motivo'=>'Derivacion de prueba con cita solicitada','prioridad'=>'Media',
+        'solicitar_cita'=>1,'cod_profesional'=>102]);
+    http('derivaciones/guardar.php',$nuevaDerivacion,'prueba_docente');
+    $solicitudGuardada=fila($bd,'SELECT cod_derivacion,solicitar_cita,cod_psicologa_solicitada FROM derivaciones ORDER BY cod_derivacion DESC LIMIT 1');
+    verificar((int)$solicitudGuardada['solicitar_cita']===1 && (int)$solicitudGuardada['cod_psicologa_solicitada']===102,'No guarda la cita solicitada desde el formulario docente.');
+    $idSolicitudPrueba=(int)$solicitudGuardada['cod_derivacion'];
+    $bd->query("UPDATE derivaciones SET solicitar_cita=0,cod_psicologa_solicitada=NULL WHERE cod_derivacion=$idSolicitudPrueba");
+    $r=http('citas/listar.php',null,'prueba_psicologa');
+    verificar(str_contains($r['cuerpo'],'Solicitudes de cita pendientes') && str_contains($r['cuerpo'],'registrar.php?cod_derivacion=1'),'La solicitud no aparece en la bandeja de Psicologia.');
+    $r=http('citas/listar.php',null,'prueba_psicologa_dos');
+    verificar(!str_contains($r['cuerpo'],'registrar.php?cod_derivacion=1'),'Muestra una solicitud dirigida a otra psicologa.');
     $r=http('citas/registrar.php?cod_derivacion=1');
     $post=formulario($r['cuerpo'],'form-cita');
+    verificar((int)$post['cod_psicologa']===102 && str_contains($r['cuerpo'],'Solicitud recibida'),'No conserva la psicologa pedida ni muestra el contexto de la solicitud.');
     verificar((int)$post['cod_estudiante']===1 && (int)$post['cod_derivacion']===1,'No transfiere la derivación a la cita.');
     $post['hora']='09:00'; $post['cod_usuario']=104;
     $r=http('citas/procesar_registrar.php',$post,'prueba_psicologa');
     $c=fila($bd,'SELECT * FROM citas ORDER BY cod_cita DESC LIMIT 1'); $idCita=(int)$c['cod_cita'];
-    verificar((int)$c['cod_psicologa']===102 && (int)$c['cod_derivacion']===1,'Pierde responsable o acepta autor del POST.');
     verificar(str_contains($r['cabeceras'],'editar.php?id='.$idCita),'No vuelve al detalle de la cita.');
+    rechaza(fn()=>cita_guardar($bd,$post,101),'Permite programar dos citas vigentes para la misma derivacion.');
+    $r=http('citas/listar.php',null,'prueba_psicologa');
+    verificar(!str_contains($r['cuerpo'],'registrar.php?cod_derivacion=1'),'La solicitud sigue pendiente despues de programar la cita.');
+    verificar((int)$c['cod_psicologa']===102 && (int)$c['cod_derivacion']===1,'Pierde responsable o acepta autor del POST.');
     $r=http('citas/editar.php?id='.$idCita);
     verificar(str_contains($r['cuerpo'],'historias_clinicas/registrar.php?cod_cita='.$idCita),'Falta enlace de cita a historia.');
     $r=http('historias_clinicas/registrar.php?cod_cita='.$idCita);
@@ -173,7 +197,7 @@ try {
     verificar((int)$i['cod_elaborado_por']===102,'Informe pierde autor.');
 
     // Nuevo episodio en el mismo expediente, sin reemplazar su derivación original.
-    $segunda=cita_guardar($bd,['cod_estudiante'=>1,'cod_derivacion'=>2,'fecha'=>$hoy,'hora'=>'10:00','estado'=>'Pendiente'],101);
+    $segunda=cita_guardar($bd,['cod_estudiante'=>1,'cod_derivacion'=>2,'cod_psicologa'=>102,'fecha'=>$hoy,'hora'=>'10:00','estado'=>'Pendiente'],101);
     $seguimiento2=seguimiento_guardar($bd,array_replace($seguimiento,['cod_cita'=>$segunda,'recomendaciones'=>'Recomendación segunda']),101);
     informe_crear($bd,informe_datos(array_replace($informe,['cod_seguimiento'=>$seguimiento2])),101);
     verificar((int)fila($bd,'SELECT cod_derivacion FROM informe_individual ORDER BY cod_informe DESC LIMIT 1')['cod_derivacion']===2,'Informe del segundo episodio usa la primera derivación.');
@@ -191,7 +215,7 @@ try {
     rechaza(fn()=>derivacion_cambiar_estado($bd,3,'Atendido',101),'Cierra una derivación sin historia/seguimiento.');
 
     // Errores de relación, duplicación, fechas y rollback de todos los efectos.
-    $otra=cita_guardar($bd,['cod_estudiante'=>2,'cod_derivacion'=>3,'fecha'=>$hoy,'hora'=>'11:00','estado'=>'Pendiente'],101);
+    $otra=cita_guardar($bd,['cod_estudiante'=>2,'cod_derivacion'=>3,'cod_psicologa'=>102,'fecha'=>$hoy,'hora'=>'11:00','estado'=>'Pendiente'],101);
     foreach ([['cod_cita'=>$otra],['cod_cita'=>$idCita],['cod_cita'=>0,'fecha'=>'2099-01-01'],['cod_cita'=>0,'proxima_sesion'=>$hoy],['cod_cita'=>0,'descripcion'=>''],['cod_historia'=>999999]] as $cambio) rechaza(fn()=>seguimiento_guardar($bd,array_replace($seguimiento,$cambio),101),'Acepta seguimiento inválido.');
     foreach ([['cod_derivacion'=>3],['hora'=>'09:15'],['hora'=>['09:00']],['fecha'=>'2026-02-30'],['fecha'=>'2020-01-01']] as $cambio) rechaza(fn()=>cita_guardar($bd,array_replace($post,$cambio),101),'Acepta cita inválida.');
     rechaza(fn()=>cita_guardar($bd,['estado'=>'Cancelada'],101,$idCita),'Cancela cita atendida.');
@@ -211,13 +235,13 @@ try {
             && $antes===$bd->query('SELECT * FROM seguimientos ORDER BY 1')->fetch_all(MYSQLI_ASSOC),'No revierte seguimiento, cita, historia y derivación juntos.');
     } finally { $bd->query('DROP TRIGGER fallo_auditoria'); }
 
-    $reserva=['cod_estudiante'=>4,'fecha'=>$hoy,'hora'=>'13:00','estado'=>'Pendiente'];
+    $reserva=['cod_estudiante'=>4,'cod_psicologa'=>102,'fecha'=>$hoy,'hora'=>'13:00','estado'=>'Pendiente'];
     $cancelable=cita_guardar($bd,$reserva,101);
     cita_guardar($bd,['estado'=>'Cancelada'],102,$cancelable);
     $reutilizada=cita_guardar($bd,$reserva,101);
     verificar($reutilizada!==$cancelable,'No libera horario de cita cancelada.');
     rechaza(fn()=>cita_guardar($bd,$reserva,101),'Dos citas ocupan el mismo turno del profesional.');
-    $otroProfesional=cita_guardar($bd,$reserva,102);
+    $otroProfesional=cita_guardar($bd,array_replace($reserva,['cod_psicologa'=>105]),101);
     verificar($otroProfesional!==$reutilizada,'No permite el mismo horario a profesionales distintos.');
     rechaza(fn()=>cita_guardar($bd,['estado'=>'Pendiente'],101,$cancelable),'Reactiva una cita cancelada.');
     // Cuatro procesos y conexiones compiten por un turno, sin serialización HTTP.
@@ -257,12 +281,12 @@ try {
     $r=http('derivaciones/eliminar.php',['cod_derivacion'=>2]+$token,'prueba_docente');
     verificar(fila($bd,'SELECT cod_derivacion FROM derivaciones WHERE cod_derivacion=2')!==[],'Elimina una derivación vinculada.');
     $bd->query("INSERT INTO derivaciones (cod_derivacion,fecha,cod_estudiante,cod_docente,motivo) VALUES (40,'$hoy',4,201,'Pendiente con cita')");
-    cita_guardar($bd,['cod_estudiante'=>4,'cod_derivacion'=>40,'fecha'=>$hoy,'hora'=>'16:00','estado'=>'Pendiente'],101);
+    cita_guardar($bd,['cod_estudiante'=>4,'cod_derivacion'=>40,'cod_psicologa'=>102,'fecha'=>$hoy,'hora'=>'16:00','estado'=>'Pendiente'],101);
     $r=http('derivaciones/eliminar.php',['cod_derivacion'=>40]+$token,'prueba_docente');
     verificar(fila($bd,'SELECT estado FROM derivaciones WHERE cod_derivacion=40')===['estado'=>'Pendiente'],'Elimina una derivación pendiente con cita y rompe el origen.');
     verificar((int)fila($bd,"SELECT COUNT(*) n FROM auditoria WHERE modulo IN ('citas','seguimientos','informes','derivaciones')")['n']>=10,'Falta auditoría del flujo.');
     if (in_array('--navegador',$argv,true)) {
-        $bd->query("INSERT INTO derivaciones (cod_derivacion,fecha,cod_estudiante,cod_docente,motivo) VALUES (4,'$hoy',3,201,'Motivo navegador del flujo')");
+        $bd->query("INSERT INTO derivaciones (cod_derivacion,fecha,cod_estudiante,cod_docente,motivo,solicitar_cita,cod_psicologa_solicitada) VALUES (41,'$hoy',3,201,'Motivo navegador del flujo',1,102)");
         $chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';
         if (!is_file($chrome)) throw new RuntimeException('No se encontró Chrome para --navegador.');
         file_put_contents($temporal.'/fixture.php','<?php return '.var_export(['app'=>$temporal.'/app','sesiones'=>$temporal.'/sesiones','secreto'=>$secreto,'navegador'=>true,'cuatro_roles'=>true],true).';');
@@ -271,7 +295,7 @@ try {
         $doc=new DOMDocument(); @$doc->loadHTML($html);
         $resultado=json_decode($doc->getElementById('resultado')?->textContent ?? '',true);
         verificar(($resultado['ok']??false)===true,'Navegador: '.json_encode($resultado,JSON_UNESCAPED_UNICODE));
-        $cadena=fila($bd,'SELECT i.cod_informe FROM informe_individual i JOIN seguimientos s ON s.cod_seguimiento=i.cod_seguimiento JOIN historias_clinicas h ON h.cod_historia=s.cod_historia JOIN citas c ON c.cod_cita=s.cod_cita WHERE i.cod_estudiante=3 AND i.cod_derivacion=4 AND h.cod_derivacion_origen=4 AND h.cod_cita_origen=c.cod_cita AND c.cod_derivacion=4');
+        $cadena=fila($bd,'SELECT i.cod_informe FROM informe_individual i JOIN seguimientos s ON s.cod_seguimiento=i.cod_seguimiento JOIN historias_clinicas h ON h.cod_historia=s.cod_historia JOIN citas c ON c.cod_cita=s.cod_cita WHERE i.cod_estudiante=3 AND i.cod_derivacion=41 AND h.cod_derivacion_origen=41 AND h.cod_cita_origen=c.cod_cita AND c.cod_derivacion=41');
         verificar($cadena!==[],'El navegador no conservó toda la cadena al guardar.');
         echo 'Navegador Chrome: '.$resultado['total']." comprobaciones correctas.\n";
     }

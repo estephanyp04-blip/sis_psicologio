@@ -132,12 +132,28 @@ try {
     verificar($antes === estructura($bd), 'Reaplicar la migración altera el esquema.');
     verificar((int)consultar($bd, 'SELECT COUNT(*) n FROM roles')['n'] === 4, 'Faltan roles al instalar.');
     verificar((int)consultar($bd, 'SELECT COUNT(*) n FROM paralelos')['n'] === 4, 'Faltan catálogos al instalar.');
+    $permiso = static function (mysqli $base, string $rol, string $modulo): array {
+        $rolSql = $base->real_escape_string($rol);
+        $moduloSql = $base->real_escape_string($modulo);
+        return consultar($base, "SELECT p.* FROM permisos p JOIN roles r ON r.cod_rol=p.cod_rol JOIN modulos m ON m.cod_modulo=p.cod_modulo WHERE r.nombre='$rolSql' AND m.nombre='$moduloSql'");
+    };
+    verificar((int)$permiso($bd, 'Docente', 'Dashboard')['puede_ver'] === 0
+        && (int)$permiso($bd, 'Docente', 'Estudiantes')['puede_ver'] === 0
+        && (int)$permiso($bd, 'Director', 'Dashboard')['puede_ver'] === 0, 'La instalación concede módulos fuera de la matriz base.');
+    verificar((int)$permiso($bd, 'Psicóloga', 'Derivaciones')['puede_editar'] === 0
+        && (int)$permiso($bd, 'Psicóloga', 'Derivaciones')['puede_cambiar_estado'] === 1
+        && (int)$permiso($bd, 'Docente', 'Derivaciones')['puede_editar'] === 1
+        && (int)$permiso($bd, 'Docente', 'Derivaciones')['puede_cambiar_estado'] === 0, 'Editar derivaciones y cambiar su estado no son permisos separados.');
 
     // Ensaya la migración normalizada con datos sintéticos y conserva cada columna previa.
     $bases[] = $actualizacion;
     ejecutar([PHP_BINARY, $raiz . '/database/migrar.php', '--base=' . $actualizacion, '--aplicar', '--instalar']);
     $copia = conectar($actualizacion);
     $copia->query('ALTER TABLE historias_clinicas DROP COLUMN tutor_curso');
+    $copia->query("DELETE FROM esquema_migraciones_normalizadas WHERE version='007_permisos_cambio_estado'");
+    $copia->query('ALTER TABLE permisos DROP COLUMN puede_cambiar_estado');
+    $copia->query("UPDATE permisos p JOIN modulos m ON m.cod_modulo=p.cod_modulo SET p.puede_ver=1 WHERE (p.cod_rol=3 AND m.nombre IN ('Dashboard','Estudiantes')) OR (p.cod_rol=4 AND m.nombre='Dashboard')");
+    $copia->query("UPDATE permisos p JOIN modulos m ON m.cod_modulo=p.cod_modulo SET p.puede_editar=1 WHERE p.cod_rol=2 AND m.nombre='Derivaciones'");
     prueba_autores($copia);
     prueba_estudiantes($copia, 1);
     $copia->query("INSERT INTO historias_clinicas (cod_historia,cod_estudiante,cod_psicologa,fecha_apertura,motivo_consulta,observaciones) VALUES (1,1,101,'2026-01-01','Motivo previo','Conservar observaciones')");
@@ -149,14 +165,23 @@ try {
     foreach (array_keys(estructura($copia)) as $tabla) $filasAntes[$tabla] = $copia->query("SELECT * FROM `$tabla` ORDER BY 1")->fetch_all(MYSQLI_ASSOC);
     $esquemaAntes = estructura($copia);
     $simulacion = ejecutar([PHP_BINARY, $raiz . '/database/migrar.php', '--base=' . $actualizacion, '--comprobar']);
-    verificar(str_contains($simulacion, 'ADD COLUMN tutor_curso') && estructura($copia) === $esquemaAntes, 'La simulación altera el esquema o no detecta el tutor pendiente.');
+    verificar(str_contains($simulacion, 'ADD COLUMN tutor_curso') && str_contains($simulacion, 'ADD COLUMN puede_cambiar_estado')
+        && estructura($copia) === $esquemaAntes, 'La simulación altera el esquema o no detecta migraciones pendientes.');
     ejecutar([PHP_BINARY, $raiz . '/database/migrar.php', '--base=' . $actualizacion, '--aplicar']);
     verificar(estructura($bd) === estructura($copia), 'Instalación y actualización no producen el mismo esquema.');
     foreach ($filasAntes as $tabla => $filas) {
+        if (in_array($tabla, ['permisos', 'esquema_migraciones_normalizadas'], true)) continue;
         $despues = $copia->query("SELECT * FROM `$tabla` ORDER BY 1")->fetch_all(MYSQLI_ASSOC);
         verificar(count($filas) === count($despues), "La migración cambia el número de filas: $tabla");
         foreach ($filas as $i => $fila) verificar($fila === array_intersect_key($despues[$i], $fila), "La migración modificó datos previos: $tabla");
     }
+    verificar((int)$permiso($copia, 'Docente', 'Dashboard')['puede_ver'] === 0
+        && (int)$permiso($copia, 'Docente', 'Estudiantes')['puede_ver'] === 0
+        && (int)$permiso($copia, 'Director', 'Dashboard')['puede_ver'] === 0, 'La migración no corrige permisos iniciales.');
+    verificar((int)$permiso($copia, 'Psicóloga', 'Derivaciones')['puede_editar'] === 0
+        && (int)$permiso($copia, 'Psicóloga', 'Derivaciones')['puede_cambiar_estado'] === 1
+        && (int)$permiso($copia, 'Docente', 'Derivaciones')['puede_editar'] === 1
+        && (int)$permiso($copia, 'Docente', 'Derivaciones')['puede_cambiar_estado'] === 0, 'La migración mezcla editar derivaciones con cambiar su estado.');
     verificar((int)consultar($copia, 'SELECT ultimo FROM informes_secuencia WHERE id=1')['ultimo'] === 42, 'La migración altera la secuencia.');
     $planificar = require $raiz . '/database/migrations_normalizadas/001_tutor_historia.php';
     verificar($planificar($copia) === [], 'La migración no es idempotente.');
@@ -343,7 +368,7 @@ try {
     verificar($r['codigo'] === 200 && str_contains($r['cuerpo'],'data-telefono="70000000"'), 'No ofrece el contacto de la cuenta.');
     $dom = new DOMDocument(); @$dom->loadHTML('<?xml encoding="UTF-8">'.$r['cuerpo']); $xpath = new DOMXPath($dom);
     $opciones = array_map(static fn($n)=>(int)$n->getAttribute('value'), iterator_to_array($xpath->query('//select[@id="cod_usuario"]/option[@value!=""]')));
-    verificar(in_array(105,$opciones,true) && !array_intersect([101,103,104,107],$opciones), 'Ofrece cuentas asignadas, inactivas o de otro rol.');
+    verificar(in_array(105,$opciones,true) && in_array(106,$opciones,true) && !array_intersect([101,103,104,107],$opciones), 'Ofrece cuentas asignadas, inactivas o de otro rol, o excluye un docente disponible.');
     $alta = ['cod_usuario'=>105,'nombres'=>'Ana','apellidos'=>'Prueba','telefono'=>'70000000','correo'=>'ana@example.test','materias'=>['Física','Química','Tecnología','Religión']] + $token;
     foreach ([[],['Materia inventada'],[['Física']]] as $invalidas) {
         $r = http_prueba('docentes/guardar.php',array_replace($alta,['materias'=>$invalidas]));
@@ -351,6 +376,8 @@ try {
     }
     $r = http_prueba('docentes/guardar.php',array_replace($alta,['cod_usuario'=>107]));
     verificar(!consultar($bd,'SELECT cod_docente FROM docentes WHERE cod_persona=1008'), 'Registra una cuenta inactiva.');
+    $r = http_prueba('docentes/guardar.php',array_replace($alta,['cod_usuario'=>104]));
+    verificar(str_contains($r['cabeceras'],'registrar.php') && !consultar($bd,'SELECT cod_docente FROM docentes WHERE cod_persona=1004'), 'Registra una cuenta de otro rol como docente.');
     $r = http_prueba('docentes/guardar.php',array_replace($alta,['materias'=>[...$alta['materias'],'Física']]));
     $idDocente = (int)(consultar($bd,'SELECT cod_docente FROM docentes WHERE cod_persona=1006')['cod_docente'] ?? 0);
     verificar($r['codigo'] === 302 && $idDocente > 0, 'No registra el docente con varias materias.');
@@ -359,6 +386,9 @@ try {
     $r = http_prueba('docentes/editar.php?id='.$idDocente);
     $editarDocente = formulario($r['cuerpo'],'formDocente');
     verificar($editarDocente['materias'] === $asignadas(), 'Editar no recupera todas las casillas seleccionadas.');
+    $cuentaAntes = consultar($bd,"SELECT cod_persona FROM docentes WHERE cod_docente=$idDocente");
+    $r = http_prueba('docentes/actualizar.php',array_replace($editarDocente,['cod_usuario'=>104]));
+    verificar(str_contains($r['cabeceras'],'editar.php?id='.$idDocente) && $cuentaAntes === consultar($bd,"SELECT cod_persona FROM docentes WHERE cod_docente=$idDocente"), 'Permite reasignar un docente a una cuenta de otro rol.');
     $r = http_prueba('docentes/actualizar.php',array_replace($editarDocente,['materias'=>['Matemática','Religión']]));
     verificar(str_contains($r['cabeceras'],'ver.php') && $asignadas() === ['Matemática','Religión'], 'No permite cambiar varias materias.');
     $r = http_prueba('docentes/listar.php?buscar='.rawurlencode('Matemática'));

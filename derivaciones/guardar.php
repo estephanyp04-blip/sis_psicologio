@@ -66,15 +66,12 @@ if ($idUsuario <= 0) {
     errorDerivacion('Inicie sesión con una cuenta de Docente o Administrador antes de registrar la derivación.');
 }
 try {
-    $stmtUsuario = $conexion->prepare("SELECT cod_rol FROM usuarios WHERE cod_usuario = ? AND estado = 'Activo' LIMIT 1");
+    $stmtUsuario = $conexion->prepare("SELECT cod_usuario FROM usuarios WHERE cod_usuario = ? AND estado = 'Activo' LIMIT 1");
     $stmtUsuario->bind_param('i', $idUsuario);
     $stmtUsuario->execute();
     $usuarioActual = $stmtUsuario->get_result()->fetch_assoc();
     $stmtUsuario->close();
-    $idRol = (int) ($usuarioActual['cod_rol'] ?? 0);
-    if (!in_array($idRol, [1, 3], true)) {
-        errorDerivacion('Su cuenta no tiene permiso para registrar derivaciones.');
-    }
+    if (!$usuarioActual) errorDerivacion('La cuenta ya no está activa.');
     $descripcionImagen = derivacion_imagen_descripcion($descripcionImagen);
     $subidaImagen = derivacion_imagen_validar($_FILES['imagen'] ?? null, $descripcionImagen);
     if ($subidaImagen === null && $descripcionImagen !== '') {
@@ -126,21 +123,18 @@ try {
     if (!$existeEstudiante) {
         errorDerivacion('El estudiante seleccionado no existe o no está activo.');
     }
-    // Un docente solo puede registrar derivaciones a su propio nombre.
-    if ($idRol === 3) {
-        $stmtDocente = $conexion->prepare('SELECT d.cod_docente FROM docentes d
-            INNER JOIN usuarios u ON u.cod_persona=d.cod_persona WHERE u.cod_usuario = ? LIMIT 2');
-        $stmtDocente->bind_param('i', $idUsuario);
+    // Las cuentas vinculadas a un perfil docente solo pueden atribuirse sus propios reportes.
+    $idDocenteSesion = (int) ($_SESSION['cod_docente'] ?? 0);
+    if ($idDocenteSesion > 0) {
+        $stmtDocente = $conexion->prepare("SELECT d.cod_docente FROM docentes d
+            INNER JOIN usuarios u ON u.cod_persona=d.cod_persona
+            WHERE u.cod_usuario=? AND d.cod_docente=? AND d.estado='Activo' LIMIT 1");
+        $stmtDocente->bind_param('ii', $idUsuario, $idDocenteSesion);
         $stmtDocente->execute();
-        $resultadoDocente = $stmtDocente->get_result();
-        if ($resultadoDocente->num_rows !== 1) {
-            $stmtDocente->close();
-            unset($_SESSION['cod_docente']);
-            errorDerivacion('Su cuenta no tiene un docente asociado de forma única. Solicite al administrador revisar la asignación de su cuenta.');
-        }
-        $idDocente = (int) $resultadoDocente->fetch_assoc()['cod_docente'];
+        $docenteVinculado = $stmtDocente->get_result()->fetch_assoc();
         $stmtDocente->close();
-        $_SESSION['cod_docente'] = $idDocente;
+        if (!$docenteVinculado) errorDerivacion('El perfil docente vinculado a su cuenta ya no está activo.');
+        $idDocente = $idDocenteSesion;
     } else {
         if ($subidaImagen !== null && $idDocenteElegido <= 0) {
             errorDerivacion('Seleccione el docente responsable antes de adjuntar la imagen.');

@@ -13,13 +13,13 @@ Ejecutar desde la raíz del proyecto, con MySQL iniciado y la conexión de `conf
 & C:\xampp\php\php.exe tests\estadisticas.php --navegador
 ```
 
-Últimos resultados con el esquema normalizado: seguridad, estadísticas y esquema/importación, 7 de octubre de 2026; las demás suites, 6 de octubre de 2026.
+Últimos resultados completos con el esquema normalizado: todas las suites, 17 de octubre de 2026.
 
 | Suite | Comprobaciones |
 |---|---:|
-| Seguridad y flujos | 927 |
+| Seguridad y flujos | 1029 |
 | Actualización de informes | 31 |
-| Esquema, importación, estudiantes y docentes, con `--navegador` | 326 + 10 verificaciones dentro de Chrome |
+| Esquema, importación, estudiantes y docentes, con `--navegador` | 347 + 10 verificaciones dentro de Chrome |
 | Historias y derivaciones, con `--navegador` | 183 + 14 verificaciones dentro de Chrome |
 | Trazabilidad, con `--navegador` | 120 + 11 verificaciones dentro de Chrome |
 | Estadísticas y panel, con `--navegador` | 74 + 19 verificaciones en Chrome a 1440 px y 19 a 390 px |
@@ -30,11 +30,13 @@ La opción `--navegador` busca Chrome en `C:/Program Files/Google/Chrome/Applica
 
 ### Seguridad y flujos
 
-`seguridad.php` crea una copia temporal de los PHP y un servidor en `127.0.0.1`, con puerto aleatorio y un secreto exclusivo. Al terminar elimina servidor, sesiones y archivos temporales, verificando la ruta de limpieza. `seguridad_router.php` prepara las cuentas mediante `personas` y también oculta las tablas/vistas de negocio con datos temporales.
+`seguridad.php` crea una copia temporal de los PHP y un servidor en `127.0.0.1`, con puerto aleatorio y un secreto exclusivo. Al terminar elimina servidor, sesiones y archivos temporales, verificando la ruta de limpieza. `seguridad_router.php` prepara las cuentas mediante tablas temporales, reemplaza también `modulos` y `permisos` en la conexión de prueba y oculta las tablas/vistas de negocio. La fixture concede intencionalmente permisos excesivos a Docente y Director en Dashboard, Estadísticas y Estudiantes, y permiso de edición de derivaciones a Docente sin cambio de estado.
 
 Cobertura:
 
-- Las 53 rutas, los cuatro roles, métodos HTTP y tokens CSRF ausentes, incorrectos, enviados como arreglo y válidos.
+- Las 59 rutas, los cuatro roles, métodos HTTP y tokens CSRF ausentes, incorrectos, enviados como arreglo y válidos.
+- Rechazo por servidor de concesiones de base excesivas a Docente y Director en Dashboard, Estadísticas y Estudiantes; edición de una derivación propia no habilita cambiar su estado.
+- El editor y el guardado de permisos mantienen bloqueados esos módulos para Docente y Director, incluso ante un POST manipulado.
 - Sesiones vencidas/revocadas, usuarios y roles inactivos, cambios de contraseña/rol y vínculo docente inválido.
 - Acceso directo por GET y POST rechazado a configuración y archivos internos, incluidos `datos.php`, `csv.php` y `formulario.php` dentro de los módulos.
 - Lectura, edición y eliminación de derivaciones propias; rechazo de operaciones sobre derivaciones ajenas.

@@ -6,7 +6,7 @@ $raiz = dirname(__DIR__);
 $permisos = require $raiz . '/config/permisos.php';
 $soloAcceso = in_array('--solo-acceso', $argv, true);
 $internosModulo = [
-    'estudiantes/datos.php', 'estudiantes/csv.php', 'derivaciones/datos.php',
+    'estudiantes/datos.php', 'estudiantes/csv.php', 'derivaciones/datos.php', 'derivaciones/evidencias.php',
     'citas/datos.php', 'citas/formulario.php', 'historias_clinicas/datos.php',
     'historias_clinicas/formulario.php', 'informes/datos.php', 'estadisticas/datos.php',
 ];
@@ -132,8 +132,11 @@ PHP
     foreach ([
         ['usuarios/guardar.php', 'POST', 2], ['usuarios/actualizar.php', 'POST', 3],
         ['docentes/listar.php', 'GET', 3], ['estudiantes/listar.php', 'GET', 3],
-        ['historias_clinicas/ver.php', 'GET', 4], ['citas/cancelar.php', 'POST', 4],
+        ['index.php', 'GET', 3], ['index.php', 'GET', 4],
+        ['estudiantes/listar.php', 'GET', 4], ['estudiantes/guardar.php', 'POST', 3],
         ['estadisticas/index.php', 'GET', 3], ['estadisticas/index.php', 'GET', 4],
+        ['derivaciones/cambiar_estado.php', 'POST', 3],
+        ['historias_clinicas/ver.php', 'GET', 4], ['citas/cancelar.php', 'POST', 4],
         ['derivaciones/editar.php', 'GET', 2], ['informes/guardar.php', 'POST', 4],
     ] as [$ruta, $metodo, $rol]) {
         $r = peticion($ruta, $metodo, ['rol' => $rol], ['csrf' => $token]);
@@ -263,6 +266,43 @@ PHP
             }
             if ($ruta === 'estudiantes/listar.php') {
                 comprobar($xpath->query('//form[contains(@class,"formulario-retirar") and @action="cambiar_estado.php"]')->length === 2, 'El retiro no apunta al receptor centralizado.');
+            }
+        }
+        $r = peticion('roles/editar.php?id=2', 'GET', ['rol' => 1, 'negocio' => true]);
+        $htmlPermisos = explode("\n__ESTADO_PRUEBA__", $r['cuerpo'])[0];
+        comprobar($r['codigo'] === 200 && str_contains($htmlPermisos, 'Cambiar estado')
+            && str_contains($htmlPermisos, 'puede_cambiar_estado'), 'El editor de roles no muestra el permiso independiente de cambio de estado.');
+        foreach ([3 => 'Docente', 4 => 'Director'] as $idRolProtegido => $nombreRol) {
+            $r = peticion('roles/editar.php?id=' . $idRolProtegido, 'GET', ['rol' => 1, 'negocio' => true]);
+            $htmlProtegido = explode("\n__ESTADO_PRUEBA__", $r['cuerpo'])[0];
+            $domProtegido = new DOMDocument();
+            @$domProtegido->loadHTML('<?xml encoding="UTF-8">' . $htmlProtegido);
+            $xpathProtegido = new DOMXPath($domProtegido);
+            comprobar($r['codigo'] === 200, "No abre el editor del rol $nombreRol.");
+            foreach (['Dashboard', 'Estadísticas', 'Estudiantes'] as $moduloProtegido) {
+                $fila = $xpathProtegido->query('//tr[th[normalize-space(.)="' . $moduloProtegido . '"]]')->item(0);
+                comprobar($fila instanceof DOMElement
+                    && $xpathProtegido->query('.//input', $fila)->length === 0
+                    && str_contains($fila->textContent, '—'), "El editor permite conceder $moduloProtegido al rol $nombreRol.");
+            }
+
+            $idsModuloPrueba = [];
+            foreach ($permisos as $politica) {
+                if (!isset($idsModuloPrueba[$politica['modulo']])) $idsModuloPrueba[$politica['modulo']] = count($idsModuloPrueba) + 1;
+            }
+            $concesionesForzadas = [];
+            foreach ($idsModuloPrueba as $idModuloPrueba) {
+                $concesionesForzadas[$idModuloPrueba] = array_fill_keys(['puede_ver', 'puede_crear', 'puede_editar', 'puede_cambiar_estado', 'puede_eliminar'], '1');
+            }
+            $r = peticion('roles/actualizar.php', 'POST', ['rol' => 1, 'negocio' => true], [
+                'csrf' => $token, 'cod_rol' => $idRolProtegido, 'nombre' => $nombreRol,
+                'descripcion' => 'Prueba de permisos protegidos', 'estado' => 'Activo', 'permisos' => $concesionesForzadas,
+            ]);
+            $filasPermiso = array_values(array_filter(estadoNegocio($r)['permisos_protegidos'] ?? [], static fn(array $permiso): bool => (int)$permiso['cod_rol'] === $idRolProtegido));
+            comprobar($r['codigo'] === 303 && count($filasPermiso) === 3, "El guardado de permisos protegidos no terminó para $nombreRol.");
+            foreach ($filasPermiso as $permiso) {
+                comprobar(array_sum(array_map('intval', array_slice($permiso, 2))) === 0,
+                    "El guardado permitió conceder {$permiso['nombre']} al rol $nombreRol.");
             }
         }
         $r = peticion('cerrar_sesion.php', 'POST', ['rol' => 3, 'negocio' => true], ['csrf' => $token]);

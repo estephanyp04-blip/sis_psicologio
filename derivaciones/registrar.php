@@ -87,12 +87,12 @@ $motivoAnt         = $d['motivo'] ?? '';
 $observacionesAnt  = $d['observaciones'] ?? '';
 $prioridadAnt      = $d['prioridad'] ?? 'Media';
 $categoriasAnt     = is_array($d['categorias'] ?? null) ? $d['categorias'] : [];
-$solicitarCitaAnt  = !array_key_exists('solicitar_cita', $d) || (int) $d['solicitar_cita'] === 1;
+$solicitarCitaAnt  = (int) ($d['solicitar_cita'] ?? 0) === 1;
 $idProfesionalAnt  = (int) ($d['cod_profesional'] ?? 0);
 $descripcionImagenAnt = is_string($d['descripcion_imagen'] ?? null) ? $d['descripcion_imagen'] : '';
-$rolActual = (int)($_SESSION['cod_rol'] ?? 0);
+$idDocenteSesion = (int) ($_SESSION['cod_docente'] ?? 0);
 $docentesDisponibles = [];
-if ($rolActual === 1) {
+if ($idDocenteSesion === 0) {
     $docentesDisponibles = $conexion->query("SELECT d.cod_docente,p.nombres,p.apellidos
         FROM docentes d INNER JOIN personas p ON p.cod_persona=d.cod_persona
         WHERE d.estado='Activo' ORDER BY p.apellidos,p.nombres")->fetch_all(MYSQLI_ASSOC);
@@ -237,7 +237,7 @@ $materias = array_column(
                                 <?php endforeach; ?>
                             </datalist>
                         </div>
-                        <?php if ($rolActual === 1): ?>
+                        <?php if ($idDocenteSesion === 0): ?>
                             <div class="col-md-6">
                                 <label for="cod_docente" class="form-label">Docente que realiza la derivación <span class="text-danger">*</span></label>
                                 <select name="cod_docente" id="cod_docente" class="form-select" required>
@@ -258,7 +258,7 @@ $materias = array_column(
 
                 <!-- 2. MOTIVO DE DERIVACIÓN -->
                 <div class="form-section mb-5">
-                    <h5 class="section-title"><i class="bi bi-exclamation-circle text-danger me-2"></i>2. Motivo de Derivación</h5>
+                    <h5 class="section-title"><i class="bi bi-exclamation-circle text-danger me-2"></i>2. Motivo de derivación</h5>
                     <hr>
 
                     <div class="mb-4">
@@ -325,17 +325,20 @@ $materias = array_column(
                 </div>
 
                 <!-- 3. SOLICITUD DE CITA -->
-                <div class="form-section mb-4">
-                    <h5 class="section-title"><i class="bi bi-calendar-event text-danger me-2"></i>3. Solicitud de Cita Psicológica</h5>
+                <div class="form-section mb-5">
+                    <h5 class="section-title"><i class="bi bi-calendar-event text-danger me-2"></i>3. Solicitud de cita con Psicología</h5>
                     <hr>
 
                     <div class="cita-box p-4 rounded border">
-                        <div class="form-check mb-4">
+                        <div class="form-check mb-3">
                             <input class="form-check-input" type="checkbox" name="solicitar_cita" value="1"
-                                   id="solicitar_cita" <?= $solicitarCitaAnt ? 'checked' : '' ?>>
+                                   id="solicitar_cita" <?= $solicitarCitaAnt ? 'checked' : '' ?> aria-describedby="ayudaSolicitudCita">
                             <label class="form-check-label fw-semibold" for="solicitar_cita">
-                                Agendar cita de evaluación con el departamento de psicología
+                                Sí, solicitar una cita de evaluación psicológica para este estudiante
                             </label>
+                        </div>
+                        <div id="ayudaSolicitudCita" class="form-text mb-3">
+                            Marque esta opción si desea que Psicología atienda al estudiante a partir de esta derivación.
                         </div>
 
                         <div class="row g-3">

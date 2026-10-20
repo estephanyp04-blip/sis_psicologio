@@ -8,13 +8,26 @@ $cita = $id ? flujo_fila($conexion, 'SELECT c.*,CONCAT(p.nombres,\' \',p.apellid
     LEFT JOIN personas p ON p.cod_persona=u.cod_persona
     WHERE c.cod_cita=?', [$id]) : null;
 if (isset($editarCita) && !$cita) { header('Location: listar.php'); exit; }
-$datos = $cita ?? ['cod_estudiante' => 0,'cod_derivacion' => 0,'fecha' => date('Y-m-d'),'hora' => '', 'estado' => 'Pendiente','observaciones' => ''];
+$datos = $cita ?? ['cod_estudiante' => 0,'cod_derivacion' => 0,'cod_psicologa' => 0,'fecha' => date('Y-m-d'),'hora' => '', 'estado' => 'Pendiente','observaciones' => ''];
+$idDerivacionOrigen = $cita ? (int) ($cita['cod_derivacion'] ?? 0) : (int) filter_var($_GET['cod_derivacion'] ?? 0, FILTER_VALIDATE_INT);
+$origen = null;
 if (!$cita) {
-    $derivacion = (int)filter_var($_GET['cod_derivacion'] ?? 0, FILTER_VALIDATE_INT);
-    if ($derivacion) {
-        $origen = flujo_fila($conexion, 'SELECT cod_estudiante,cod_derivacion FROM derivaciones WHERE cod_derivacion=?', [$derivacion]);
+    if ($idDerivacionOrigen) {
+        $origen = flujo_fila($conexion, 'SELECT d.cod_estudiante,d.cod_derivacion,d.solicitar_cita,d.cod_psicologa_solicitada,
+            CONCAT(e.nombres,\' \',e.apellidos) AS estudiante,
+            CONCAT(p.nombres,\' \',p.apellidos) AS psicologa_solicitada
+            FROM derivaciones d
+            INNER JOIN estudiantes e ON e.cod_estudiante=d.cod_estudiante
+            LEFT JOIN usuarios u ON u.cod_usuario=d.cod_psicologa_solicitada
+            LEFT JOIN personas p ON p.cod_persona=u.cod_persona
+            WHERE d.cod_derivacion=?', [$idDerivacionOrigen]);
         if (!$origen) { http_response_code(404); exit('Derivación no encontrada.'); }
-        $datos = array_replace($datos, $origen);
+        $datos = array_replace($datos, $origen, [
+            'cod_psicologa' => (int) ($origen['cod_psicologa_solicitada'] ?? 0),
+            'observaciones' => (int) ($origen['solicitar_cita'] ?? 0) === 1
+                ? 'Solicitud de cita recibida desde la derivacion #' . $idDerivacionOrigen
+                : '',
+        ]);
     }
 }
 $recuperados = $_SESSION['datos_cita'] ?? [];
@@ -22,6 +35,13 @@ if ((int)($recuperados['cod_cita'] ?? 0) === $id) $datos = array_replace($datos,
 $mensaje = $_SESSION['mensaje_cita'] ?? '';
 unset($_SESSION['datos_cita'], $_SESSION['mensaje_cita']);
 $estudiantes = $conexion->query("SELECT cod_estudiante,CONCAT(apellidos,', ',nombres) nombre FROM estudiantes WHERE estado='Activo' ORDER BY apellidos,nombres")->fetch_all(MYSQLI_ASSOC);
+$profesionales = $conexion->query("SELECT u.cod_usuario,CONCAT(p.nombres,' ',p.apellidos) nombre
+    FROM usuarios u INNER JOIN personas p ON p.cod_persona=u.cod_persona
+    WHERE u.cod_rol=2 AND u.estado='Activo' ORDER BY p.apellidos,p.nombres")->fetch_all(MYSQLI_ASSOC);
+$idUsuarioSesion = (int) ($_SESSION['cod_usuario'] ?? 0);
+$rolUsuarioSesion = (int) ($_SESSION['cod_rol'] ?? 0);
+$idPsicologaSeleccionada = (int) ($datos['cod_psicologa'] ?? 0);
+if (!$cita && $rolUsuarioSesion === 2) $idPsicologaSeleccionada = $idUsuarioSesion;
 $derivaciones = $conexion->query("SELECT d.cod_derivacion,d.cod_estudiante,d.estado,CONCAT(e.apellidos,', ',e.nombres) nombre
     FROM derivaciones d JOIN estudiantes e ON e.cod_estudiante=d.cod_estudiante
     ORDER BY d.fecha DESC,d.cod_derivacion DESC")->fetch_all(MYSQLI_ASSOC);
@@ -32,6 +52,10 @@ include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/sid
 <h1><?= login_html($tituloPagina) ?></h1>
 <?php if ($mensaje): ?><div class="alert alert-danger"><?= login_html($mensaje) ?></div><?php endif; ?>
 <?php if (isset($_GET['exito'])): ?><div class="alert alert-success">Cita guardada correctamente.</div><?php endif; ?>
+<?php if ($origen && (int) ($origen['solicitar_cita'] ?? 0) === 1): ?>
+<div class="alert alert-info"><strong>Solicitud recibida.</strong> La docente pidió una cita para <?= login_html($origen['estudiante']) ?>.
+<?php if (!empty($origen['psicologa_solicitada'])): ?> Psicóloga solicitada: <?= login_html($origen['psicologa_solicitada']) ?>.<?php endif; ?></div>
+<?php endif; ?>
 <div class="card p-4">
 <p>Responsable: <?= login_html($cita ? ($cita['profesional'] ?? 'Sin responsable registrado') : ($_SESSION['nombre'] ?? 'Usuario de la sesión')) ?>.</p>
 <form id="form-cita" method="POST" action="<?= $id ? 'procesar_editar.php' : 'procesar_registrar.php' ?>">
@@ -54,6 +78,21 @@ include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/sid
 <div class="col-md-4"><label for="estado" class="form-label">Estado</label><select id="estado" name="estado" class="form-select">
 <?php foreach ($id ? ['Pendiente','Reprogramada','Atendida','Cancelada'] : ['Pendiente'] as $estado): ?><option value="<?= $estado ?>" <?= $estado===$datos['estado'] ? 'selected' : '' ?>><?= $estado ?></option><?php endforeach; ?></select></div>
 <div class="col-12"><label for="observaciones" class="form-label">Observaciones</label><textarea id="observaciones" name="observaciones" class="form-control" rows="4" maxlength="5000"><?= login_html($datos['observaciones'] ?? '') ?></textarea></div>
+<div class="col-md-6">
+<?php if ($id): ?>
+<label class="form-label">Psicóloga responsable</label><input class="form-control" value="<?= login_html($cita['profesional'] ?? 'Sin responsable') ?>" readonly>
+<?php elseif ($rolUsuarioSesion === 2): ?>
+<label class="form-label">Psicóloga responsable</label><input class="form-control" value="<?= login_html($_SESSION['nombre_completo'] ?? $_SESSION['nombre'] ?? 'Psicóloga de la sesión') ?>" readonly>
+<input type="hidden" name="cod_psicologa" value="<?= $idUsuarioSesion ?>">
+<?php else: ?>
+<label for="psicologa" class="form-label">Psicóloga responsable <span class="text-danger">*</span></label>
+<select id="psicologa" name="cod_psicologa" class="form-select" required>
+<option value="">Seleccione una psicóloga</option>
+<?php foreach ($profesionales as $profesional): ?><option value="<?= (int)$profesional['cod_usuario'] ?>" <?= $idPsicologaSeleccionada === (int)$profesional['cod_usuario'] ? 'selected' : '' ?>><?= login_html($profesional['nombre']) ?></option><?php endforeach; ?>
+</select>
+<?php if (!$profesionales): ?><div class="form-text text-danger">No hay psicólogas activas para asignar la cita.</div><?php endif; ?>
+<?php endif; ?>
+</div>
 </div><div class="mt-3"><button class="btn btn-primary">Guardar cita</button> <a class="btn btn-light" href="listar.php">Volver</a></div>
 </form></div>
 <?php if ($cita):

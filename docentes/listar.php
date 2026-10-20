@@ -122,10 +122,10 @@ include '../includes/navbar.php';
             </p>
         </div>
 
-        <a href="registrar.php" class="btn btn-primary">
+        <?php if (login_puede('docentes/registrar.php')): ?><a href="registrar.php" class="btn btn-primary">
             <i class="bi bi-person-plus me-1"></i>
             Registrar docente
-        </a>
+        </a><?php endif; ?>
     </div>
 
     <div class="card shadow-sm mb-4">
@@ -249,12 +249,12 @@ include '../includes/navbar.php';
                                                 <i class="bi bi-eye"></i>
                                             </a>
 
-                                            <a href="editar.php?id=<?= (int)
+                                            <?php if (login_puede('docentes/editar.php')): ?><a href="editar.php?id=<?= (int)
                                                 $docente['cod_docente']; ?>"
                                                class="btn btn-sm btn-outline-warning"
                                                title="Editar docente">
                                                 <i class="bi bi-pencil"></i>
-                                            </a>
+                                            </a><?php endif; ?>
 
                                         </div>
                                     </td>

@@ -3,6 +3,8 @@ require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('usuarios/listar.php');
 
 require_once '../config/conexion.php';
+$rolActual = (int) ($_SESSION['cod_rol'] ?? 0);
+$filtroRol = $rolActual === 1 ? '' : 'WHERE u.cod_rol=' . $rolActual;
 
 include '../includes/header.php';
 include '../includes/sidebar.php';
@@ -20,6 +22,7 @@ $sql="SELECT
       FROM usuarios u
       INNER JOIN personas p ON p.cod_persona = u.cod_persona
       LEFT JOIN roles r ON u.cod_rol=r.cod_rol
+      $filtroRol
       ORDER BY u.cod_usuario DESC";
 
 $resultado=$conexion->query($sql);
@@ -43,10 +46,7 @@ if(!$resultado){
             <p class="text-muted mb-0">Lista de usuarios registrados en el sistema.</p>
         </div>
 
-        <a href="registrar.php" class="btn btn-primary">
-            <i class="bi bi-person-plus me-1"></i>
-            Nuevo usuario
-        </a>
+        <?php if (login_puede('usuarios/registrar.php')): ?><a href="registrar.php" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Nuevo usuario</a><?php endif; ?>
     </div>
 
     <div class="card shadow-sm">
@@ -117,20 +117,21 @@ if(!$resultado){
                                     </td>
 
                                     <td class="text-center">
-                                        <a
+                                        <?php if (login_puede('usuarios/ver.php')): ?><a
                                             href="ver.php?id=<?= (int)$fila['cod_usuario']; ?>"
                                             class="btn btn-sm btn-outline-secondary"
                                             title="Ver">
                                             <i class="bi bi-eye"></i>
-                                        </a>
+                                        </a><?php endif; ?>
 
-                                        <a
+                                        <?php if (login_puede('usuarios/editar.php')): ?><a
                                             href="editar.php?id=<?= (int)$fila['cod_usuario']; ?>"
                                             class="btn btn-sm btn-outline-primary"
                                             title="Editar">
                                             <i class="bi bi-pencil"></i>
-                                        </a>
+                                        </a><?php endif; ?>
                                         
+                                        <?php if (login_puede('usuarios/cambiar_estado.php')): ?>
                                         <form action="cambiar_estado.php" method="POST" class="d-inline" onsubmit="return confirm('¿Está seguro de cambiar el estado de este usuario?');">
                                             <?= login_campo_csrf() ?>
                                             <input type="hidden" name="cod_usuario" value="<?= (int)$fila['cod_usuario']; ?>">
@@ -145,6 +146,7 @@ if(!$resultado){
                                                 </button>
                                             <?php endif; ?>
                                         </form>
+                                        <?php endif; ?>
 
                                     </td>
                                 </tr>

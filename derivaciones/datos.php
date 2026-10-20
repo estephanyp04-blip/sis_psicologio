@@ -68,9 +68,11 @@ function derivacion_observaciones(array $entrada, ?string $original, array $perm
     return implode("\n\n", array_merge($partes, $previo['metadatos']));
 }
 
-function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, int $docente, ?array $archivo = null): void
+function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, int $docente, ?array $archivo = null, bool $puedeEditar = false): void
 {
-    if (!in_array($rol, [1, 3], true)) throw new InvalidArgumentException('No tiene permiso para editar derivaciones.');
+    if (!in_array($rol, [1, 3], true) && !$puedeEditar) {
+        throw new InvalidArgumentException('No tiene permiso para editar derivaciones.');
+    }
     $descripcionImagenPresente = array_key_exists('descripcion_imagen', $entrada);
     $descripcionImagen = derivacion_imagen_descripcion($entrada['descripcion_imagen'] ?? '');
     $subidaImagen = derivacion_imagen_validar($archivo, $descripcionImagen);
@@ -90,8 +92,8 @@ function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, in
     try {
         $stmt = $bd->prepare('SELECT d.observaciones,d.estado,d.cod_materia,m.nombre AS materia
             FROM derivaciones d LEFT JOIN materias m ON m.cod_materia=d.cod_materia
-            WHERE d.cod_derivacion = ? AND (? <> 3 OR d.cod_docente = ?) FOR UPDATE');
-        $stmt->bind_param('iii', $id, $rol, $docente); $stmt->execute();
+            WHERE d.cod_derivacion = ? AND (? <= 0 OR d.cod_docente = ?) FOR UPDATE');
+        $stmt->bind_param('iii', $id, $docente, $docente); $stmt->execute();
         $actual = $stmt->get_result()->fetch_assoc(); $stmt->close();
         if (!$actual) throw new InvalidArgumentException('La derivación no existe o no tiene permiso para editarla.');
         if ($actual['estado'] !== 'Pendiente') throw new InvalidArgumentException('Solo se pueden editar derivaciones pendientes.');
@@ -111,8 +113,8 @@ function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, in
         $idMateria = flujo_fila($bd, "SELECT cod_materia FROM materias WHERE nombre=? AND (estado='Activo' OR cod_materia=?) LIMIT 1", [$entrada['materia'], $actual['cod_materia']]);
         if (!$idMateria) throw new InvalidArgumentException('La materia seleccionada no está activa en el catálogo.');
         $idMateria = (int)$idMateria['cod_materia'];
-        $stmt = $bd->prepare('UPDATE derivaciones SET fecha=?, cod_materia=?, motivo=?, observaciones=?, prioridad=? WHERE cod_derivacion=? AND (? <> 3 OR cod_docente=?) AND estado=\'Pendiente\'');
-        $stmt->bind_param('sisssiii', $entrada['fecha'], $idMateria, $entrada['motivo'], $observaciones, $entrada['prioridad'], $id, $rol, $docente);
+        $stmt = $bd->prepare('UPDATE derivaciones SET fecha=?, cod_materia=?, motivo=?, observaciones=?, prioridad=? WHERE cod_derivacion=? AND (? <= 0 OR cod_docente=?) AND estado=\'Pendiente\'');
+        $stmt->bind_param('sisssiii', $entrada['fecha'], $idMateria, $entrada['motivo'], $observaciones, $entrada['prioridad'], $id, $docente, $docente);
         $stmt->execute(); $stmt->close();
         if (($entrada['observaciones_presentes'] ?? '') === '1') {
             $stmt = $bd->prepare('DELETE FROM derivacion_categorias WHERE cod_derivacion=?');

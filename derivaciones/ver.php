@@ -4,8 +4,9 @@ requerir_acceso('derivaciones/ver.php');
 
 
 require_once '../config/conexion.php';
+require_once __DIR__ . '/datos.php';
 
-$baseUrl = '/proyecto_vercionII';
+$baseUrl = rtrim(login_config()['base_url'], '/');
 
 if (!function_exists('escapar')) {
     function escapar(mixed $valor): string
@@ -18,20 +19,7 @@ if (!function_exists('escapar')) {
     }
 }
 
-/* Permisos de consulta y alcance del docente autenticado. */
-$rolActual = isset($_SESSION['cod_rol'])
-    ? (int) $_SESSION['cod_rol']
-    : 0;
-
-if (
-    !login_puede('derivaciones/ver.php')
-) {
-    $_SESSION['mensaje'] = 'No tiene permiso para ver derivaciones.';
-    $_SESSION['tipo_mensaje'] = 'danger';
-
-    header('Location: ' . $baseUrl . '/index.php');
-    exit;
-}
+/* El acceso se autoriza al inicio; las cuentas ligadas a docentes ven sus propios registros. */
 
 /* Validar ID */
 $idDerivacion = filter_input(
@@ -64,6 +52,10 @@ $sql = "SELECT
             d.observaciones,
             d.prioridad,
             d.estado,
+            d.solicitar_cita,
+            d.cod_psicologa_solicitada,
+            psicologa_persona.nombres AS psicologa_solicitada_nombres,
+            psicologa_persona.apellidos AS psicologa_solicitada_apellidos,
             e.nombres AS estudiante_nombres,
             e.apellidos AS estudiante_apellidos,
             e.curso,
@@ -79,8 +71,12 @@ $sql = "SELECT
             ON doc.cod_docente = d.cod_docente
         LEFT JOIN personas persona
             ON persona.cod_persona = doc.cod_persona
+        LEFT JOIN usuarios psicologa_usuario
+            ON psicologa_usuario.cod_usuario = d.cod_psicologa_solicitada
+        LEFT JOIN personas psicologa_persona
+            ON psicologa_persona.cod_persona = psicologa_usuario.cod_persona
         WHERE d.cod_derivacion = ?
-          AND (? <> 3 OR d.cod_docente = ?)
+          AND (? <= 0 OR d.cod_docente = ?)
         LIMIT 1";
 
 $stmt = $conexion->prepare($sql);
@@ -97,7 +93,7 @@ if (!$stmt) {
     exit;
 }
 
-$stmt->bind_param('iii', $idDerivacion, $rolActual, $idDocenteSesion);
+$stmt->bind_param('iii', $idDerivacion, $idDocenteSesion, $idDocenteSesion);
 $stmt->execute();
 
 $resultado = $stmt->get_result();
@@ -117,35 +113,39 @@ if (!$derivacion) {
     exit;
 }
 
-/* Validar que el docente solo vea sus derivaciones */
-$idDocenteSesion = (int) ($_SESSION['cod_docente'] ?? 0);
+$stmt = $conexion->prepare("SELECT cod_cita,fecha,hora,estado FROM citas
+    WHERE cod_derivacion=? AND estado<>'Cancelada'
+    ORDER BY fecha DESC,hora DESC,cod_cita DESC LIMIT 1");
+$stmt->bind_param('i', $idDerivacion);
+$stmt->execute();
+$citaVinculada = $stmt->get_result()->fetch_assoc() ?: null;
+$stmt->close();
+
+$solicitudCitaActiva = (int) ($derivacion['solicitar_cita'] ?? 0) === 1;
+$nombrePsicologaSolicitada = trim(
+    ($derivacion['psicologa_solicitada_nombres'] ?? '') . ' ' .
+    ($derivacion['psicologa_solicitada_apellidos'] ?? '')
+);
+$observacionesTexto = (string) ($derivacion['observaciones'] ?? '');
+$observacionesSeparadas = derivacion_desglosar($observacionesTexto);
+$categoriasObservadas = derivacion_categorias_registradas($conexion, $idDerivacion, $observacionesTexto);
+if ($nombrePsicologaSolicitada === '') {
+    foreach ($observacionesSeparadas['metadatos'] as $metadato) {
+        if (str_starts_with($metadato, 'Profesional solicitado:')) {
+            $nombrePsicologaSolicitada = trim(substr($metadato, strlen('Profesional solicitado:')));
+            break;
+        }
+    }
+}
 
 $esPropietario = $idDocenteSesion > 0 &&
     $idDocenteSesion ===
     (int) $derivacion['derivacion_id_docente'];
 
-if (
-    $rolActual === 3 &&
-    !$esPropietario
-) {
-    $_SESSION['mensaje'] = 'No tiene permiso para ver esta derivación.';
-    $_SESSION['tipo_mensaje'] = 'danger';
-
-    header(
-        'Location: ' .
-        $baseUrl .
-        '/derivaciones/listar.php'
-    );
-    exit;
-}
-
-/* Administrador o docente propietario pueden editar */
-$puedeEditar =
-    $derivacion['estado'] === 'Pendiente' &&
-    (
-        $rolActual === 1 ||
-        ($rolActual === 3 && $esPropietario)
-    );
+/* Un permiso de edición autoriza la acción; un perfil ligado a docente conserva alcance propio. */
+$puedeEditar = $derivacion['estado'] === 'Pendiente'
+    && login_puede('derivaciones/editar.php')
+    && ($idDocenteSesion === 0 || $esPropietario);
 
 $stmt = $conexion->prepare('SELECT cod_evidencia,nombre_original,descripcion FROM derivacion_evidencias
     WHERE cod_derivacion=? ORDER BY cod_evidencia DESC LIMIT 1');
@@ -238,7 +238,11 @@ include '../includes/navbar.php';
         <?php require_once __DIR__ . '/../includes/trazabilidad_vista.php'; flujo_panel($conexion,'derivacion',$derivacion); ?>
         <div class="card p-3 my-3 d-print-none">
             <div class="d-flex gap-2 mb-3">
-                <a class="btn btn-primary" href="../citas/registrar.php?cod_derivacion=<?= (int)$idDerivacion ?>">Programar cita</a>
+                <?php if (login_puede('citas/registrar.php') && !$citaVinculada): ?>
+                <a class="btn btn-primary" href="../citas/registrar.php?cod_derivacion=<?= (int)$idDerivacion ?>"><?= $solicitudCitaActiva ? 'Atender solicitud de cita' : 'Programar cita' ?></a>
+                <?php elseif ($citaVinculada && login_puede('citas/editar.php')): ?>
+                <a class="btn btn-primary" href="../citas/editar.php?id=<?= (int)$citaVinculada['cod_cita'] ?>">Ver cita programada</a>
+                <?php endif; ?>
                 <a class="btn btn-outline-primary" href="../historias_clinicas/registrar.php?cod_derivacion=<?= (int)$idDerivacion ?>">Abrir historia</a>
             </div>
             <form action="cambiar_estado.php" method="POST">
@@ -465,32 +469,64 @@ include '../includes/navbar.php';
                     <?php endif; ?>
                 </div>
 
-                <!-- CATEGORÍAS Y OBSERVACIONES -->
-                <div>
+                <!-- CATEGORÍAS OBSERVADAS -->
+                <div class="mb-4">
                     <h5 class="border-bottom pb-2 mb-3">
-                        <i class="bi bi-card-text me-2"></i>
-                        Categorías y observaciones
+                        <i class="bi bi-tags me-2"></i>
+                        Categorías observadas
                     </h5>
 
-                    <?php if (
-                        trim(
-                            (string) ($derivacion['observaciones'] ?? '')
-                        ) !== ''
-                    ): ?>
-
-                        <div style="white-space: pre-line;">
-                            <?= escapar(
-                                $derivacion['observaciones']
-                            ) ?>
+                    <?php if ($categoriasObservadas): ?>
+                        <div class="d-flex flex-wrap gap-2">
+                            <?php foreach ($categoriasObservadas as $categoria): ?>
+                                <span class="badge bg-light text-dark border"><?= escapar($categoria) ?></span>
+                            <?php endforeach; ?>
                         </div>
-
                     <?php else: ?>
-
                         <p class="text-muted mb-0">
-                            No se registraron observaciones.
+                            No se registraron categorías.
                         </p>
-
                     <?php endif; ?>
+                </div>
+
+                <!-- OBSERVACIONES ADICIONALES -->
+                <div class="mb-4">
+                    <h5 class="border-bottom pb-2 mb-3">
+                        <i class="bi bi-card-text me-2"></i>
+                        Observaciones adicionales
+                    </h5>
+
+                    <?php if ($observacionesSeparadas['adicionales'] !== ''): ?>
+                        <p class="mb-0" style="white-space: pre-line;"><?= escapar($observacionesSeparadas['adicionales']) ?></p>
+                    <?php else: ?>
+                        <p class="text-muted mb-0">No se registraron observaciones adicionales.</p>
+                    <?php endif; ?>
+                </div>
+
+                <!-- SOLICITUD DE ATENCIÓN -->
+                <div>
+                    <h5 class="border-bottom pb-2 mb-3">
+                        <i class="bi bi-calendar-check me-2"></i>
+                        Solicitud de atención psicológica
+                    </h5>
+
+                    <?php if ($solicitudCitaActiva || $citaVinculada): ?>
+                        <div class="alert <?= $citaVinculada ? 'alert-success' : 'alert-info' ?> mb-0">
+                            <?php if ($citaVinculada): ?>
+                                <strong>Cita programada:</strong>
+                                <?= escapar(date('d/m/Y', strtotime($citaVinculada['fecha'])) . ' a las ' . substr($citaVinculada['hora'], 0, 5)) ?>
+                                (<?= escapar($citaVinculada['estado']) ?>).
+                            <?php else: ?>
+                                <strong>Solicitud de cita pendiente de programación.</strong>
+                            <?php endif; ?>
+                            <?php if ($solicitudCitaActiva): ?>
+                                <span class="d-block mt-1">Psicóloga solicitada: <?= escapar($nombrePsicologaSolicitada !== '' ? $nombrePsicologaSolicitada : 'Sin asignar') ?>.</span>
+                            <?php endif; ?>
+                        </div>
+                    <?php else: ?>
+                        <p class="text-muted mb-0">No se solicitó una cita psicológica.</p>
+                    <?php endif; ?>
+
                 </div>
 
             </div>

@@ -46,7 +46,7 @@ function login_validar_token($token): bool
 }
 function login_rol_valido(array $u): bool
 {
-    return in_array((int) $u['cod_rol'], [1, 2, 3, 4], true) && $u['rol_estado'] === 'Activo';
+    return (int) ($u['cod_rol'] ?? 0) > 0 && ($u['rol_estado'] ?? '') === 'Activo';
 }
 function login_buscar_usuario(string $usuario): ?array
 {
@@ -96,9 +96,9 @@ function login_comprobar(string $usuario, string $clave): array
         $hash = $u['password'] ?? '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
         $correcta = password_verify($clave, $hash);
         $valido = $u && $correcta && $u['estado'] === 'Activo' && login_rol_valido($u);
-        if ($valido && (int) $u['cod_rol'] === 3) {
+        if ($valido) {
             $u['cod_docente'] = login_docente((int) $u['cod_usuario']);
-            if (!$u['cod_docente']) {
+            if ((int) $u['cod_rol'] === 3 && !$u['cod_docente']) {
                 $valido = false;
                 $error = 'Tu usuario no tiene un único docente vinculado. Solicita al administrador que revise la relación.';
             }
@@ -148,7 +148,8 @@ function login_usuario_actual(): ?array
         || (int) $u['cod_usuario'] !== ($_SESSION['cod_usuario'] ?? 0)
         || (int) $u['cod_rol'] !== ($_SESSION['cod_rol'] ?? 0)
         || !hash_equals($_SESSION['login_firma'] ?? '', hash('sha256', $u['password']))) return null;
-    if ((int) $u['cod_rol'] === 3 && login_docente((int) $u['cod_usuario']) !== ($_SESSION['cod_docente'] ?? null)) return null;
+    if (((int) $u['cod_rol'] === 3 || isset($_SESSION['cod_docente']))
+        && login_docente((int) $u['cod_usuario']) !== ($_SESSION['cod_docente'] ?? null)) return null;
     $_SESSION['login_actividad'] = time();
     return $u;
 }
@@ -185,7 +186,46 @@ function requerir_roles(array $permitidos = [], bool $json = false): void
 function login_permisos(): array
 {
     static $permisos = null;
-    return $permisos ??= require __DIR__ . '/../config/permisos.php';
+    if ($permisos !== null) return $permisos;
+
+    $rutas = require __DIR__ . '/../config/permisos.php';
+    $concedidos = [];
+    try {
+        $sql = 'SELECT m.nombre AS modulo, p.cod_rol, p.puede_ver, p.puede_crear, p.puede_editar,
+                p.puede_cambiar_estado, p.puede_eliminar
+            FROM permisos p
+            INNER JOIN roles r ON r.cod_rol = p.cod_rol AND r.estado = \'Activo\'
+            INNER JOIN modulos m ON m.cod_modulo = p.cod_modulo AND m.estado = \'Activo\'';
+        $resultado = login_bd()->query($sql);
+        while ($fila = $resultado->fetch_assoc()) {
+            $concedidos[$fila['modulo']][(int) $fila['cod_rol']] = $fila;
+        }
+    } catch (Throwable $e) {
+        error_log('Permisos: ' . $e->getMessage());
+    }
+
+    foreach ($rutas as $nombre => $ruta) {
+        $roles = [];
+        if (!empty($ruta['solo_admin'])) {
+            $roles = [1];
+        } else {
+            foreach ($concedidos[$ruta['modulo']] ?? [] as $idRol => $permiso) {
+                if ((int) ($permiso[$ruta['accion']] ?? 0) === 1) $roles[] = (int) $idRol;
+            }
+            if (is_array($ruta['roles_restringidos'] ?? null)) {
+                $roles = array_values(array_intersect($roles, $ruta['roles_restringidos']));
+            } else {
+                // El administrador conserva acceso global, salvo rutas restringidas por su función.
+                $roles[] = 1;
+            }
+            if (is_array($ruta['roles_bloqueados'] ?? null)) {
+                $roles = array_values(array_diff($roles, $ruta['roles_bloqueados']));
+            }
+        }
+        $ruta['roles'] = array_values(array_unique($roles));
+        $permisos[$nombre] = $ruta;
+    }
+    return $permisos;
 }
 
 // Solo para presentar enlaces: el servidor siempre ejecuta requerir_acceso().
@@ -199,8 +239,23 @@ function login_puede(string $ruta): bool
 
 function login_inicio_url(): string
 {
-    $destino = login_config()['destinos'][(int) ($_SESSION['cod_rol'] ?? 0)] ?? 'login.php';
-    return login_url($destino);
+    return login_url(login_destino_ruta());
+}
+
+function login_destino_ruta(): string
+{
+    $preferidos = [
+        1 => ['index.php', 'estadisticas/index.php', 'usuarios/listar.php'],
+        2 => ['index.php', 'derivaciones/listar.php', 'estudiantes/listar.php'],
+        3 => ['derivaciones/listar.php', 'derivaciones/mis_derivaciones.php', 'index.php'],
+        4 => ['informes/listar.php', 'estadisticas/index.php', 'index.php'],
+    ];
+    $rutas = $preferidos[(int) ($_SESSION['cod_rol'] ?? 0)] ?? [];
+    foreach ($rutas as $ruta) if (login_puede($ruta)) return $ruta;
+    foreach (login_permisos() as $ruta => $permiso) {
+        if (in_array('GET', $permiso['metodos'], true) && login_puede($ruta)) return $ruta;
+    }
+    return 'sin_acceso.php';
 }
 
 function login_campo_csrf(): string
@@ -217,16 +272,24 @@ function requerir_csrf(): void
 }
 
 // Debe ejecutarse antes de conectar a la base de los módulos o producir HTML.
-function requerir_acceso(string $ruta): void
+function requerir_acceso(string $nombreRuta): void
 {
-    $permiso = login_permisos()[$ruta] ?? null;
-    if ($permiso === null) {
+    $catalogo = require __DIR__ . '/../config/permisos.php';
+    $definicion = $catalogo[$nombreRuta] ?? null;
+    if ($definicion === null) {
         http_response_code(403);
         exit('Esta ruta no tiene permisos definidos.');
     }
 
-    $json = ($permiso['formato'] ?? '') === 'json';
-    requerir_roles($permiso['roles'], $json);
+    $json = ($definicion['formato'] ?? '') === 'json';
+    requerir_roles([], $json);
+    $permiso = login_permisos()[$nombreRuta] ?? null;
+    if ($permiso === null || !in_array((int) ($_SESSION['cod_rol'] ?? 0), $permiso['roles'], true)) {
+        if ($json) login_error_json(403, 'No tiene permiso para realizar esta consulta.');
+        http_response_code(403);
+        exit('No tienes permiso para realizar esta acción.');
+    }
+
     $metodo = $_SERVER['REQUEST_METHOD'] ?? '';
     if (!in_array($metodo, $permiso['metodos'], true)) {
         header('Allow: ' . implode(', ', $permiso['metodos']));

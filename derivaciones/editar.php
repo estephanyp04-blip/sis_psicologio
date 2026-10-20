@@ -12,7 +12,6 @@ function escapar($valor): string
     return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
 }
 
-$rolActual = isset($_SESSION['cod_rol']) ? (int) $_SESSION['cod_rol'] : 0;
 $puedeEditar = login_puede('derivaciones/editar.php');
 $idDocenteActual = (int) ($_SESSION['cod_docente'] ?? 0);
 
@@ -59,7 +58,7 @@ $sql = "SELECT
         LEFT JOIN personas AS persona
             ON persona.cod_persona = doc.cod_persona
         WHERE d.cod_derivacion = ?
-          AND (? <> 3 OR d.cod_docente = ?)
+          AND (? <= 0 OR d.cod_docente = ?)
         LIMIT 1";
 
 $stmt = $conexion->prepare($sql);
@@ -68,7 +67,7 @@ if (!$stmt) {
     die('Error al preparar la consulta: ' . escapar($conexion->error));
 }
 
-$stmt->bind_param('iii', $idDerivacion, $rolActual, $idDocenteActual);
+$stmt->bind_param('iii', $idDerivacion, $idDocenteActual, $idDocenteActual);
 $stmt->execute();
 
 $resultado = $stmt->get_result();

@@ -17,6 +17,28 @@ function cita_guardar(mysqli $bd, array $entrada, int $autor, ?int $id = null): 
         if ($id && !$anterior) throw new InvalidArgumentException('La cita no existe.');
         $estudiante = flujo_id($entrada['cod_estudiante'] ?? $anterior['cod_estudiante'] ?? null);
         $derivacion = flujo_id($entrada['cod_derivacion'] ?? $anterior['cod_derivacion'] ?? 0, true);
+        $psicologa = (int) ($anterior['cod_psicologa'] ?? 0);
+        $rolAutor = 0;
+        if (!$anterior) {
+            $cuentaAutor = flujo_fila($bd, "SELECT cod_rol FROM usuarios WHERE cod_usuario=? AND estado='Activo'", [$autor]);
+            if (!$cuentaAutor) throw new InvalidArgumentException('La cuenta que programa la cita no existe o esta inactiva.');
+            $rolAutor = (int) $cuentaAutor['cod_rol'];
+            $seleccionPsicologa = flujo_id($entrada['cod_psicologa'] ?? 0, true);
+            if ($rolAutor === 2) {
+                if ($seleccionPsicologa > 0 && $seleccionPsicologa !== $autor) {
+                    throw new InvalidArgumentException('Una psicologa solo puede programar citas a su propio nombre.');
+                }
+                $psicologa = $autor;
+            } elseif ($rolAutor === 1) {
+                $psicologa = $seleccionPsicologa;
+                if ($psicologa <= 0) throw new InvalidArgumentException('Seleccione la psicologa responsable de la cita.');
+            } else {
+                throw new InvalidArgumentException('Su rol no puede programar citas.');
+            }
+            if (!flujo_fila($bd, "SELECT cod_usuario FROM usuarios WHERE cod_usuario=? AND cod_rol=2 AND estado='Activo'", [$psicologa])) {
+                throw new InvalidArgumentException('La psicologa seleccionada no existe o no esta activa.');
+            }
+        }
         if ($anterior && ($estudiante !== (int)$anterior['cod_estudiante'] || $derivacion !== (int)($anterior['cod_derivacion'] ?? 0))) throw new InvalidArgumentException('El estudiante y la derivación de origen no pueden cambiarse.');
         $fecha = flujo_fecha($entrada['fecha'] ?? $anterior['fecha'] ?? '');
         $hora = flujo_texto($entrada['hora'] ?? substr($anterior['hora'] ?? '',0,5), 5);
@@ -38,13 +60,20 @@ function cita_guardar(mysqli $bd, array $entrada, int $autor, ?int $id = null): 
         if (!$anterior && !flujo_fila($bd, "SELECT cod_estudiante FROM estudiantes WHERE cod_estudiante=? AND estado='Activo'", [$estudiante])) throw new InvalidArgumentException('El estudiante no existe o no está activo.');
         if ($derivacion) {
             $d = flujo_fila($bd, 'SELECT * FROM derivaciones WHERE cod_derivacion=? FOR UPDATE', [$derivacion]);
+            if ($d && !$anterior && $rolAutor === 2 && (int)($d['cod_psicologa_solicitada'] ?? 0) > 0
+                && (int)$d['cod_psicologa_solicitada'] !== $psicologa) {
+                throw new InvalidArgumentException('Esta solicitud fue dirigida a otra psicologa.');
+            }
+            if ($d && !$anterior && flujo_fila($bd, "SELECT cod_cita FROM citas WHERE cod_derivacion=? AND estado<>'Cancelada' LIMIT 1", [$derivacion])) {
+                throw new InvalidArgumentException('Esta derivacion ya tiene una cita vigente.');
+            }
             if (!$d || (int)$d['cod_estudiante'] !== $estudiante) throw new InvalidArgumentException('La derivación no corresponde al estudiante.');
             if (!$anterior && $d['estado'] === 'Atendido') throw new InvalidArgumentException('Reabra la derivación antes de programar otra cita.');
         }
         if ($anterior) {
             flujo_ejecutar($bd, 'UPDATE citas SET fecha=?,hora=?,estado=?,observaciones=? WHERE cod_cita=?', [$fecha,$hora,$estado,$observaciones,$id]);
         } else {
-            flujo_ejecutar($bd, 'INSERT INTO citas (cod_estudiante,cod_psicologa,cod_derivacion,fecha,hora,estado,observaciones) VALUES (?,?,NULLIF(?,0),?,?,?,?)', [$estudiante,$autor,$derivacion,$fecha,$hora,$estado,$observaciones]);
+            flujo_ejecutar($bd, 'INSERT INTO citas (cod_estudiante,cod_psicologa,cod_derivacion,fecha,hora,estado,observaciones) VALUES (?,?,NULLIF(?,0),?,?,?,?)', [$estudiante,$psicologa,$derivacion,$fecha,$hora,$estado,$observaciones]);
             $id = (int)$bd->insert_id;
         }
         flujo_auditar($bd, $autor, 'citas', $anterior ? 'Actualizar' : 'Crear', $id, ($anterior['estado'] ?? 'Nueva') . ' → ' . $estado);

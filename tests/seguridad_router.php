@@ -24,8 +24,52 @@ require $fixture['app'] . '/includes/autenticacion.php';
 $db = login_bd();
 // Estas tablas SOLO existen en esta conexión; ocultan a las permanentes.
 // No ejecutar DROP/TRUNCATE ni DDL contra las tablas reales.
-$db->query("CREATE TEMPORARY TABLE roles (cod_rol INT PRIMARY KEY, nombre VARCHAR(40), estado VARCHAR(20))");
-$db->query("INSERT INTO roles VALUES (1,'Administrador','Activo'),(2,'Psicologa','Activo'),(3,'Docente','Activo'),(4,'Director','Activo')");
+$db->query("CREATE TEMPORARY TABLE roles (cod_rol INT PRIMARY KEY, nombre VARCHAR(40), descripcion VARCHAR(255), estado VARCHAR(20))");
+$db->query("INSERT INTO roles (cod_rol,nombre,estado) VALUES (1,'Administrador','Activo'),(2,'Psicologa','Activo'),(3,'Docente','Activo'),(4,'Director','Activo')");
+$politicas = require $fixture['app'] . '/config/permisos.php';
+$idsModulo = [];
+$db->query("CREATE TEMPORARY TABLE modulos (cod_modulo INT PRIMARY KEY,nombre VARCHAR(100),ruta VARCHAR(190),orden INT,estado VARCHAR(20))");
+$insertModulo = $db->prepare('INSERT INTO modulos (cod_modulo,nombre,ruta,orden,estado) VALUES (?,?,?,?,?)');
+foreach ($politicas as $ruta => $politica) {
+    $nombre = $politica['modulo'];
+    if (isset($idsModulo[$nombre])) continue;
+    $idModulo = count($idsModulo) + 1;
+    $idsModulo[$nombre] = $idModulo;
+    $estadoModulo = 'Activo';
+    $insertModulo->bind_param('issis', $idModulo, $nombre, $ruta, $idModulo, $estadoModulo);
+    $insertModulo->execute();
+}
+$insertModulo->close();
+$db->query("CREATE TEMPORARY TABLE permisos (cod_permiso INT AUTO_INCREMENT PRIMARY KEY,cod_rol INT NOT NULL,cod_modulo INT NOT NULL,puede_ver TINYINT(1) NOT NULL DEFAULT 0,puede_crear TINYINT(1) NOT NULL DEFAULT 0,puede_editar TINYINT(1) NOT NULL DEFAULT 0,puede_cambiar_estado TINYINT(1) NOT NULL DEFAULT 0,puede_eliminar TINYINT(1) NOT NULL DEFAULT 0,UNIQUE KEY uq_permiso_rol_modulo (cod_rol,cod_modulo))");
+$acciones = ['puede_ver', 'puede_crear', 'puede_editar', 'puede_cambiar_estado', 'puede_eliminar'];
+$permisosPrueba = [];
+foreach ($politicas as $politica) {
+    foreach ($politica['roles'] as $idRol) {
+        $clave = $idRol . ':' . $idsModulo[$politica['modulo']];
+        $permisosPrueba[$clave] ??= array_fill_keys($acciones, 0);
+        $permisosPrueba[$clave][$politica['accion']] = 1;
+    }
+}
+// Simula filas heredadas o concedidas por error: la autorización del servidor
+// debe seguir bloqueando Docente y Director en áreas con datos estudiantiles.
+foreach ([3, 4] as $idRol) {
+    foreach (['Dashboard', 'Estadísticas', 'Estudiantes'] as $nombreModulo) {
+        $clave = $idRol . ':' . $idsModulo[$nombreModulo];
+        $permisosPrueba[$clave] = array_fill_keys($acciones, 1);
+    }
+}
+// Docente puede editar derivaciones propias, pero esa facultad no habilita estados.
+$claveDocenteDerivaciones = '3:' . $idsModulo['Derivaciones'];
+$permisosPrueba[$claveDocenteDerivaciones] ??= array_fill_keys($acciones, 0);
+$permisosPrueba[$claveDocenteDerivaciones]['puede_editar'] = 1;
+$permisosPrueba[$claveDocenteDerivaciones]['puede_cambiar_estado'] = 0;
+$insertPermiso = $db->prepare('INSERT INTO permisos (cod_rol,cod_modulo,puede_ver,puede_crear,puede_editar,puede_cambiar_estado,puede_eliminar) VALUES (?,?,?,?,?,?,?)');
+foreach ($permisosPrueba as $clave => $valores) {
+    [$idRol, $idModulo] = array_map('intval', explode(':', $clave));
+    $insertPermiso->bind_param('iiiiiii', $idRol, $idModulo, $valores['puede_ver'], $valores['puede_crear'], $valores['puede_editar'], $valores['puede_cambiar_estado'], $valores['puede_eliminar']);
+    $insertPermiso->execute();
+}
+$insertPermiso->close();
 $db->query("CREATE TEMPORARY TABLE personas (cod_persona INT PRIMARY KEY, nombres VARCHAR(60), apellidos VARCHAR(60), correo VARCHAR(120))");
 $db->query("INSERT INTO personas VALUES (201,'Admin','Prueba',''),(202,'Psicologa','Prueba',''),(203,'Docente','Prueba',''),(204,'Director','Prueba',''),(205,'Otro','Docente','')");
 $db->query("CREATE TEMPORARY TABLE usuarios (cod_usuario INT PRIMARY KEY, cod_persona INT, usuario VARCHAR(40), password VARCHAR(255), estado VARCHAR(20), cod_rol INT)");
@@ -76,8 +120,8 @@ if ($GLOBALS['prueba_negocio']) {
     $db->query("CREATE TEMPORARY TABLE categorias_derivacion (cod_categoria INT PRIMARY KEY, nombre VARCHAR(100), estado VARCHAR(20))");
     $db->query("INSERT INTO categorias_derivacion VALUES (1,'Rendimiento Académico','Activo')");
     $db->query('CREATE TEMPORARY TABLE derivacion_categorias (cod_derivacion INT, cod_categoria INT)');
-    $db->query("CREATE TEMPORARY TABLE derivaciones (cod_derivacion INT PRIMARY KEY, fecha DATE, cod_estudiante INT, cod_docente INT, cod_materia INT, motivo TEXT, observaciones TEXT, prioridad VARCHAR(20), estado VARCHAR(30), fecha_registro DATETIME)");
-    $db->query("INSERT INTO derivaciones VALUES (1,CURDATE(),1,303,1,'PROPIA_PRIVADA','Observacion propia','Media','Pendiente',NOW()),(2,CURDATE(),2,305,1,'AJENA_PRIVADA','Observacion ajena','Media','Pendiente',NOW())");
+    $db->query("CREATE TEMPORARY TABLE derivaciones (cod_derivacion INT PRIMARY KEY, fecha DATE, cod_estudiante INT, cod_docente INT, cod_materia INT, motivo TEXT, observaciones TEXT, prioridad VARCHAR(20), estado VARCHAR(30), solicitar_cita TINYINT(1) NOT NULL DEFAULT 0, cod_psicologa_solicitada INT NULL, fecha_registro DATETIME)");
+    $db->query("INSERT INTO derivaciones (cod_derivacion,fecha,cod_estudiante,cod_docente,cod_materia,motivo,observaciones,prioridad,estado,solicitar_cita,cod_psicologa_solicitada,fecha_registro) VALUES (1,CURDATE(),1,303,1,'PROPIA_PRIVADA','Observacion propia','Media','Pendiente',0,NULL,NOW()),(2,CURDATE(),2,305,1,'AJENA_PRIVADA','Observacion ajena','Media','Pendiente',0,NULL,NOW())");
     $db->query("CREATE TEMPORARY TABLE citas (cod_cita INT PRIMARY KEY, cod_estudiante INT, fecha DATE, hora TIME, estado VARCHAR(20), observaciones TEXT, cod_derivacion INT NULL)");
     $db->query("INSERT INTO citas VALUES (1,1,CURDATE(),'09:00','Pendiente','Cita de prueba',NULL)");
     $db->query("CREATE TEMPORARY TABLE historias_clinicas (cod_historia INT PRIMARY KEY,cod_estudiante INT,cod_derivacion_origen INT,cod_cita_origen INT)");
@@ -90,6 +134,7 @@ if ($GLOBALS['prueba_negocio']) {
             'cita' => $db->query('SELECT estado FROM citas WHERE cod_cita=1')->fetch_assoc()['estado'],
             'estudiantes' => $db->query('SELECT cod_estudiante,estado FROM estudiantes ORDER BY cod_estudiante')->fetch_all(MYSQLI_ASSOC),
             'inscripciones' => $db->query('SELECT cod_inscripcion,cod_estudiante,estado FROM inscripciones ORDER BY cod_inscripcion')->fetch_all(MYSQLI_ASSOC),
+            'permisos_protegidos' => $db->query("SELECT p.cod_rol,m.nombre,p.puede_ver,p.puede_crear,p.puede_editar,p.puede_cambiar_estado,p.puede_eliminar FROM permisos p JOIN modulos m ON m.cod_modulo=p.cod_modulo WHERE p.cod_rol IN (3,4) AND m.nombre IN ('Dashboard','Estadísticas','Estudiantes') ORDER BY p.cod_rol,m.nombre")->fetch_all(MYSQLI_ASSOC),
             'autenticado' => $_SESSION['autenticado'] ?? false,
         ];
         echo "\n__ESTADO_PRUEBA__", json_encode($estado);

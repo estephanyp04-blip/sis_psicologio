@@ -113,11 +113,12 @@ include '../includes/navbar.php';
 
                 <div class="d-flex flex-wrap gap-2">
 
-                    <a href="registrar.php" class="btn btn-primary">
+                    <?php if (login_puede('estudiantes/registrar.php')): ?><a href="registrar.php" class="btn btn-primary">
                         <i class="bi bi-person-plus me-2"></i>
                         Registrar estudiante
-                    </a>
+                    </a><?php endif; ?>
 
+                    <?php if (login_puede('estudiantes/importar.php')): ?>
                     <form
                         action="importar.php"
                         method="POST"
@@ -143,6 +144,7 @@ include '../includes/navbar.php';
                             Importar datos
                         </button>
                     </form>
+                    <?php endif; ?>
                     <small class="text-muted d-block mt-1"> 
                 </div>
 
@@ -460,14 +462,15 @@ include '../includes/navbar.php';
 
                                 <?php if(($fila['estado']??'')==='Activo'):?>
 
-                                    <a
+                                    <?php if (login_puede('estudiantes/editar.php')): ?><a
                                         href="editar.php?id=<?= (int)$fila['cod_estudiante'] ?>"
                                         class="btn btn-sm btn-outline-primary"
                                         title="Editar estudiante"
                                     >
                                         <i class="bi bi-pencil"></i>
-                                    </a>
+                                    </a><?php endif; ?>
 
+                                    <?php if (login_puede('estudiantes/cambiar_estado.php')): ?>
                                     <form
                                         action="cambiar_estado.php"
                                         method="POST"
@@ -496,9 +499,11 @@ include '../includes/navbar.php';
                                         </button>
 
                                     </form>
+                                    <?php endif; ?>
 
                                 <?php else:?>
 
+                                    <?php if (login_puede('estudiantes/cambiar_estado.php')): ?>
                                     <form
                                         action="cambiar_estado.php"
                                         method="POST"
@@ -527,6 +532,7 @@ include '../includes/navbar.php';
                                         </button>
 
                                     </form>
+                                    <?php endif; ?>
 
                                 <?php endif;?>
 

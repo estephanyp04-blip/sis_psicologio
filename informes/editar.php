@@ -5,14 +5,6 @@ requerir_acceso('informes/editar.php');
 require_once '../config/conexion.php';
 require_once __DIR__ . '/datos.php';
 
-$rolActual = (int)($_SESSION['cod_rol'] ?? 0);
-if (!in_array($rolActual, [1, 2], true)) {
-    $_SESSION['mensaje'] = 'No tiene permiso para editar informes.';
-    $_SESSION['tipo_mensaje'] = 'danger';
-    header('Location: listar.php');
-    exit;
-}
-
 function e($valor): string
 {
     return htmlspecialchars((string)$valor, ENT_QUOTES, 'UTF-8');

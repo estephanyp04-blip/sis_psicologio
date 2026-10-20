@@ -4,13 +4,7 @@ requerir_acceso('informes/ver.php');
 
 require_once '../config/conexion.php';
 
-$rolActual = (int)($_SESSION['cod_rol'] ?? 0);
-if (!in_array($rolActual, [1, 2, 4], true)) {
-    header('Location: ../index.php');
-    exit;
-}
-
-$puedeEditar = in_array($rolActual, [1, 2], true);
+$puedeEditar = login_puede('informes/editar.php');
 
 function e($valor): string
 {

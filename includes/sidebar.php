@@ -8,21 +8,22 @@ $baseUrl = login_config()['base_url'];
 $rutaActual = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '';
 $gruposMenu = [
     'Principal' => [
-        ['index.php', 'Panel principal', 'bi-grid-1x2-fill'],
+        ['index.php', 'Panel principal', 'bi-grid-1x2-fill', null],
     ],
     'Gestión psicológica' => [
-        ['estudiantes/listar.php', 'Estudiantes', 'bi-people-fill'],
-        ['derivaciones/listar.php', 'Derivaciones', 'bi-send-fill'],
-        ['citas/listar.php', 'Citas', 'bi-calendar2-week-fill'],
-        ['historias_clinicas/listar.php', 'Historias clínicas', 'bi-file-earmark-medical-fill'],
+        ['estudiantes/listar.php', 'Estudiantes', 'bi-people-fill', 'estudiantes/registrar.php'],
+        ['derivaciones/listar.php', 'Derivaciones', 'bi-send-fill', 'derivaciones/registrar.php'],
+        ['citas/listar.php', 'Citas', 'bi-calendar2-week-fill', 'citas/registrar.php'],
+        ['historias_clinicas/listar.php', 'Historias clínicas', 'bi-file-earmark-medical-fill', 'historias_clinicas/registrar.php'],
     ],
     'Administración' => [
-        ['docentes/listar.php', 'Docentes', 'bi-person-badge-fill'],
-        ['usuarios/listar.php', 'Usuarios', 'bi-person-gear'],
+        ['docentes/listar.php', 'Docentes', 'bi-person-badge-fill', 'docentes/registrar.php'],
+        ['usuarios/listar.php', 'Usuarios', 'bi-person-gear', 'usuarios/registrar.php'],
+        ['roles/listar.php', 'Roles y permisos', 'bi-shield-lock', null],
     ],
     'Resultados' => [
-        ['informes/listar.php', 'Informes', 'bi-file-earmark-bar-graph-fill'],
-        ['estadisticas/index.php', 'Estadísticas', 'bi-bar-chart-line-fill'],
+        ['informes/listar.php', 'Informes', 'bi-file-earmark-bar-graph-fill', 'informes/registrar.php'],
+        ['estadisticas/index.php', 'Estadísticas', 'bi-bar-chart-line-fill', null],
     ],
 ];
 ?>
@@ -36,13 +37,14 @@ $gruposMenu = [
     <nav class="sidebar-menu" aria-label="Menú principal">
         <?php foreach ($gruposMenu as $tituloGrupo => $enlaces): ?>
             <?php
-            $enlaces = array_filter($enlaces, static fn(array $enlace): bool => login_puede($enlace[0]));
+            $enlaces = array_values(array_filter($enlaces, static fn(array $enlace): bool => login_puede($enlace[0]) || (!empty($enlace[3]) && login_puede($enlace[3]))));
             if (!$enlaces) continue;
             ?>
             <span class="sidebar-section-title"><?= login_html($tituloGrupo) ?></span>
             <ul class="nav flex-column">
-                <?php foreach ($enlaces as [$ruta, $etiqueta, $icono]): ?>
+                <?php foreach ($enlaces as [$ruta, $etiqueta, $icono, $rutaAlternativa]): ?>
                     <?php
+                    if (!login_puede($ruta) && $rutaAlternativa) $ruta = $rutaAlternativa;
                     $activo = $ruta === 'index.php'
                         ? in_array(rtrim($rutaActual, '/'), [$baseUrl, login_url($ruta)], true)
                         : str_starts_with($rutaActual, login_url(dirname($ruta)) . '/');

@@ -31,6 +31,7 @@ require $fixture['app'] . '/includes/autenticacion.php';
 login_iniciar_sesion();
 $usuario = $_SERVER['HTTP_X_PRUEBA_USUARIO'] ?? 'prueba_admin';
 $usuariosPermitidos = ['prueba_admin', 'prueba_psicologa'];
+if (!empty($fixture['cuatro_roles'])) $usuariosPermitidos[] = 'prueba_psicologa_dos';
 if (!empty($fixture['cuatro_roles'])) $usuariosPermitidos = array_merge($usuariosPermitidos,['prueba_docente','prueba_director']);
 if (!in_array($usuario, $usuariosPermitidos, true)) { http_response_code(403); exit; }
 if (($_SESSION['usuario'] ?? '') !== $usuario) {

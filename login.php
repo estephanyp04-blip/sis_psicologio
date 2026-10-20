@@ -4,7 +4,7 @@ login_iniciar_sesion();
 $error = '';
 $nombreUsuario = '';
 try {
-    if (login_usuario_actual()) login_ir(login_config()['destinos'][$_SESSION['cod_rol']]);
+    if (login_usuario_actual()) login_ir(login_destino_ruta());
     if (($_SESSION['autenticado'] ?? false) === true) { $_SESSION = []; session_regenerate_id(true); }
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nombreUsuario = is_string($_POST['usuario'] ?? null) ? trim($_POST['usuario']) : '';
@@ -15,7 +15,7 @@ try {
             $error = 'Introduce un usuario y una contraseña válidos.';
         } else {
             [$u, $error] = login_comprobar($nombreUsuario, $clave);
-            if ($u) { login_establecer($u); login_ir(login_config()['destinos'][(int) $u['cod_rol']]); }
+            if ($u) { login_establecer($u); login_ir(login_destino_ruta()); }
         }
         unset($clave);
     }

@@ -71,11 +71,8 @@ $sqlUsuarios = "
     LEFT JOIN docentes d ON d.cod_persona=u.cod_persona
     WHERE u.cod_rol = 3
       AND (
-          u.cod_usuario = ?
-          OR (
-              u.estado = 'Activo'
-              AND d.cod_docente IS NULL
-          )
+          u.estado = 'Activo'
+          AND (u.cod_usuario = ? OR d.cod_docente IS NULL)
       )
     ORDER BY p.apellidos,p.nombres
 ";
@@ -214,7 +211,7 @@ include '../includes/navbar.php';
                             <?php endwhile; ?>
                         </select>
                         <div class="form-text">
-                            Si cambia la cuenta, se cargarán los datos personales de esa cuenta.
+                            Solo aparecen cuentas activas con rol Docente. Si cambia la cuenta, se cargarán sus datos personales.
                             Puede revisarlos y corregirlos antes de guardar.
                         </div>
                     </div>

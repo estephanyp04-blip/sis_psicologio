@@ -4,15 +4,8 @@ requerir_acceso('informes/listar.php');
 
 require_once '../config/conexion.php';
 
-$rolActual = (int) ($_SESSION['cod_rol'] ?? 0);
-$rolesPermitidos = [1, 2, 4];
-
-if (!in_array($rolActual, $rolesPermitidos, true)) {
-    header('Location: ../index.php');
-    exit;
-}
-
-$puedeGestionar = in_array($rolActual, [1, 2], true);
+$puedeCrear = login_puede('informes/registrar.php');
+$puedeEditar = login_puede('informes/editar.php');
 $mensaje = $_SESSION['mensaje'] ?? '';
 $tipoMensaje = $_SESSION['tipo_mensaje'] ?? 'info';
 unset($_SESSION['mensaje'], $_SESSION['tipo_mensaje']);
@@ -96,7 +89,7 @@ include '../includes/navbar.php';
             <p>Gestión de fichas psicológicas de los estudiantes.</p>
         </div>
 
-        <?php if ($puedeGestionar): ?>
+        <?php if ($puedeCrear): ?>
             <a href="registrar.php" class="btn btn-light">
                 <i class="bi bi-plus-circle me-2"></i>
                 Nuevo informe
@@ -276,7 +269,7 @@ include '../includes/navbar.php';
                                         <span>Ver</span>
                                     </a>
 
-                                    <?php if ($puedeGestionar): ?>
+                                    <?php if ($puedeEditar): ?>
                                         <a
                                             href="editar.php?id=<?= (int)$informe['cod_informe']; ?>"
                                             class="btn-accion editar"

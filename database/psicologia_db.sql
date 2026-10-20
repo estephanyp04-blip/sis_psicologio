@@ -472,13 +472,16 @@ CREATE TABLE `modulos` (
 
 INSERT INTO `modulos` (`cod_modulo`, `nombre`, `ruta`, `icono`, `orden`, `estado`) VALUES
 (1, 'Dashboard', '/index.php', 'bi-speedometer2', 1, 'Activo'),
-(2, 'Estudiantes', '/estudiantes/index.php', 'bi-people', 2, 'Activo'),
+(2, 'Estudiantes', '/estudiantes/listar.php', 'bi-people-fill', 2, 'Activo'),
 (3, 'Derivaciones', '/derivaciones/listar.php', 'bi-send', 3, 'Activo'),
 (4, 'Citas', '/citas/listar.php', 'bi-calendar-check', 4, 'Activo'),
 (5, 'Historias clinicas', '/historias_clinicas/listar.php', 'bi-folder2-open', 5, 'Activo'),
 (6, 'Informes', '/informes/listar.php', 'bi-file-earmark-bar-graph', 6, 'Activo'),
 (7, 'Usuarios', '/usuarios/listar.php', 'bi-person-gear', 7, 'Activo'),
-(8, 'Roles y permisos', '/roles/listar.php', 'bi-shield-lock', 8, 'Activo');
+(8, 'Roles y permisos', '/roles/listar.php', 'bi-shield-lock', 8, 'Activo'),
+(9, 'Docentes', '/docentes/listar.php', 'bi-person-badge-fill', 9, 'Activo'),
+(10, 'Seguimientos', '/seguimientos/ver.php', 'bi-journal-medical', 10, 'Activo'),
+(11, 'Estadísticas', '/estadisticas/index.php', 'bi-bar-chart-line-fill', 11, 'Activo');
 
 -- --------------------------------------------------------
 
@@ -571,33 +574,39 @@ CREATE TABLE `permisos` (
   `puede_ver` tinyint(1) NOT NULL DEFAULT 0,
   `puede_crear` tinyint(1) NOT NULL DEFAULT 0,
   `puede_editar` tinyint(1) NOT NULL DEFAULT 0,
-  `puede_eliminar` tinyint(1) NOT NULL DEFAULT 0
+  `puede_eliminar` tinyint(1) NOT NULL DEFAULT 0,
+  `puede_cambiar_estado` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `permisos`
 --
 
-INSERT INTO `permisos` (`cod_permiso`, `cod_rol`, `cod_modulo`, `puede_ver`, `puede_crear`, `puede_editar`, `puede_eliminar`) VALUES
-(1, 1, 1, 1, 1, 1, 1),
-(2, 1, 2, 1, 1, 1, 1),
-(3, 1, 3, 1, 1, 1, 1),
-(4, 1, 4, 1, 1, 1, 1),
-(5, 1, 5, 1, 1, 1, 1),
-(6, 1, 6, 1, 1, 1, 1),
-(7, 1, 7, 1, 1, 1, 1),
-(8, 1, 8, 1, 1, 1, 1),
-(9, 2, 1, 1, 0, 0, 0),
-(10, 2, 2, 1, 1, 1, 0),
-(11, 2, 3, 1, 0, 1, 0),
-(12, 2, 4, 1, 1, 1, 0),
-(13, 2, 5, 1, 1, 1, 0),
-(14, 2, 6, 1, 1, 1, 0),
-(15, 3, 1, 1, 0, 0, 0),
-(16, 3, 2, 1, 0, 0, 0),
-(17, 3, 3, 1, 1, 1, 0),
-(18, 4, 1, 1, 0, 0, 0),
-(19, 4, 6, 1, 0, 0, 0);
+INSERT INTO `permisos` (`cod_permiso`, `cod_rol`, `cod_modulo`, `puede_ver`, `puede_crear`, `puede_editar`, `puede_eliminar`, `puede_cambiar_estado`) VALUES
+(1, 1, 1, 1, 1, 1, 1, 0),
+(2, 1, 2, 1, 1, 1, 1, 1),
+(3, 1, 3, 1, 1, 1, 1, 1),
+(4, 1, 4, 1, 1, 1, 1, 1),
+(5, 1, 5, 1, 1, 1, 1, 0),
+(6, 1, 6, 1, 1, 1, 1, 0),
+(7, 1, 7, 1, 1, 1, 1, 1),
+(8, 1, 8, 1, 1, 1, 1, 0),
+(9, 2, 1, 1, 0, 0, 0, 0),
+(10, 2, 2, 1, 1, 1, 0, 1),
+(11, 2, 3, 1, 0, 0, 0, 1),
+(12, 2, 4, 1, 1, 1, 0, 1),
+(13, 2, 5, 1, 1, 1, 0, 0),
+(14, 2, 6, 1, 1, 1, 0, 0),
+(15, 3, 1, 0, 0, 0, 0, 0),
+(16, 3, 2, 0, 0, 0, 0, 0),
+(17, 3, 3, 1, 1, 1, 1, 0),
+(18, 4, 1, 0, 0, 0, 0, 0),
+(19, 4, 6, 1, 0, 0, 0, 0),
+(20, 1, 9, 1, 1, 1, 1, 0),
+(21, 1, 10, 1, 1, 1, 1, 0),
+(22, 1, 11, 1, 1, 1, 1, 0),
+(23, 2, 10, 1, 1, 1, 0, 0),
+(24, 2, 11, 1, 0, 0, 0, 0);
 
 -- --------------------------------------------------------
 
@@ -1234,7 +1243,7 @@ ALTER TABLE `materias`
 -- AUTO_INCREMENT de la tabla `modulos`
 --
 ALTER TABLE `modulos`
-  MODIFY `cod_modulo` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `cod_modulo` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT de la tabla `opciones_historia`
@@ -1252,7 +1261,7 @@ ALTER TABLE `paralelos`
 -- AUTO_INCREMENT de la tabla `permisos`
 --
 ALTER TABLE `permisos`
-  MODIFY `cod_permiso` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `cod_permiso` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT de la tabla `personas`

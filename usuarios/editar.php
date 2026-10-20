@@ -30,7 +30,13 @@ if(!$datos){
     exit;
 }
 
-$resultadoRoles=$conexion->query("SELECT cod_rol,nombre FROM roles ORDER BY cod_rol ASC");
+$rolActual = (int) ($_SESSION['cod_rol'] ?? 0);
+if ($rolActual !== 1 && ((int)$datos['cod_rol'] === 1 || (int)$datos['cod_rol'] !== $rolActual)) {
+    http_response_code(403);
+    exit('Solo puedes editar cuentas de tu mismo rol.');
+}
+$condicionRoles = $rolActual === 1 ? '' : ' AND cod_rol=' . $rolActual . ' AND cod_rol<>1';
+$resultadoRoles=$conexion->query("SELECT cod_rol,nombre FROM roles WHERE estado='Activo'$condicionRoles ORDER BY cod_rol ASC");
 
 if(!$resultadoRoles){
     die('Error al consultar roles: '.$conexion->error);
@@ -187,7 +193,7 @@ include '../includes/navbar.php';
                                     name="password"
                                     id="password"
                                     class="form-control"
-                                    minlength="15"
+                                    minlength="8"
                                     placeholder="Dejar vacío para mantener la actual"
                                     autocomplete="new-password">
 
@@ -197,7 +203,7 @@ include '../includes/navbar.php';
                             </div>
 
                             <small class="text-muted">
-                                Solo complete este campo si desea cambiarla; use al menos 15 caracteres.
+                                Solo complete este campo si desea cambiarla; use al menos 8 caracteres.
                             </small>
                         </div>
 
@@ -212,7 +218,7 @@ include '../includes/navbar.php';
                                     name="confirmar_password"
                                     id="confirmar_password"
                                     class="form-control"
-                                    minlength="15"
+                                    minlength="8"
                                     placeholder="Repita la nueva contraseña"
                                     autocomplete="new-password">
 

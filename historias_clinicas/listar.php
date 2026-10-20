@@ -4,27 +4,8 @@ requerir_acceso('historias_clinicas/listar.php');
 
 require_once '../config/conexion.php';
 
-/* PERMISOS*/
-
-$rolActual = isset($_SESSION['cod_rol'])
-    ? (int) $_SESSION['cod_rol']
-    : 0;
-
-$rolesPermitidos = [1, 2];
-
-if (
-    !in_array($rolActual, $rolesPermitidos, true)
-) {
-    $_SESSION['mensaje'] =
-        'No tiene permiso para consultar historias clínicas.';
-
-    $_SESSION['tipo_mensaje'] = 'danger';
-
-    header('Location: ../index.php');
-    exit;
-}
-
-$puedeEditar = in_array($rolActual, [1, 2], true);
+$puedeCrear = login_puede('historias_clinicas/registrar.php');
+$puedeEditar = login_puede('historias_clinicas/editar.php');
 
 /*  FUNCIONES */
 
@@ -49,7 +30,7 @@ $sql = "
         e.apellidos,
         e.curso,
         e.paralelo,
-        CONCAT_WS(' ', p.nombres, p.apellidos) AS profesional
+        CONCAT_WS(' ', p.nombres, p.apellidos) AS registrado_por
     FROM historias_clinicas h
     INNER JOIN vista_estudiantes e
         ON e.cod_estudiante = h.cod_estudiante
@@ -138,7 +119,7 @@ include '../includes/navbar.php';
                 </p>
             </div>
 
-            <?php if ($puedeEditar): ?>
+            <?php if ($puedeCrear): ?>
                 <a
                     href="registrar.php"
                     class="btn btn-light">
@@ -234,7 +215,7 @@ include '../includes/navbar.php';
                             <th>Estudiante</th>
                             <th>Curso</th>
                             <th>Fecha de apertura</th>
-                            <th>Profesional</th>
+                            <th>Registrado por</th>
                             <th>Estado</th>
                             <th class="text-end">Acciones</th>
                         </tr>
@@ -304,8 +285,8 @@ include '../includes/navbar.php';
 
                                 <td>
                                     <?= e(
-                                        $historia['profesional']
-                                        ?: 'Sin asignar'
+                                        $historia['registrado_por']
+                                        ?: 'No registrado'
                                     ) ?>
                                 </td>
 

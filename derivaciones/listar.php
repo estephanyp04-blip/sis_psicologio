@@ -9,10 +9,9 @@ require_once '../config/conexion.php';
 
 $baseUrl = rtrim(login_config()['base_url'], '/');
 
-$rol       = (int) ($_SESSION['cod_rol'] ?? 0);
 $idDocente = (int) ($_SESSION['cod_docente'] ?? 0);
 
-$esDocente      = ($rol === 3);
+$esDocente      = ($idDocente > 0);
 
 $puedeCrear = login_puede('derivaciones/registrar.php');
 
@@ -552,15 +551,8 @@ include '../includes/navbar.php';
                                 : 'Sin fecha';
 
 
-                            $editable =
-                                $fila['estado'] === 'Pendiente'
-                                &&
-                                (
-                                    $esDocente
-                                    ||
-                                    $rol === 1
-
-                                );
+                            $editable = $fila['estado'] === 'Pendiente'
+                                && login_puede('derivaciones/editar.php');
 
                             ?>
 
@@ -712,7 +704,7 @@ include '../includes/navbar.php';
 
                                         <?php endif; ?>
 
-                                        <?php if ($esDocente && $fila['estado'] === 'Pendiente'): ?>
+                                        <?php if ($fila['estado'] === 'Pendiente' && login_puede('derivaciones/eliminar.php')): ?>
                                             <form action="eliminar.php" method="POST" class="d-inline"
                                                 onsubmit="return confirm('¿Eliminar esta derivación pendiente?');">
                                                 <?= login_campo_csrf() ?>
