@@ -50,9 +50,10 @@ function login_rol_valido(array $u): bool
 }
 function login_buscar_usuario(string $usuario): ?array
 {
-    $s = login_bd()->prepare('SELECT u.cod_usuario, u.usuario, p.nombres AS nombre, p.apellidos AS apellido, u.password, u.estado, u.cod_rol, r.nombre AS rol, r.estado AS rol_estado
+    $bd = login_bd();
+    $s = $bd->prepare('SELECT u.cod_usuario, u.usuario, u.nombres AS nombre, u.apellidos AS apellido,
+            u.password, u.estado, u.cod_rol, r.nombre AS rol, r.estado AS rol_estado
         FROM usuarios u
-        INNER JOIN personas p ON p.cod_persona = u.cod_persona
         INNER JOIN roles r ON r.cod_rol = u.cod_rol
         WHERE u.usuario = ? LIMIT 2');
     $s->bind_param('s', $usuario);
@@ -64,9 +65,10 @@ function login_buscar_usuario(string $usuario): ?array
 }
 function login_docente(int $idUsuario): ?int
 {
-    $s = login_bd()->prepare('SELECT d.cod_docente
+    $bd = login_bd();
+    $s = $bd->prepare('SELECT d.cod_docente
         FROM docentes d
-        INNER JOIN usuarios u ON u.cod_persona = d.cod_persona
+        INNER JOIN usuarios u ON d.cod_usuario = u.cod_usuario
         WHERE u.cod_usuario = ? LIMIT 2');
     $s->bind_param('i', $idUsuario);
     $s->execute();

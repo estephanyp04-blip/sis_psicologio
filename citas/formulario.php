@@ -2,10 +2,10 @@
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(404); exit; }
 require_once __DIR__ . '/datos.php';
 $id = isset($editarCita) ? (int)filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT) : 0;
-$cita = $id ? flujo_fila($conexion, 'SELECT c.*,CONCAT(p.nombres,\' \',p.apellidos) profesional
+$cita = $id ? flujo_fila($conexion, 'SELECT c.*,CONCAT(u.nombres,\' \',u.apellidos) profesional
     FROM citas c
     LEFT JOIN usuarios u ON u.cod_usuario=c.cod_psicologa
-    LEFT JOIN personas p ON p.cod_persona=u.cod_persona
+
     WHERE c.cod_cita=?', [$id]) : null;
 if (isset($editarCita) && !$cita) { header('Location: listar.php'); exit; }
 $datos = $cita ?? ['cod_estudiante' => 0,'cod_derivacion' => 0,'cod_psicologa' => 0,'fecha' => date('Y-m-d'),'hora' => '', 'estado' => 'Pendiente','observaciones' => ''];
@@ -15,11 +15,11 @@ if (!$cita) {
     if ($idDerivacionOrigen) {
         $origen = flujo_fila($conexion, 'SELECT d.cod_estudiante,d.cod_derivacion,d.solicitar_cita,d.cod_psicologa_solicitada,
             CONCAT(e.nombres,\' \',e.apellidos) AS estudiante,
-            CONCAT(p.nombres,\' \',p.apellidos) AS psicologa_solicitada
+            CONCAT(u.nombres,\' \',u.apellidos) AS psicologa_solicitada
             FROM derivaciones d
             INNER JOIN estudiantes e ON e.cod_estudiante=d.cod_estudiante
             LEFT JOIN usuarios u ON u.cod_usuario=d.cod_psicologa_solicitada
-            LEFT JOIN personas p ON p.cod_persona=u.cod_persona
+
             WHERE d.cod_derivacion=?', [$idDerivacionOrigen]);
         if (!$origen) { http_response_code(404); exit('Derivación no encontrada.'); }
         $datos = array_replace($datos, $origen, [
@@ -35,9 +35,9 @@ if ((int)($recuperados['cod_cita'] ?? 0) === $id) $datos = array_replace($datos,
 $mensaje = $_SESSION['mensaje_cita'] ?? '';
 unset($_SESSION['datos_cita'], $_SESSION['mensaje_cita']);
 $estudiantes = $conexion->query("SELECT cod_estudiante,CONCAT(apellidos,', ',nombres) nombre FROM estudiantes WHERE estado='Activo' ORDER BY apellidos,nombres")->fetch_all(MYSQLI_ASSOC);
-$profesionales = $conexion->query("SELECT u.cod_usuario,CONCAT(p.nombres,' ',p.apellidos) nombre
-    FROM usuarios u INNER JOIN personas p ON p.cod_persona=u.cod_persona
-    WHERE u.cod_rol=2 AND u.estado='Activo' ORDER BY p.apellidos,p.nombres")->fetch_all(MYSQLI_ASSOC);
+$profesionales = $conexion->query("SELECT u.cod_usuario,CONCAT(u.nombres,' ',u.apellidos) nombre
+    FROM usuarios u
+    WHERE u.cod_rol=2 AND u.estado='Activo' ORDER BY u.apellidos,u.nombres")->fetch_all(MYSQLI_ASSOC);
 $idUsuarioSesion = (int) ($_SESSION['cod_usuario'] ?? 0);
 $rolUsuarioSesion = (int) ($_SESSION['cod_rol'] ?? 0);
 $idPsicologaSeleccionada = (int) ($datos['cod_psicologa'] ?? 0);

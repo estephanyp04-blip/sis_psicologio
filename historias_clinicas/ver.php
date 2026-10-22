@@ -53,10 +53,10 @@ function cargarSeguimientos(mysqli $conexion, int $idHistoria): array
 {
     $stmt = $conexion->prepare("SELECT s.cod_seguimiento,s.cod_historia,s.cod_psicologa,s.cod_cita,
             s.fecha,s.descripcion,s.tecnicas_aplicadas,s.acuerdos,s.recomendaciones,s.proxima_sesion,s.fecha_registro,
-            CONCAT_WS(' ',p.nombres,p.apellidos) AS profesional,c.fecha AS fecha_cita,c.hora AS hora_cita
+            CONCAT_WS(' ',u.nombres,u.apellidos) AS profesional,c.fecha AS fecha_cita,c.hora AS hora_cita
         FROM seguimientos s
         LEFT JOIN usuarios u ON u.cod_usuario=s.cod_psicologa
-        LEFT JOIN personas p ON p.cod_persona=u.cod_persona
+
         LEFT JOIN citas c ON c.cod_cita=s.cod_cita
         WHERE s.cod_historia=?
         ORDER BY s.fecha ASC,s.cod_seguimiento ASC");
@@ -99,7 +99,7 @@ try {
             h.peso_kg AS peso,
             h.valoracion_fisica AS valoracion,
             d.fecha AS fecha_derivacion,
-            TRIM(CONCAT(COALESCE(dp.nombres,''),' ',COALESCE(dp.apellidos,''))) AS derivado_por,
+            TRIM(CONCAT(COALESCE(du.nombres,''),' ',COALESCE(du.apellidos,''))) AS derivado_por,
             e.codigo,
             e.ci,
             e.nombres,
@@ -114,18 +114,16 @@ try {
                 WHERE er.cod_estudiante=e.cod_estudiante AND er.parentesco='Tutor'
                 ORDER BY er.es_principal DESC LIMIT 1) AS tutor,
             e.telefono,
-            p.nombres AS autor_nombre,
-            p.apellidos AS autor_apellido
+            u.nombres AS autor_nombre,
+            u.apellidos AS autor_apellido
         FROM historias_clinicas h
         LEFT JOIN derivaciones d ON d.cod_derivacion = h.cod_derivacion_origen
         LEFT JOIN docentes doc ON doc.cod_docente = d.cod_docente
-        LEFT JOIN personas dp ON dp.cod_persona = doc.cod_persona
+        LEFT JOIN usuarios du ON du.cod_usuario = doc.cod_usuario
         INNER JOIN vista_estudiantes e
             ON e.cod_estudiante = h.cod_estudiante
         LEFT JOIN usuarios u
             ON u.cod_usuario = h.cod_psicologa
-        LEFT JOIN personas p
-            ON p.cod_persona = u.cod_persona
         WHERE h.cod_historia = ?
         LIMIT 1
     ");
@@ -383,7 +381,7 @@ include '../includes/navbar.php';
         </div>
     </section>
 
-  
+
     <section class="expediente-seccion">
         <div class="expediente-seccion-titulo">
             <span>3</span>

@@ -14,16 +14,14 @@ $busqueda = trim($_GET['buscar'] ?? '');
 $sql = "
     SELECT
         d.cod_docente,
-        d.cod_persona,
-        p.nombres,
-        p.apellidos,
-        p.telefono,
-        p.correo,
+        u.nombres,
+        u.apellidos,
+        u.telefono,
+        u.correo,
         GROUP_CONCAT(DISTINCT m.nombre ORDER BY m.nombre SEPARATOR ', ') AS materia,
         u.usuario
     FROM docentes d
-    INNER JOIN personas p ON p.cod_persona=d.cod_persona
-    LEFT JOIN usuarios u ON u.cod_persona=d.cod_persona
+    INNER JOIN usuarios u ON u.cod_usuario=d.cod_usuario
     LEFT JOIN docente_materias dm ON dm.cod_docente=d.cod_docente
     LEFT JOIN materias m ON m.cod_materia=dm.cod_materia
 ";
@@ -33,10 +31,10 @@ $tipos = '';
 
 if ($busqueda !== '') {
     $sql .= "
-        WHERE p.nombres LIKE ?
-        OR p.apellidos LIKE ?
-        OR p.telefono LIKE ?
-        OR p.correo LIKE ?
+        WHERE u.nombres LIKE ?
+        OR u.apellidos LIKE ?
+        OR u.telefono LIKE ?
+        OR u.correo LIKE ?
         OR EXISTS (
             SELECT 1 FROM docente_materias dm_busqueda
             INNER JOIN materias m_busqueda ON m_busqueda.cod_materia=dm_busqueda.cod_materia
@@ -59,7 +57,7 @@ if ($busqueda !== '') {
     $tipos = 'ssssss';
 }
 
-$sql .= " GROUP BY d.cod_docente,p.cod_persona,p.nombres,p.apellidos,p.telefono,p.correo,u.usuario ORDER BY p.apellidos ASC,p.nombres ASC";
+$sql .= " GROUP BY d.cod_docente,u.nombres,u.apellidos,u.telefono,u.correo,u.usuario ORDER BY u.apellidos ASC,u.nombres ASC";
 
 $stmt = $conexion->prepare($sql);
 

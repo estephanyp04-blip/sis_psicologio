@@ -5,10 +5,10 @@ require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/../includes/trazabilidad_vista.php';
 $id = (int)filter_var($_GET['id'] ?? null,FILTER_VALIDATE_INT);
 $s = flujo_fila($conexion, 'SELECT s.*,h.cod_estudiante,COALESCE(c.cod_derivacion,h.cod_derivacion_origen) cod_derivacion,
-    CONCAT(p.nombres,\' \',p.apellidos) profesional,c.fecha AS fecha_cita,c.hora AS hora_cita
+    CONCAT(u.nombres,\' \',u.apellidos) profesional,c.fecha AS fecha_cita,c.hora AS hora_cita
     FROM seguimientos s JOIN historias_clinicas h ON h.cod_historia=s.cod_historia
     JOIN usuarios u ON u.cod_usuario=s.cod_psicologa
-    JOIN personas p ON p.cod_persona=u.cod_persona
+
     LEFT JOIN citas c ON c.cod_cita=s.cod_cita WHERE s.cod_seguimiento=?', [$id]);
 if (!$s) { http_response_code(404); exit('Seguimiento no encontrado.'); }
 $tituloPagina='Seguimiento #' . $id;

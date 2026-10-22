@@ -171,7 +171,7 @@ foreach ($materiasRecibidas as $materiaSeleccionada) {
 /* COMPROBAR USUARIO */
 
 $sqlUsuario = "
-    SELECT u.cod_persona
+    SELECT u.cod_usuario
     FROM usuarios u
     WHERE cod_usuario = ?
       AND cod_rol = 3
@@ -200,7 +200,7 @@ if ($resultadoUsuario->num_rows !== 1) {
         'La cuenta seleccionada no existe, no está activa o no tiene el rol Docente.'
     );
 }
-$idPersona = (int)$resultadoUsuario->fetch_assoc()['cod_persona'];
+$idUsuario = (int)$resultadoUsuario->fetch_assoc()['cod_usuario'];
 $stmtUsuario->close();
 
 /* COMPROBAR QUE LA CUENTA NO ESTÉ ASIGNADA */
@@ -208,20 +208,20 @@ $correoDb = $correo !== '' ? $correo : null;
 $telefonoDb = $telefono !== '' ? $telefono : null;
 $conexion->begin_transaction();
 try {
-    $stmt = $conexion->prepare('SELECT cod_docente FROM docentes WHERE cod_persona=? FOR UPDATE');
-    $stmt->bind_param('i', $idPersona);
+    $stmt = $conexion->prepare('SELECT cod_docente FROM docentes WHERE cod_usuario=? FOR UPDATE');
+    $stmt->bind_param('i', $idUsuario);
     $stmt->execute();
     $ocupado = $stmt->get_result()->num_rows > 0;
     $stmt->close();
     if ($ocupado) throw new InvalidArgumentException('La cuenta seleccionada ya está asignada a un docente.');
 
-    $stmt = $conexion->prepare('UPDATE personas SET nombres=?,apellidos=?,telefono=?,correo=? WHERE cod_persona=?');
-    $stmt->bind_param('ssssi', $nombres, $apellidos, $telefonoDb, $correoDb, $idPersona);
+    $stmt = $conexion->prepare('UPDATE usuarios SET nombres=?,apellidos=?,telefono=?,correo=? WHERE cod_usuario=?');
+    $stmt->bind_param('ssssi', $nombres, $apellidos, $telefonoDb, $correoDb, $idUsuario);
     $stmt->execute();
     $stmt->close();
 
-    $stmt = $conexion->prepare('INSERT INTO docentes (cod_persona) VALUES (?)');
-    $stmt->bind_param('i', $idPersona);
+    $stmt = $conexion->prepare('INSERT INTO docentes (cod_usuario) VALUES (?)');
+    $stmt->bind_param('i', $idUsuario);
     $stmt->execute();
     $idDocente = (int)$conexion->insert_id;
     $stmt->close();

@@ -100,18 +100,10 @@ $correoBaseDatos = $correo !== '' ? $correo : null;
 
 $conexion->begin_transaction();
 try {
-    $stmtPersona = $conexion->prepare(
-        'INSERT INTO personas (nombres, apellidos, correo) VALUES (?, ?, ?)'
-    );
-    $stmtPersona->bind_param('sss', $nombre, $apellido, $correoBaseDatos);
-    $stmtPersona->execute();
-    $idPersona = $conexion->insert_id;
-    $stmtPersona->close();
-
     $stmt = $conexion->prepare(
-        'INSERT INTO usuarios (cod_persona, usuario, password, cod_rol, estado) VALUES (?, ?, ?, ?, ?)'
+        'INSERT INTO usuarios (nombres, apellidos, correo, usuario, password, cod_rol, estado) VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
-    $stmt->bind_param('issis', $idPersona, $usuario, $passwordHash, $idRol, $estado);
+    $stmt->bind_param('sssssis', $nombre, $apellido, $correoBaseDatos, $usuario, $passwordHash, $idRol, $estado);
     $stmt->execute();
     $stmt->close();
     $conexion->commit();

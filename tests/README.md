@@ -7,6 +7,7 @@ Ejecutar desde la raíz del proyecto, con MySQL iniciado y la conexión de `conf
 ```powershell
 & C:\xampp\php\php.exe tests\seguridad.php
 & C:\xampp\php\php.exe tests\informes_actualizacion.php
+& C:\xampp\php\php.exe tests\migracion_identidad_academica.php
 & C:\xampp\php\php.exe tests\esquema_informes_importacion.php --navegador
 & C:\xampp\php\php.exe tests\historias_derivaciones.php --navegador
 & C:\xampp\php\php.exe tests\trazabilidad.php --navegador
@@ -60,6 +61,7 @@ Para ejecutar únicamente los controles de acceso, sin los casos de negocio:
 
 | Archivo | Cobertura |
 |---|---|
+| `migracion_identidad_academica.php` | Protección ante registros huérfanos, migración de identidad e historial académico, eliminación de tablas/vistas/columnas heredadas, claves foráneas e idempotencia |
 | `esquema_informes_importacion.php` | Instalación, migraciones de tutor y materias, conservación de datos, CSV parcial, informes concurrentes, estudiantes y docentes |
 | `historias_derivaciones.php` | Persistencia clínica, tutor, medidas, recuperación de errores, categorías de catálogo y conservación de valores históricos |
 | `trazabilidad.php` | Citas, historias, seguimientos e informes; episodios distintos, permisos, rollback y reserva concurrente por profesional |

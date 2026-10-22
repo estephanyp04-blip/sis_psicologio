@@ -1,17 +1,17 @@
-# Base de datos e instalación
+﻿# Base de datos e instalación
 
 ## Esquema actual
 
-El archivo [psicologia_db.sql](psicologia_db.sql) contiene el esquema normalizado que usa la aplicación:
+El archivo [psicologia_db.sql](psicologia_db.sql) contiene el esquema final que usa la aplicación:
 
-- `personas` comparte los datos de usuarios y docentes.
-- `secciones` e `inscripciones` relacionan curso, paralelo, turno y gestión de los estudiantes.
+- `usuarios` guarda los datos de identidad y acceso; `docentes` se vincula mediante `cod_usuario`.
+- `secciones` e `historial_academico` relacionan curso, paralelo, turno y gestión de los estudiantes.
 - `historias_clinicas` usa `cod_psicologa`, `cod_derivacion_origen` e `cod_cita_origen`.
 - Las columnas identificadoras que antes comenzaban con `id_` ahora comienzan con `cod_`.
 - `informes` guarda la cabecera y `informe_individual` el detalle y las relaciones del informe.
 - Las opciones clínicas, materias y categorías de derivación se guardan en catálogos relacionados.
 
-El SQL es una exportación que incluye catálogos, secciones para la gestión 2026 y registros iniciales de personas/usuarios. No es una plantilla sin datos. Sus vistas declaran `DEFINER=root@localhost`; al instalar con otra cuenta hay que adaptar ese definidor al servidor de destino.
+El SQL incluye catálogos, secciones para la gestión 2026 y un usuario administrador inicial. No es una plantilla sin datos. No contiene tablas ni vistas `personas` o `inscripciones`, ni columnas `cod_persona`. Sus vistas declaran `DEFINER=root@localhost`; al instalar con otra cuenta hay que adaptar ese definidor al servidor de destino.
 
 ## Instalación en una base nueva
 
@@ -53,6 +53,8 @@ La migración `007_permisos_cambio_estado.php` separa la autorización para camb
 
 La migración `008_limites_permisos_datos_estudiantiles.php` limpia permisos previamente concedidos a Docente y Director en Dashboard, Estadísticas y Estudiantes. La aplicación también hace cumplir ese límite en sus rutas y en el formulario de permisos.
 
+La migración `009_personas_historial_academico.php` copia la identidad a `usuarios`, vincula docentes con `docentes.cod_usuario` y traslada cada inscripción a `historial_academico`; luego elimina las tablas anteriores. La migración `010_eliminar_aliases_identidad.php` elimina las vistas y columnas de compatibilidad que quedaron en instalaciones actualizadas con versiones preliminares. El alcance actual es una sola unidad educativa.
+
 Después de respaldar una base existente, aplicar las operaciones pendientes:
 
 ```powershell
@@ -83,4 +85,4 @@ Cada fila válida se guarda con su inscripción y responsables dentro de una tra
 
 Consultar [tests/README.md](../tests/README.md) para las pruebas vigentes. Las pruebas de acceso y edición de informes usan tablas `TEMPORARY`; las de migración, importación, historias y flujo completo crean bases con nombres aleatorios y datos sintéticos. Ninguna escribe datos de prueba en los registros reales.
 
-La migracion `000_renombrar_identificadores.php` cambia las columnas `id_*` a `cod_*` en bases normalizadas existentes. Conserva los datos, las claves foraneas y las vistas; una instalacion nueva ya usa los nombres `cod_*`.
+La migración `000_renombrar_identificadores.php` cambia las columnas `id_*` a `cod_*` en bases normalizadas existentes. Conserva los datos, las claves foráneas y las vistas; una instalación nueva ya usa los nombres `cod_*`.

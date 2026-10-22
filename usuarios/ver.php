@@ -19,15 +19,14 @@ if(!$id){
 $stmt=$conexion->prepare("
     SELECT
         u.cod_usuario,
-        p.nombres AS nombre,
-        p.apellidos AS apellido,
+        u.nombres AS nombre,
+        u.apellidos AS apellido,
         u.usuario,
-        p.correo,
+        u.correo,
         u.estado,
         u.cod_rol,
         r.nombre AS rol
     FROM usuarios u
-    INNER JOIN personas p ON p.cod_persona = u.cod_persona
     LEFT JOIN roles r ON u.cod_rol=r.cod_rol
     WHERE u.cod_usuario=? AND (?=1 OR u.cod_rol=?)
     LIMIT 1

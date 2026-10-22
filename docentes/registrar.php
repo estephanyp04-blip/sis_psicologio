@@ -16,18 +16,18 @@ function escapar($valor): string
 $sqlUsuarios = "
     SELECT
         u.cod_usuario,
-        p.nombres AS nombre,
-        p.apellidos AS apellido,
+        u.nombres AS nombre,
+        u.apellidos AS apellido,
         u.usuario,
-        p.telefono,
-        p.correo
+        u.telefono,
+        u.correo
     FROM usuarios u
-    INNER JOIN personas p ON p.cod_persona=u.cod_persona
-    LEFT JOIN docentes d ON d.cod_persona=u.cod_persona
+
+    LEFT JOIN docentes d ON d.cod_usuario=u.cod_usuario
     WHERE u.cod_rol = 3
       AND u.estado = 'Activo'
       AND d.cod_docente IS NULL
-    ORDER BY p.apellidos ASC,p.nombres ASC
+    ORDER BY u.apellidos ASC,u.nombres ASC
 ";
 
 $resultadoUsuarios = $conexion->query($sqlUsuarios);

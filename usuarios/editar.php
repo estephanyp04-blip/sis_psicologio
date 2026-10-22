@@ -10,8 +10,8 @@ if(!$id){
     exit;
 }
 
-$stmt=$conexion->prepare("SELECT u.cod_usuario,p.nombres AS nombre,p.apellidos AS apellido,u.usuario,p.correo,u.estado,u.cod_rol
-    FROM usuarios u INNER JOIN personas p ON p.cod_persona=u.cod_persona
+$stmt=$conexion->prepare("SELECT u.cod_usuario,u.nombres AS nombre,u.apellidos AS apellido,u.usuario,u.correo,u.estado,u.cod_rol
+    FROM usuarios u
     WHERE u.cod_usuario=? LIMIT 1");
 
 if(!$stmt){

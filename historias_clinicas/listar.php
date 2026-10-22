@@ -30,14 +30,12 @@ $sql = "
         e.apellidos,
         e.curso,
         e.paralelo,
-        CONCAT_WS(' ', p.nombres, p.apellidos) AS registrado_por
+        CONCAT_WS(' ', u.nombres, u.apellidos) AS registrado_por
     FROM historias_clinicas h
     INNER JOIN vista_estudiantes e
         ON e.cod_estudiante = h.cod_estudiante
     LEFT JOIN usuarios u
         ON u.cod_usuario = h.cod_psicologa
-    LEFT JOIN personas p
-        ON p.cod_persona = u.cod_persona
     ORDER BY
         h.fecha_apertura DESC,
         h.cod_historia DESC

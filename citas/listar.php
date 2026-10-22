@@ -24,14 +24,14 @@ $idUsuarioSesion = (int) ($_SESSION['cod_usuario'] ?? 0);
 $solicitudesSql = "SELECT d.cod_derivacion,d.fecha_registro,d.prioridad,
         e.nombres,e.apellidos,ve.curso,ve.paralelo,
         pd.nombres AS docente_nombres,pd.apellidos AS docente_apellidos,
-        pp.nombres AS psicologa_nombres,pp.apellidos AS psicologa_apellidos
+        pu.nombres AS psicologa_nombres,pu.apellidos AS psicologa_apellidos
     FROM derivaciones d
     INNER JOIN estudiantes e ON e.cod_estudiante=d.cod_estudiante
     LEFT JOIN vista_estudiantes ve ON ve.cod_estudiante=e.cod_estudiante
     LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
-    LEFT JOIN personas pd ON pd.cod_persona=doc.cod_persona
+    LEFT JOIN usuarios pd ON pd.cod_usuario=doc.cod_usuario
     LEFT JOIN usuarios pu ON pu.cod_usuario=d.cod_psicologa_solicitada
-    LEFT JOIN personas pp ON pp.cod_persona=pu.cod_persona
+
     WHERE d.solicitar_cita=1
       AND NOT EXISTS (SELECT 1 FROM citas c WHERE c.cod_derivacion=d.cod_derivacion AND c.estado<>'Cancelada')";
 if ($rolUsuarioSesion === 2) {
@@ -81,10 +81,10 @@ $stmtSolicitudes->close();
 
     <!-- Breadcrumb -->
     <nav class="breadcrumb mb-3">
-        <span>Inicio</span> &gt; 
+        <span>Inicio</span> &gt;
         <strong>Citas</strong>
     </nav>
-    
+
 
     <!-- Barra superior -->
     <div class="card p-4 mb-4">
@@ -100,7 +100,7 @@ $stmtSolicitudes->close();
 
             <!-- Filtro estado -->
             <div class="col-md-2">
-                <select class="form-select" 
+                <select class="form-select"
                         id="filtroEstado">
                     <option value="">Todos los estados</option>
                     <option value="Pendiente">Pendiente</option>
@@ -129,7 +129,7 @@ $stmtSolicitudes->close();
 
     <!-- Mensaje éxito -->
     <?php if(isset($_GET['exito'])): ?>
-    <div class="alert alert-success 
+    <div class="alert alert-success
                 alert-dismissible fade show">
         <i class="bi bi-check-circle-fill"></i>
         <?php
@@ -140,7 +140,7 @@ $stmtSolicitudes->close();
         if($_GET['exito'] == 3)
             echo " Cita cancelada correctamente";
         ?>
-        <button type="button" 
+        <button type="button"
                 class="btn-close"
                 data-bs-dismiss="alert">
         </button>
@@ -149,7 +149,7 @@ $stmtSolicitudes->close();
 
     <!-- Mensaje error -->
     <?php if(isset($_GET['error'])): ?>
-    <div class="alert alert-danger 
+    <div class="alert alert-danger
                 alert-dismissible fade show">
         <i class="bi bi-exclamation-triangle-fill"></i>
         <?php
@@ -158,7 +158,7 @@ $stmtSolicitudes->close();
         if($_GET['error'] == 2)
             echo " No se pudo procesar la solicitud";
         ?>
-        <button type="button" 
+        <button type="button"
                 class="btn-close"
                 data-bs-dismiss="alert">
         </button>
@@ -188,26 +188,26 @@ $stmtSolicitudes->close();
                 <?php
                 if($resultado->num_rows > 0):
                     $numero = 1;
-                    while($fila = 
+                    while($fila =
                     $resultado->fetch_assoc()):
                 ?>
                 <tr>
                     <td><?= $numero++ ?></td>
                     <td>
                         <?= htmlspecialchars(
-                            $fila['nombres'] . ' ' . 
+                            $fila['nombres'] . ' ' .
                             $fila['apellidos']) ?>
                     </td>
                     <td>
-                        <?= $fila['curso'] ?>° 
+                        <?= $fila['curso'] ?>°
                         <?= $fila['paralelo'] ?>
                     </td>
                     <td>
-                        <?= date('d/m/Y', 
+                        <?= date('d/m/Y',
                             strtotime($fila['fecha'])) ?>
                     </td>
                     <td>
-                        <?= date('H:i', 
+                        <?= date('H:i',
                             strtotime($fila['hora'])) ?>
                     </td>
                     <td>
@@ -251,7 +251,7 @@ $stmtSolicitudes->close();
                 else:
                 ?>
                 <tr>
-                    <td colspan="8" 
+                    <td colspan="8"
                         class="text-center py-4 text-muted">
                         No hay citas registradas
                     </td>
@@ -265,8 +265,8 @@ $stmtSolicitudes->close();
     <!-- Pie -->
     <div class="mt-3">
         <span>
-            Mostrando 
-            <strong><?= $total_citas ?></strong> 
+            Mostrando
+            <strong><?= $total_citas ?></strong>
             citas en total
         </span>
     </div>

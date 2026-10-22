@@ -83,14 +83,15 @@ try {
     }
     $bd->query("UPDATE estudiantes SET nombres='Ana <prueba>',apellidos='Alumno' WHERE cod_estudiante=1");
     $bd->query("UPDATE estudiantes SET estado='Retirado' WHERE cod_estudiante=3");
-    $bd->query("UPDATE inscripciones SET estado='Retirado' WHERE cod_estudiante=3");
-    $bd->query('DELETE FROM inscripciones WHERE cod_estudiante=2');
-    $bd->query("INSERT INTO inscripciones (cod_estudiante,cod_seccion,fecha_inscripcion,estado)
+    $bd->query("UPDATE historial_academico SET estado='Retirado' WHERE cod_estudiante=3");
+    $bd->query('DELETE FROM historial_academico WHERE cod_estudiante=2');
+    $bd->query("UPDATE historial_academico SET estado='Finalizado' WHERE cod_estudiante=1 AND estado='Activo'");
+    $bd->query("INSERT INTO historial_academico (cod_estudiante,cod_seccion,fecha_inicio,estado)
         SELECT 1,se.cod_seccion,CURRENT_DATE(),'Activo' FROM secciones se JOIN cursos c ON c.cod_curso=se.cod_curso
         JOIN paralelos p ON p.cod_paralelo=se.cod_paralelo WHERE c.orden=2 AND p.nombre='B' AND se.turno='Mañana' LIMIT 1");
     $bd->query("INSERT INTO secciones (cod_seccion,cod_institucion,cod_curso,cod_paralelo,turno,gestion,estado)
         VALUES (101,1,3,1,'Mañana',$anterior,'Activo')");
-    $bd->query("INSERT INTO inscripciones (cod_estudiante,cod_seccion,fecha_inscripcion,estado) VALUES (1,101,'$anterior-02-01','Finalizado')");
+    $bd->query("INSERT INTO historial_academico (cod_estudiante,cod_seccion,fecha_inicio,estado) VALUES (1,101,'$anterior-02-01','Finalizado')");
     $bd->query("INSERT INTO seguimientos (cod_seguimiento,cod_historia,cod_psicologa,fecha,descripcion,proxima_sesion) VALUES
         (1,101,102,'$anio-01-01','DETALLE_PRIVADO',NULL),
         (2,101,102,'$anio-02-10','DETALLE_PRIVADO','$anio-03-15'),
@@ -103,7 +104,7 @@ try {
         (1,102,'$anio-03-10','10:00','Atendida'),(1,102,'$anio-03-11','10:00','Cancelada')");
     $filtros = estadisticas_filtros(['desde'=>"$anio-01-01",'hasta'=>"$anio-03-31"]);
     $datos = estadisticas_datos($bd, $filtros);
-    verificar($datos['resumen'] === ['historias'=>23,'sesiones'=>5,'acumuladas'=>6,'con_sesiones'=>3,'sin_sesiones'=>20], 'Conteos del período y acumulados incorrectos o duplicados por inscripciones/citas.');
+    verificar($datos['resumen'] === ['historias'=>23,'sesiones'=>5,'acumuladas'=>6,'con_sesiones'=>3,'sin_sesiones'=>20], 'Conteos del período y acumulados incorrectos o duplicados por historial_academico/citas.');
     verificar($datos['meses'] === ["$anio-01"=>1,"$anio-02"=>3,"$anio-03"=>1], 'Serie mensual incorrecta.');
     verificar($datos['estados'] === ['Activa'=>21,'En seguimiento'=>1,'Cerrada'=>1], 'Estados no reconcilian.');
     $porEstudiante = array_column($datos['historias'], null, 'cod_estudiante');
@@ -128,7 +129,7 @@ try {
     rechaza(fn()=>estadisticas_datos($bd,array_replace($filtros,['curso'=>999999])), 'Acepta curso inexistente.');
     $baseVacia = estadisticas_datos($bd, ['desde'=>'1900-01-01','hasta'=>'1900-01-31']);
     verificar($baseVacia['resumen'] === ['historias'=>0,'sesiones'=>0,'acumuladas'=>0,'con_sesiones'=>0,'sin_sesiones'=>0], 'No maneja un período sin historias.');
-    echo "Conteos clínicos, inscripciones múltiples, límites de fechas y filtros: correctos.\n";
+    echo "Conteos clínicos, historial_academico múltiples, límites de fechas y filtros: correctos.\n";
     $sinDatos = estadisticas_panel($bd,'1900-01-01');
     verificar(array_sum($sinDatos['resumen']) === 0 && !$sinDatos['prioritarios'] && !$sinDatos['agenda'], 'Panel sin datos inventa actividad.');
     $hoy = new DateTimeImmutable('today');

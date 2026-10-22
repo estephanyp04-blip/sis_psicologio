@@ -190,9 +190,9 @@ PHP
         comprobar((estadoNegocio($r)['cita'] ?? '') === 'Cancelada', 'POST válido no canceló la cita de prueba.');
         echo "Propiedad de derivaciones y cancelación de citas: correctas.\n";
 
-        $estadoEstudiante = static fn(array $r): array => array_intersect_key(estadoNegocio($r), array_flip(['estudiantes', 'inscripciones']));
+        $estadoEstudiante = static fn(array $r): array => array_intersect_key(estadoNegocio($r), array_flip(['estudiantes', 'historial_academico']));
         $baseEstudiante = $estadoEstudiante(peticion('estudiantes/listar.php', 'GET', ['rol' => 2, 'negocio' => true]));
-        comprobar(count($baseEstudiante['inscripciones'] ?? []) === 4, 'No se prepararon las inscripciones de prueba.');
+        comprobar(count($baseEstudiante['historial_academico'] ?? []) === 4, 'No se prepararon las historial_academico de prueba.');
         foreach ([1, 2] as $rol) {
             foreach (['retirar' => 'Retirado', 'reactivar' => 'Activo'] as $accion => $estado) {
                 $r = peticion('estudiantes/cambiar_estado.php', 'POST', ['rol' => $rol, 'negocio' => true, 'estudiante_retirado' => $accion === 'reactivar'],
@@ -200,9 +200,9 @@ PHP
                 $guardado = $estadoEstudiante($r);
                 comprobar($r['codigo'] === 302, "No redirige después de $accion, rol $rol.");
                 comprobar(($guardado['estudiantes'][0]['estado'] ?? '') === $estado, "No se pudo $accion al estudiante.");
-                comprobar(($guardado['inscripciones'][2]['estado'] ?? '') === $estado, "No se pudo $accion la última inscripción.");
+                comprobar(($guardado['historial_academico'][2]['estado'] ?? '') === $estado, "No se pudo $accion la última inscripción.");
                 foreach ([0, 1, 3] as $indice) {
-                    comprobar(($guardado['inscripciones'][$indice] ?? null) === $baseEstudiante['inscripciones'][$indice], 'Se alteró una inscripción histórica o ajena.');
+                    comprobar(($guardado['historial_academico'][$indice] ?? null) === $baseEstudiante['historial_academico'][$indice], 'Se alteró una inscripción histórica o ajena.');
                 }
                 comprobar(($guardado['estudiantes'][1] ?? null) === $baseEstudiante['estudiantes'][1], 'Se modificó otro estudiante.');
             }

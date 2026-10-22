@@ -23,13 +23,13 @@ $sql = "SELECT
             e.apellidos,
             e.curso,
             e.paralelo,
-            p.nombres AS nombre_psicologo,
-            p.apellidos AS apellido_psicologo
+            u.nombres AS nombre_psicologo,
+            u.apellidos AS apellido_psicologo
         FROM informes i
         INNER JOIN informe_individual d ON d.cod_informe=i.cod_informe
         INNER JOIN vista_estudiantes e ON d.cod_estudiante=e.cod_estudiante
         INNER JOIN usuarios u ON i.cod_elaborado_por=u.cod_usuario
-        INNER JOIN personas p ON p.cod_persona=u.cod_persona
+
         ORDER BY i.fecha_inicio DESC, i.cod_informe DESC";
 
 $resultado = $conexion->query($sql);

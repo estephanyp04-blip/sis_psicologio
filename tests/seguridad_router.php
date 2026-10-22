@@ -70,12 +70,10 @@ foreach ($permisosPrueba as $clave => $valores) {
     $insertPermiso->execute();
 }
 $insertPermiso->close();
-$db->query("CREATE TEMPORARY TABLE personas (cod_persona INT PRIMARY KEY, nombres VARCHAR(60), apellidos VARCHAR(60), correo VARCHAR(120))");
-$db->query("INSERT INTO personas VALUES (201,'Admin','Prueba',''),(202,'Psicologa','Prueba',''),(203,'Docente','Prueba',''),(204,'Director','Prueba',''),(205,'Otro','Docente','')");
-$db->query("CREATE TEMPORARY TABLE usuarios (cod_usuario INT PRIMARY KEY, cod_persona INT, usuario VARCHAR(40), password VARCHAR(255), estado VARCHAR(20), cod_rol INT)");
-$db->query("INSERT INTO usuarios VALUES (101,201,'prueba_admin','hash-prueba','Activo',1),(102,202,'prueba_psicologa','hash-prueba','Activo',2),(103,203,'prueba_docente','hash-prueba','Activo',3),(104,204,'prueba_director','hash-prueba','Activo',4),(105,205,'otro_docente','hash-prueba','Activo',3)");
-$db->query("CREATE TEMPORARY TABLE docentes (cod_docente INT PRIMARY KEY, cod_persona INT)");
-$db->query("INSERT INTO docentes VALUES (303,203),(305,205)");
+$db->query("CREATE TEMPORARY TABLE usuarios (cod_usuario INT PRIMARY KEY, nombres VARCHAR(60), apellidos VARCHAR(60), correo VARCHAR(120), usuario VARCHAR(40), password VARCHAR(255), estado VARCHAR(20), cod_rol INT)");
+$db->query("INSERT INTO usuarios VALUES (101,'Admin','Prueba','admin@example.test','prueba_admin','hash-prueba','Activo',1),(102,'Psicologa','Prueba','psicologa@example.test','prueba_psicologa','hash-prueba','Activo',2),(103,'Docente','Prueba','docente@example.test','prueba_docente','hash-prueba','Activo',3),(104,'Director','Prueba','director@example.test','prueba_director','hash-prueba','Activo',4),(105,'Otro','Docente','otro@example.test','otro_docente','hash-prueba','Activo',3)");
+$db->query("CREATE TEMPORARY TABLE docentes (cod_docente INT PRIMARY KEY, cod_usuario INT)");
+$db->query("INSERT INTO docentes VALUES (303,103),(305,105)");
 
 login_iniciar_sesion();
 // Cada petición construye su propio caso, sin heredar estado de otro ensayo.
@@ -95,24 +93,24 @@ switch ($caso['sesion'] ?? '') {
     case 'rol_inactivo': $db->query('UPDATE roles SET estado=\'Inactivo\' WHERE cod_rol=' . $rol); break;
     case 'clave_cambiada': $db->query("UPDATE usuarios SET password='nuevo-hash' WHERE cod_usuario=" . (100 + $rol)); break;
     case 'rol_cambiado': $db->query('UPDATE usuarios SET cod_rol=4 WHERE cod_usuario=' . (100 + $rol)); break;
-    case 'sin_docente': $db->query('DELETE FROM docentes WHERE cod_persona=203'); break;
-    case 'docente_duplicado': $db->query('INSERT INTO docentes VALUES (306,203)'); break;
+    case 'sin_docente': $db->query('DELETE FROM docentes WHERE cod_usuario=103'); break;
+    case 'docente_duplicado': $db->query('INSERT INTO docentes VALUES (306,103)'); break;
 }
 
 $GLOBALS['prueba_negocio'] = !empty($caso['negocio']);
 if ($GLOBALS['prueba_negocio']) {
     $db->query("CREATE TEMPORARY TABLE estudiantes (cod_estudiante INT PRIMARY KEY, codigo VARCHAR(20), nombres VARCHAR(60), apellidos VARCHAR(60), ci VARCHAR(20), estado VARCHAR(20)) ENGINE=InnoDB");
     $db->query("INSERT INTO estudiantes VALUES (1,'PRUEBA1','Estudiante','Prueba','PRUEBA','Activo'),(2,'PRUEBA2','OTRO_ESTUDIANTE','Prueba','OTRO','Activo')");
-    $db->query("CREATE TEMPORARY TABLE inscripciones (cod_inscripcion INT PRIMARY KEY, cod_estudiante INT, estado VARCHAR(20)) ENGINE=InnoDB");
-    $db->query("INSERT INTO inscripciones VALUES (9,1,'Finalizado'),(10,1,'Retirado'),(11,1,'Activo'),(12,2,'Activo')");
+    $db->query("CREATE TEMPORARY TABLE historial_academico (cod_historial_academico INT PRIMARY KEY, cod_estudiante INT, estado VARCHAR(20)) ENGINE=InnoDB");
+    $db->query("INSERT INTO historial_academico VALUES (9,1,'Finalizado'),(10,1,'Retirado'),(11,1,'Activo'),(12,2,'Activo')");
     if (!empty($caso['estudiante_retirado'])) {
         $db->query("UPDATE estudiantes SET estado='Retirado' WHERE cod_estudiante=1");
-        $db->query("UPDATE inscripciones SET estado='Retirado' WHERE cod_inscripcion=11");
+        $db->query("UPDATE historial_academico SET estado='Retirado' WHERE cod_historial_academico=11");
     }
     if (!empty($caso['fallo_inscripcion'])) {
-        $db->query("ALTER TABLE inscripciones ADD CONSTRAINT fallo_prueba CHECK (cod_inscripcion<>11 OR estado='Activo')");
+        $db->query("ALTER TABLE historial_academico ADD CONSTRAINT fallo_prueba CHECK (cod_historial_academico<>11 OR estado='Activo')");
     }
-    // Oculta también la vista permanente: ningún formulario consulta personas reales.
+    // El router trabaja solo con las tablas temporales del esquema actual.
     $db->query("CREATE TEMPORARY TABLE vista_estudiantes (cod_estudiante INT PRIMARY KEY, codigo VARCHAR(20), nombres VARCHAR(60), apellidos VARCHAR(60), ci VARCHAR(20), estado VARCHAR(20), curso VARCHAR(30), paralelo VARCHAR(10), turno VARCHAR(20))");
     $db->query("INSERT INTO vista_estudiantes SELECT e.*,'1ro de Secundaria','A','Mañana' FROM estudiantes e");
     $db->query("CREATE TEMPORARY TABLE materias (cod_materia INT PRIMARY KEY, nombre VARCHAR(150), estado VARCHAR(20))");
@@ -133,7 +131,7 @@ if ($GLOBALS['prueba_negocio']) {
             'derivaciones' => $db->query('SELECT cod_derivacion,motivo,observaciones FROM derivaciones ORDER BY cod_derivacion')->fetch_all(MYSQLI_ASSOC),
             'cita' => $db->query('SELECT estado FROM citas WHERE cod_cita=1')->fetch_assoc()['estado'],
             'estudiantes' => $db->query('SELECT cod_estudiante,estado FROM estudiantes ORDER BY cod_estudiante')->fetch_all(MYSQLI_ASSOC),
-            'inscripciones' => $db->query('SELECT cod_inscripcion,cod_estudiante,estado FROM inscripciones ORDER BY cod_inscripcion')->fetch_all(MYSQLI_ASSOC),
+            'historial_academico' => $db->query('SELECT cod_historial_academico,cod_estudiante,estado FROM historial_academico ORDER BY cod_historial_academico')->fetch_all(MYSQLI_ASSOC),
             'permisos_protegidos' => $db->query("SELECT p.cod_rol,m.nombre,p.puede_ver,p.puede_crear,p.puede_editar,p.puede_cambiar_estado,p.puede_eliminar FROM permisos p JOIN modulos m ON m.cod_modulo=p.cod_modulo WHERE p.cod_rol IN (3,4) AND m.nombre IN ('Dashboard','Estadísticas','Estudiantes') ORDER BY p.cod_rol,m.nombre")->fetch_all(MYSQLI_ASSOC),
             'autenticado' => $_SESSION['autenticado'] ?? false,
         ];

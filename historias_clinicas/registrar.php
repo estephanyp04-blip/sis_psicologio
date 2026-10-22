@@ -45,13 +45,13 @@ if($idDerivacion){
                 INNER JOIN responsables r ON r.cod_responsable=er.cod_responsable
                 WHERE er.cod_estudiante=e.cod_estudiante AND er.parentesco='Tutor'
                 ORDER BY er.es_principal DESC LIMIT 1) AS nombre_tutor,
-            dp.nombres AS docente_nombres,
-            dp.apellidos AS docente_apellidos,
+            du.nombres AS docente_nombres,
+            du.apellidos AS docente_apellidos,
             h.cod_historia
         FROM derivaciones d
         INNER JOIN vista_estudiantes e ON e.cod_estudiante=d.cod_estudiante
         LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
-        LEFT JOIN personas dp ON dp.cod_persona=doc.cod_persona
+        LEFT JOIN usuarios du ON du.cod_usuario=doc.cod_usuario
         LEFT JOIN materias m ON m.cod_materia=d.cod_materia
         LEFT JOIN historias_clinicas h ON h.cod_estudiante=e.cod_estudiante
         WHERE d.cod_derivacion=?
@@ -110,8 +110,8 @@ elseif($idEstudiante){
             m.nombre AS materia,
             d.prioridad,
             d.observaciones AS observaciones_derivacion,
-            dp.nombres AS docente_nombres,
-            dp.apellidos AS docente_apellidos,
+            du.nombres AS docente_nombres,
+            du.apellidos AS docente_apellidos,
             h.cod_historia
         FROM vista_estudiantes e
         LEFT JOIN historias_clinicas h ON h.cod_estudiante=e.cod_estudiante
@@ -123,7 +123,7 @@ elseif($idEstudiante){
             LIMIT 1
         )
         LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
-        LEFT JOIN personas dp ON dp.cod_persona=doc.cod_persona
+        LEFT JOIN usuarios du ON du.cod_usuario=doc.cod_usuario
         LEFT JOIN materias m ON m.cod_materia=d.cod_materia
         WHERE e.cod_estudiante=?
         AND e.estado='Activo'
@@ -190,7 +190,7 @@ $sql="
         m.nombre AS materia_derivacion,
         d.prioridad AS prioridad_derivacion,
         d.observaciones AS observaciones_derivacion,
-        TRIM(CONCAT(COALESCE(dp.nombres,''),' ',COALESCE(dp.apellidos,''))) AS derivado_por
+        TRIM(CONCAT(COALESCE(du.nombres,''),' ',COALESCE(du.apellidos,''))) AS derivado_por
     FROM vista_estudiantes e
     LEFT JOIN historias_clinicas h ON h.cod_estudiante=e.cod_estudiante
     LEFT JOIN derivaciones d ON d.cod_derivacion=(
@@ -201,7 +201,7 @@ $sql="
         LIMIT 1
     )
     LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
-    LEFT JOIN personas dp ON dp.cod_persona=doc.cod_persona
+    LEFT JOIN usuarios du ON du.cod_usuario=doc.cod_usuario
     LEFT JOIN materias m ON m.cod_materia=d.cod_materia
     WHERE e.estado='Activo'
     AND h.cod_historia IS NULL

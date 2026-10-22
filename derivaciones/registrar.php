@@ -71,9 +71,9 @@ if (!$rsEstudiantes) {
 
 // Psicólogas activas disponibles para la atención.
 $rsProfesionales = $conexion->query(
-    "SELECT u.cod_usuario,p.nombres AS nombre,p.apellidos AS apellido,u.usuario,p.correo
-     FROM usuarios u INNER JOIN personas p ON p.cod_persona=u.cod_persona
-     WHERE u.cod_rol = 2 AND u.estado = 'Activo' ORDER BY p.apellidos,p.nombres"
+    "SELECT u.cod_usuario,u.nombres AS nombre,u.apellidos AS apellido,u.usuario,u.correo
+     FROM usuarios u
+     WHERE u.cod_rol = 2 AND u.estado = 'Activo' ORDER BY u.apellidos,u.nombres"
 );
 $profesionales = $rsProfesionales->fetch_all(MYSQLI_ASSOC);
 $rsProfesionales->free();
@@ -93,9 +93,9 @@ $descripcionImagenAnt = is_string($d['descripcion_imagen'] ?? null) ? $d['descri
 $idDocenteSesion = (int) ($_SESSION['cod_docente'] ?? 0);
 $docentesDisponibles = [];
 if ($idDocenteSesion === 0) {
-    $docentesDisponibles = $conexion->query("SELECT d.cod_docente,p.nombres,p.apellidos
-        FROM docentes d INNER JOIN personas p ON p.cod_persona=d.cod_persona
-        WHERE d.estado='Activo' ORDER BY p.apellidos,p.nombres")->fetch_all(MYSQLI_ASSOC);
+    $docentesDisponibles = $conexion->query("SELECT d.cod_docente,u.nombres,u.apellidos
+        FROM docentes d INNER JOIN usuarios u ON u.cod_usuario=d.cod_usuario
+        WHERE d.estado='Activo' ORDER BY u.apellidos,u.nombres")->fetch_all(MYSQLI_ASSOC);
 }
 // Preseleccionar la cuenta indicada sin reemplazar una elección anterior.
 if (!array_key_exists('cod_profesional', $d)) {

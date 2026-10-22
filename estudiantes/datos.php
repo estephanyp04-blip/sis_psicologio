@@ -86,9 +86,9 @@ function estudiante_cambiar_estado(mysqli $conexion, int $id, string $accion): b
         $stmt->close();
         if (!$estudiante) throw new InvalidArgumentException('El estudiante no existe.');
 
-        $stmt = $conexion->prepare("SELECT cod_inscripcion,estado FROM inscripciones
+        $stmt = $conexion->prepare("SELECT cod_historial_academico,estado FROM historial_academico
             WHERE cod_estudiante=? AND estado IN ('Activo','Retirado')
-            ORDER BY cod_inscripcion DESC LIMIT 1 FOR UPDATE");
+            ORDER BY cod_historial_academico DESC LIMIT 1 FOR UPDATE");
         $stmt->bind_param('i', $id);
         $stmt->execute();
         $inscripcion = $stmt->get_result()->fetch_assoc();
@@ -100,8 +100,8 @@ function estudiante_cambiar_estado(mysqli $conexion, int $id, string $accion): b
         $stmt->execute();
         $stmt->close();
         if ($inscripcion) {
-            $stmt = $conexion->prepare('UPDATE inscripciones SET estado=? WHERE cod_inscripcion=?');
-            $stmt->bind_param('si', $estado, $inscripcion['cod_inscripcion']);
+            $stmt = $conexion->prepare('UPDATE historial_academico SET estado=? WHERE cod_historial_academico=?');
+            $stmt->bind_param('si', $estado, $inscripcion['cod_historial_academico']);
             $stmt->execute();
             $stmt->close();
         }
@@ -135,11 +135,11 @@ function estudiante_actualizar(mysqli $conexion, int $id, array $entrada): void
         $stmt->bind_param('i', $id); $stmt->execute();
         $existe = $stmt->get_result()->fetch_assoc(); $stmt->close();
         if (!$existe) throw new InvalidArgumentException('El estudiante no existe.');
-        $stmt = $conexion->prepare("SELECT i.cod_inscripcion,s.cod_seccion,s.cod_institucion,s.turno,s.gestion,c.orden,p.nombre AS paralelo
-            FROM inscripciones i INNER JOIN secciones s ON s.cod_seccion=i.cod_seccion
+        $stmt = $conexion->prepare("SELECT i.cod_historial_academico,s.cod_seccion,s.cod_institucion,s.turno,s.gestion,c.orden,p.nombre AS paralelo
+            FROM historial_academico i INNER JOIN secciones s ON s.cod_seccion=i.cod_seccion
             INNER JOIN cursos c ON c.cod_curso=s.cod_curso INNER JOIN paralelos p ON p.cod_paralelo=s.cod_paralelo
             WHERE i.cod_estudiante=? AND i.estado IN ('Activo','Retirado')
-            ORDER BY i.cod_inscripcion DESC LIMIT 1 FOR UPDATE");
+            ORDER BY i.cod_historial_academico DESC LIMIT 1 FOR UPDATE");
         $stmt->bind_param('i', $id); $stmt->execute();
         $inscripcion = $stmt->get_result()->fetch_assoc(); $stmt->close();
         if (!$inscripcion) throw new InvalidArgumentException('El estudiante no tiene una inscripción académica que actualizar.');
@@ -159,8 +159,8 @@ function estudiante_actualizar(mysqli $conexion, int $id, array $entrada): void
         $stmt = $conexion->prepare('UPDATE estudiantes SET ci=?,nombres=?,apellidos=?,estado=? WHERE cod_estudiante=?');
         $stmt->bind_param('ssssi', $ci, $datos['nombres'], $datos['apellidos'], $datos['estado'], $id);
         $stmt->execute(); $stmt->close();
-        $stmt = $conexion->prepare('UPDATE inscripciones SET cod_seccion=?,estado=? WHERE cod_inscripcion=?');
-        $stmt->bind_param('isi', $idSeccion, $datos['estado'], $inscripcion['cod_inscripcion']);
+        $stmt = $conexion->prepare('UPDATE historial_academico SET cod_seccion=?,estado=? WHERE cod_historial_academico=?');
+        $stmt->bind_param('isi', $idSeccion, $datos['estado'], $inscripcion['cod_historial_academico']);
         $stmt->execute(); $stmt->close();
         $conexion->commit();
     } catch (Throwable $error) {
@@ -185,8 +185,8 @@ function estudiante_insertar(mysqli $conexion, array $datos, array $academico): 
         $idEstudiante = (int) $conexion->insert_id;
         $stmt->close();
 
-        $stmt = $conexion->prepare('INSERT INTO inscripciones
-            (cod_estudiante, cod_seccion, fecha_inscripcion, estado)
+        $stmt = $conexion->prepare('INSERT INTO historial_academico
+            (cod_estudiante, cod_seccion, fecha_inicio, estado)
             VALUES (?, ?, CURRENT_DATE(), ?)');
         $stmt->bind_param('iis', $idEstudiante, $academico['cod_seccion'], $datos['estado']);
         $stmt->execute();

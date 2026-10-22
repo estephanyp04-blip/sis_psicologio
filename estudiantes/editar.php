@@ -6,9 +6,9 @@ require_once __DIR__ . '/../config/conexion.php';
 $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 if (!$id) { header('Location: listar.php'); exit; }
 $stmt = $conexion->prepare("SELECT e.*,c.orden AS curso,p.nombre AS paralelo,s.cod_institucion,s.gestion,s.turno
-    FROM estudiantes e LEFT JOIN inscripciones i ON i.cod_inscripcion=(
-        SELECT i2.cod_inscripcion FROM inscripciones i2 WHERE i2.cod_estudiante=e.cod_estudiante
-        AND i2.estado IN ('Activo','Retirado') ORDER BY i2.cod_inscripcion DESC LIMIT 1)
+    FROM estudiantes e LEFT JOIN historial_academico i ON i.cod_historial_academico=(
+        SELECT i2.cod_historial_academico FROM historial_academico i2 WHERE i2.cod_estudiante=e.cod_estudiante
+        AND i2.estado IN ('Activo','Retirado') ORDER BY i2.cod_historial_academico DESC LIMIT 1)
     LEFT JOIN secciones s ON s.cod_seccion=i.cod_seccion LEFT JOIN cursos c ON c.cod_curso=s.cod_curso
     LEFT JOIN paralelos p ON p.cod_paralelo=s.cod_paralelo WHERE e.cod_estudiante=?");
 $stmt->bind_param('i', $id); $stmt->execute();

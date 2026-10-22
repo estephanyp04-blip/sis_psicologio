@@ -19,11 +19,11 @@ try {
 
     $stmt = $conexion->prepare("SELECT d.cod_derivacion AS id, d.fecha, m.nombre AS materia, d.prioridad,
         d.motivo, d.observaciones, d.estado,
-        TRIM(CONCAT(COALESCE(p.nombres, ''), ' ', COALESCE(p.apellidos, ''))) AS docente
+        TRIM(CONCAT(COALESCE(u.nombres, ''), ' ', COALESCE(u.apellidos, ''))) AS docente
         FROM derivaciones d
         LEFT JOIN materias m ON m.cod_materia=d.cod_materia
         LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
-        LEFT JOIN personas p ON p.cod_persona=doc.cod_persona
+        LEFT JOIN usuarios u ON u.cod_usuario=doc.cod_usuario
         WHERE d.cod_estudiante = ? ORDER BY d.fecha DESC, d.cod_derivacion DESC");
     $stmt->bind_param('i', $idEstudiante);
     $stmt->execute();

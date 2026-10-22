@@ -49,13 +49,13 @@ $stmt = $conexion->prepare("
         e.fecha_nacimiento,
         e.curso AS estudiante_curso,
         e.paralelo AS estudiante_paralelo,
-        p.nombres AS psicologo_nombre,
-        p.apellidos AS psicologo_apellido
+        u.nombres AS psicologo_nombre,
+        u.apellidos AS psicologo_apellido
     FROM informes i
     LEFT JOIN informe_individual d ON d.cod_informe=i.cod_informe
     LEFT JOIN vista_estudiantes e ON e.cod_estudiante = d.cod_estudiante
     LEFT JOIN usuarios u ON u.cod_usuario = i.cod_elaborado_por
-    LEFT JOIN personas p ON p.cod_persona=u.cod_persona
+
     WHERE i.cod_informe = ?
     LIMIT 1
 ");

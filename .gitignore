@@ -1,6 +1,7 @@
 .vscode/
 .env
 *.log
+database/backups/
 Thumbs.db
 .DS_Store
 derivaciones/evidencia_*.jpg

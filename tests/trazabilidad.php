@@ -105,8 +105,7 @@ try {
     $bd->set_charset('utf8mb4');
     $bd->query("SET SESSION sql_mode='STRICT_ALL_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
     prueba_autores($bd);
-    $bd->query("INSERT INTO personas (cod_persona,nombres,apellidos) VALUES (1006,'Psicologa','Dos')");
-    $bd->query("INSERT INTO usuarios (cod_usuario,cod_persona,usuario,password,cod_rol) VALUES (105,1006,'prueba_psicologa_dos','hash-prueba',2)");
+    $bd->query("INSERT INTO usuarios (cod_usuario,nombres,apellidos,usuario,password,cod_rol) VALUES (112,'Psicologa','Dos','prueba_psicologa_dos','hash-prueba',2)");
     prueba_estudiantes($bd, 4);
     $hoy=date('Y-m-d');
     $bd->query("INSERT INTO derivaciones (cod_derivacion,fecha,cod_estudiante,cod_docente,motivo,solicitar_cita,cod_psicologa_solicitada) VALUES (1,'$hoy',1,201,'Origen primero',1,102),(2,'$hoy',1,201,'Nuevo motivo distinto',0,NULL),(3,'$hoy',2,202,'Ajena',0,NULL)");
@@ -241,7 +240,7 @@ try {
     $reutilizada=cita_guardar($bd,$reserva,101);
     verificar($reutilizada!==$cancelable,'No libera horario de cita cancelada.');
     rechaza(fn()=>cita_guardar($bd,$reserva,101),'Dos citas ocupan el mismo turno del profesional.');
-    $otroProfesional=cita_guardar($bd,array_replace($reserva,['cod_psicologa'=>105]),101);
+    $otroProfesional=cita_guardar($bd,array_replace($reserva,['cod_psicologa'=>112]),101);
     verificar($otroProfesional!==$reutilizada,'No permite el mismo horario a profesionales distintos.');
     rechaza(fn()=>cita_guardar($bd,['estado'=>'Pendiente'],101,$cancelable),'Reactiva una cita cancelada.');
     // Cuatro procesos y conexiones compiten por un turno, sin serialización HTTP.

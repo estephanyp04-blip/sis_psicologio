@@ -8,6 +8,8 @@ Aplicación PHP para gestionar estudiantes, docentes, derivaciones, citas, histo
 - MariaDB; el entorno local utiliza XAMPP y MariaDB 10.4.
 - Apache para abrir la aplicación. Las pruebas HTTP arrancan su propio servidor PHP local.
 
+Para guardar versiones y actualizar el esquema de forma segura, consulta la [guía de versiones](docs/GUIA_VERSIONES.md) y el [registro de cambios](CHANGELOG.md).
+
 ## Uso local
 
 1. Iniciar Apache y MySQL desde XAMPP.

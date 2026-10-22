@@ -54,8 +54,8 @@ $sql = "SELECT
             d.estado,
             d.solicitar_cita,
             d.cod_psicologa_solicitada,
-            psicologa_persona.nombres AS psicologa_solicitada_nombres,
-            psicologa_persona.apellidos AS psicologa_solicitada_apellidos,
+            psicologa_usuario.nombres AS psicologa_solicitada_nombres,
+            psicologa_usuario.apellidos AS psicologa_solicitada_apellidos,
             e.nombres AS estudiante_nombres,
             e.apellidos AS estudiante_apellidos,
             e.curso,
@@ -69,12 +69,10 @@ $sql = "SELECT
             ON m.cod_materia = d.cod_materia
         LEFT JOIN docentes doc
             ON doc.cod_docente = d.cod_docente
-        LEFT JOIN personas persona
-            ON persona.cod_persona = doc.cod_persona
+        LEFT JOIN usuarios persona
+            ON persona.cod_usuario = doc.cod_usuario
         LEFT JOIN usuarios psicologa_usuario
             ON psicologa_usuario.cod_usuario = d.cod_psicologa_solicitada
-        LEFT JOIN personas psicologa_persona
-            ON psicologa_persona.cod_persona = psicologa_usuario.cod_persona
         WHERE d.cod_derivacion = ?
           AND (? <= 0 OR d.cod_docente = ?)
         LIMIT 1";

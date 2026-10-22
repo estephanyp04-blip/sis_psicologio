@@ -55,8 +55,8 @@ $sql = "SELECT
             ON m.cod_materia = d.cod_materia
         LEFT JOIN docentes AS doc
             ON d.cod_docente = doc.cod_docente
-        LEFT JOIN personas AS persona
-            ON persona.cod_persona = doc.cod_persona
+        LEFT JOIN usuarios AS persona
+            ON persona.cod_usuario = doc.cod_usuario
         WHERE d.cod_derivacion = ?
           AND (? <= 0 OR d.cod_docente = ?)
         LIMIT 1";

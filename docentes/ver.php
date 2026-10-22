@@ -26,19 +26,18 @@ if (!$idDocente || $idDocente <= 0) {
 $sql = "
     SELECT
         d.cod_docente,
-        d.cod_persona,
-        p.nombres,
-        p.apellidos,
-        p.telefono,
-        p.correo,
+        d.cod_usuario,
+        u.nombres,
+        u.apellidos,
+        u.telefono,
+        u.correo,
         GROUP_CONCAT(DISTINCT m.nombre ORDER BY m.nombre SEPARATOR ', ') AS materia,
         u.usuario,
         u.estado AS estado_usuario,
         r.nombre AS nombre_rol,
         COUNT(DISTINCT de.cod_derivacion) AS total_derivaciones
     FROM docentes d
-    INNER JOIN personas p ON p.cod_persona=d.cod_persona
-    LEFT JOIN usuarios u ON u.cod_persona=d.cod_persona
+    INNER JOIN usuarios u ON u.cod_usuario=d.cod_usuario
     LEFT JOIN roles r
         ON r.cod_rol = u.cod_rol
     LEFT JOIN docente_materias dm ON dm.cod_docente=d.cod_docente
@@ -48,11 +47,11 @@ $sql = "
     WHERE d.cod_docente = ?
     GROUP BY
         d.cod_docente,
-        d.cod_persona,
-        p.nombres,
-        p.apellidos,
-        p.telefono,
-        p.correo,
+        d.cod_usuario,
+        u.nombres,
+        u.apellidos,
+        u.telefono,
+        u.correo,
         u.usuario,
         u.estado,
         r.nombre

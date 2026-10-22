@@ -127,7 +127,7 @@ try {
     $idDocenteSesion = (int) ($_SESSION['cod_docente'] ?? 0);
     if ($idDocenteSesion > 0) {
         $stmtDocente = $conexion->prepare("SELECT d.cod_docente FROM docentes d
-            INNER JOIN usuarios u ON u.cod_persona=d.cod_persona
+            INNER JOIN usuarios u ON u.cod_usuario=d.cod_usuario
             WHERE u.cod_usuario=? AND d.cod_docente=? AND d.estado='Activo' LIMIT 1");
         $stmtDocente->bind_param('ii', $idUsuario, $idDocenteSesion);
         $stmtDocente->execute();
@@ -142,9 +142,9 @@ try {
         // El administrador elige al docente; no se asigna uno por defecto.
         $idDocente = $idDocenteElegido;
         if ($idDocente <= 0) {
-            $resultadoDocentes = $conexion->query("SELECT d.cod_docente,p.nombres,p.apellidos
-                FROM docentes d INNER JOIN personas p ON p.cod_persona=d.cod_persona
-                WHERE d.estado='Activo' ORDER BY p.apellidos,p.nombres");
+            $resultadoDocentes = $conexion->query("SELECT d.cod_docente,u.nombres,u.apellidos
+                FROM docentes d INNER JOIN usuarios u ON u.cod_usuario=d.cod_usuario
+                WHERE d.estado='Activo' ORDER BY u.apellidos,u.nombres");
             $docentes = $resultadoDocentes->fetch_all(MYSQLI_ASSOC);
             $resultadoDocentes->free();
             if (!$docentes) {
@@ -202,8 +202,8 @@ try {
     // Profesional solicitado y observaciones, como en el formulario original.
     $nombreProfesional = '';
     if ($solicitarCita === 1 && $idProfesional > 0) {
-        $stmtProfesional = $conexion->prepare("SELECT p.nombres AS nombre,p.apellidos AS apellido
-            FROM usuarios u INNER JOIN personas p ON p.cod_persona=u.cod_persona
+        $stmtProfesional = $conexion->prepare("SELECT u.nombres AS nombre,u.apellidos AS apellido
+            FROM usuarios u
             WHERE u.cod_usuario = ? AND u.cod_rol = 2 AND u.estado = 'Activo' LIMIT 1");
         $stmtProfesional->bind_param('i', $idProfesional);
         $stmtProfesional->execute();

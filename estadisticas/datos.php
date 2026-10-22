@@ -45,11 +45,11 @@ function estadisticas_datos(mysqli $bd, array $filtros): array
     // El curso y el estado son los actuales; las fechas delimitan las sesiones.
     $uniones = "FROM historias_clinicas h
         INNER JOIN estudiantes e ON e.cod_estudiante=h.cod_estudiante
-        LEFT JOIN inscripciones i ON i.cod_inscripcion=(
-            SELECT i2.cod_inscripcion FROM inscripciones i2
+        LEFT JOIN historial_academico i ON i.cod_historial_academico=(
+            SELECT i2.cod_historial_academico FROM historial_academico i2
             INNER JOIN secciones se2 ON se2.cod_seccion=i2.cod_seccion
             WHERE i2.cod_estudiante=e.cod_estudiante
-            ORDER BY se2.gestion DESC,i2.fecha_inscripcion DESC,i2.cod_inscripcion DESC LIMIT 1)
+            ORDER BY se2.gestion DESC,i2.fecha_inicio DESC,i2.cod_historial_academico DESC LIMIT 1)
         LEFT JOIN secciones se ON se.cod_seccion=i.cod_seccion
         LEFT JOIN cursos c ON c.cod_curso=se.cod_curso
         LEFT JOIN paralelos p ON p.cod_paralelo=se.cod_paralelo";
@@ -277,10 +277,10 @@ function estadisticas_panel(mysqli $bd, ?string $hoy = null): array
                 AND d2.estado IN ('Pendiente','En seguimiento') AND d2.fecha<=?
                 ORDER BY FIELD(d2.prioridad,'Alta','Media','Baja'),d2.fecha,d2.cod_derivacion LIMIT 1)
             LEFT JOIN historias_clinicas h ON h.cod_estudiante=e.cod_estudiante AND h.fecha_apertura<=?
-            LEFT JOIN inscripciones i ON i.cod_inscripcion=(
-                SELECT i2.cod_inscripcion FROM inscripciones i2 JOIN secciones se2 ON se2.cod_seccion=i2.cod_seccion
+            LEFT JOIN historial_academico i ON i.cod_historial_academico=(
+                SELECT i2.cod_historial_academico FROM historial_academico i2 JOIN secciones se2 ON se2.cod_seccion=i2.cod_seccion
                 WHERE i2.cod_estudiante=e.cod_estudiante
-                ORDER BY se2.gestion DESC,i2.fecha_inscripcion DESC,i2.cod_inscripcion DESC LIMIT 1)
+                ORDER BY se2.gestion DESC,i2.fecha_inicio DESC,i2.cod_historial_academico DESC LIMIT 1)
             LEFT JOIN secciones se ON se.cod_seccion=i.cod_seccion
             LEFT JOIN cursos c ON c.cod_curso=se.cod_curso
             LEFT JOIN paralelos p ON p.cod_paralelo=se.cod_paralelo
@@ -288,9 +288,9 @@ function estadisticas_panel(mysqli $bd, ?string $hoy = null): array
             ORDER BY FIELD(d.prioridad,'Alta','Media','Baja'),ultima_sesion,d.fecha,e.cod_estudiante LIMIT 5",
             [$hoy,$hoy,$hoy]);
         $agenda = estadisticas_consultar($bd, "SELECT c.cod_cita,c.hora,c.estado,e.nombres,e.apellidos,
-            CONCAT_WS(' ',p.nombres,p.apellidos) AS profesional
+            CONCAT_WS(' ',u.nombres,u.apellidos) AS profesional
             FROM citas c JOIN estudiantes e ON e.cod_estudiante=c.cod_estudiante
-            JOIN usuarios u ON u.cod_usuario=c.cod_psicologa JOIN personas p ON p.cod_persona=u.cod_persona
+            JOIN usuarios u ON u.cod_usuario=c.cod_psicologa
             WHERE c.fecha=? AND c.estado<>'Cancelada' ORDER BY c.hora,c.cod_cita", [$hoy]);
         $bd->commit();
     } catch (Throwable $error) {

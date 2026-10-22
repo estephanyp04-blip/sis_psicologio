@@ -39,13 +39,17 @@ try {
     }
     $tablas = array_column($bd->query('SHOW TABLES')->fetch_all(MYSQLI_NUM), 0);
     $normalizado = false;
-    if (in_array('personas', $tablas, true) && in_array('informe_individual', $tablas, true)) {
+    if (in_array('informe_individual', $tablas, true)) {
         $campos = [];
         foreach (['usuarios', 'docentes', 'historias_clinicas', 'informes'] as $tabla) {
             $campos[$tabla] = array_column($bd->query("SHOW COLUMNS FROM `$tabla`")->fetch_all(MYSQLI_ASSOC), 'Field');
         }
-        $normalizado = (in_array('cod_persona', $campos['usuarios'], true) || in_array('id_persona', $campos['usuarios'], true))
-            && (in_array('cod_persona', $campos['docentes'], true) || in_array('id_persona', $campos['docentes'], true))
+        $normalizado = (in_array('cod_persona', $campos['usuarios'], true)
+                || in_array('id_persona', $campos['usuarios'], true)
+                || in_array('nombres', $campos['usuarios'], true))
+            && (in_array('cod_persona', $campos['docentes'], true)
+                || in_array('id_persona', $campos['docentes'], true)
+                || in_array('cod_usuario', $campos['docentes'], true))
             && (in_array('cod_derivacion_origen', $campos['historias_clinicas'], true) || in_array('id_derivacion_origen', $campos['historias_clinicas'], true))
             && (in_array('cod_elaborado_por', $campos['informes'], true) || in_array('id_elaborado_por', $campos['informes'], true));
     }

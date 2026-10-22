@@ -168,16 +168,6 @@ try {
     $correoBaseDatos = $correo !== '' ? $correo : null;
 
     $conexion->begin_transaction();
-    $stmtPersona = $conexion->prepare(
-        'UPDATE personas p
-         INNER JOIN usuarios u ON u.cod_persona = p.cod_persona
-         SET p.nombres = ?, p.apellidos = ?, p.correo = ?
-         WHERE u.cod_usuario = ?'
-    );
-    $stmtPersona->bind_param('sssi', $nombre, $apellido, $correoBaseDatos, $idUsuario);
-    $stmtPersona->execute();
-    $stmtPersona->close();
-
     if ($cambiarPassword) {
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
@@ -190,29 +180,22 @@ try {
 
         $stmtActualizar = $conexion->prepare(
             'UPDATE usuarios
-             SET usuario = ?, password = ?, estado = ?, cod_rol = ?
+             SET nombres = ?, apellidos = ?, correo = ?, usuario = ?, password = ?, estado = ?, cod_rol = ?
              WHERE cod_usuario = ?'
         );
         $stmtActualizar->bind_param(
-            'sssii',
-            $usuario,
-            $passwordHash,
-            $estado,
-            $idRol,
-            $idUsuario
+            'ssssssii',
+            $nombre, $apellido, $correoBaseDatos, $usuario, $passwordHash, $estado, $idRol, $idUsuario
         );
     } else {
         $stmtActualizar = $conexion->prepare(
             'UPDATE usuarios
-             SET usuario = ?, estado = ?, cod_rol = ?
+             SET nombres = ?, apellidos = ?, correo = ?, usuario = ?, estado = ?, cod_rol = ?
              WHERE cod_usuario = ?'
         );
         $stmtActualizar->bind_param(
-            'ssii',
-            $usuario,
-            $estado,
-            $idRol,
-            $idUsuario
+            'sssssii',
+            $nombre, $apellido, $correoBaseDatos, $usuario, $estado, $idRol, $idUsuario
         );
     }
 

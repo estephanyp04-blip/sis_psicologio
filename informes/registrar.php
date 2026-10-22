@@ -30,8 +30,8 @@ $idUsuario=(int)($_SESSION['cod_usuario']??0);
 $nombrePsicologa='Psicóloga';
 
 if($idUsuario>0){
-    $stmt=$conexion->prepare("SELECT p.nombres AS nombre,p.apellidos AS apellido
-        FROM usuarios u INNER JOIN personas p ON p.cod_persona=u.cod_persona
+    $stmt=$conexion->prepare("SELECT u.nombres AS nombre,u.apellidos AS apellido
+        FROM usuarios u
         WHERE u.cod_usuario=? LIMIT 1");
     $stmt->bind_param('i',$idUsuario);
     $stmt->execute();
@@ -39,8 +39,8 @@ if($idUsuario>0){
     $stmt->close();
     if($usuario)$nombrePsicologa=trim($usuario['nombre'].' '.$usuario['apellido']);
 }else{
-    $stmt=$conexion->prepare("SELECT u.cod_usuario,p.nombres AS nombre,p.apellidos AS apellido
-        FROM usuarios u INNER JOIN personas p ON p.cod_persona=u.cod_persona
+    $stmt=$conexion->prepare("SELECT u.cod_usuario,u.nombres AS nombre,u.apellidos AS apellido
+        FROM usuarios u
         WHERE u.cod_rol=2 AND u.estado='Activo' ORDER BY u.cod_usuario ASC LIMIT 1");
     $stmt->execute();
     $usuario=$stmt->get_result()->fetch_assoc();
@@ -67,7 +67,7 @@ $sqlEstudiantes="SELECT e.cod_estudiante,e.nombres,e.apellidos,e.curso,e.paralel
     LEFT JOIN derivaciones d ON d.cod_derivacion=COALESCE(cs.cod_derivacion,h.cod_derivacion_origen,
         CASE WHEN h.cod_historia IS NULL THEN (SELECT d2.cod_derivacion FROM derivaciones d2 WHERE d2.cod_estudiante=e.cod_estudiante ORDER BY d2.fecha DESC,d2.cod_derivacion DESC LIMIT 1) ELSE NULL END)
     LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
-    LEFT JOIN personas doc_persona ON doc_persona.cod_persona=doc.cod_persona
+    LEFT JOIN usuarios doc_persona ON doc_persona.cod_usuario=doc.cod_usuario
     WHERE e.estado='Activo' ORDER BY e.apellidos,e.nombres";
 $resultadoEstudiantes=$conexion->query($sqlEstudiantes);
 

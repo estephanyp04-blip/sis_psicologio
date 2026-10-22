@@ -23,15 +23,14 @@ if (!$idDocente || $idDocente <= 0) {
 
 $sqlDocente = "
     SELECT
-        d.cod_docente,u.cod_usuario,d.cod_persona,p.nombres,p.apellidos,p.telefono,p.correo,
+        d.cod_docente,u.cod_usuario,u.nombres,u.apellidos,u.telefono,u.correo,
         GROUP_CONCAT(DISTINCT m.nombre ORDER BY m.nombre SEPARATOR ', ') AS materia
     FROM docentes d
-    INNER JOIN personas p ON p.cod_persona=d.cod_persona
-    LEFT JOIN usuarios u ON u.cod_persona=d.cod_persona
+    INNER JOIN usuarios u ON u.cod_usuario=d.cod_usuario
     LEFT JOIN docente_materias dm ON dm.cod_docente=d.cod_docente
     LEFT JOIN materias m ON m.cod_materia=dm.cod_materia
     WHERE d.cod_docente=?
-    GROUP BY d.cod_docente,u.cod_usuario,d.cod_persona,p.nombres,p.apellidos,p.telefono,p.correo
+    GROUP BY d.cod_docente,u.cod_usuario,u.nombres,u.apellidos,u.telefono,u.correo
 ";
 
 $stmtDocente = $conexion->prepare($sqlDocente);
@@ -61,20 +60,20 @@ if (!$docente) {
 $sqlUsuarios = "
     SELECT
         u.cod_usuario,
-        p.nombres AS nombre,
-        p.apellidos AS apellido,
+        u.nombres AS nombre,
+        u.apellidos AS apellido,
         u.usuario,
-        p.telefono,
-        p.correo
+        u.telefono,
+        u.correo
     FROM usuarios u
-    INNER JOIN personas p ON p.cod_persona=u.cod_persona
-    LEFT JOIN docentes d ON d.cod_persona=u.cod_persona
+
+    LEFT JOIN docentes d ON d.cod_usuario=u.cod_usuario
     WHERE u.cod_rol = 3
       AND (
           u.estado = 'Activo'
           AND (u.cod_usuario = ? OR d.cod_docente IS NULL)
       )
-    ORDER BY p.apellidos,p.nombres
+    ORDER BY u.apellidos,u.nombres
 ";
 
 $stmtUsuarios = $conexion->prepare($sqlUsuarios);

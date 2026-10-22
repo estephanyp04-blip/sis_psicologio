@@ -67,8 +67,8 @@ $sql = "
 
     LEFT JOIN docentes doc
         ON doc.cod_docente = d.cod_docente
-    LEFT JOIN personas persona
-        ON persona.cod_persona = doc.cod_persona
+    LEFT JOIN usuarios persona
+        ON persona.cod_usuario = doc.cod_usuario
 ";
 
 

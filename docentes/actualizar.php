@@ -197,28 +197,28 @@ try {
     $stmt->close();
     if (!$docenteExiste) throw new InvalidArgumentException('El docente no existe.');
 
-    $stmt = $conexion->prepare("SELECT cod_persona FROM usuarios WHERE cod_usuario=? AND cod_rol=3 AND estado='Activo' FOR UPDATE");
+    $stmt = $conexion->prepare("SELECT cod_usuario FROM usuarios WHERE cod_usuario=? AND cod_rol=3 AND estado='Activo' FOR UPDATE");
     $stmt->bind_param('i', $idUsuario);
     $stmt->execute();
     $cuenta = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     if (!$cuenta) throw new InvalidArgumentException('La cuenta seleccionada no está activa o no tiene el rol Docente.');
-    $idPersona = (int)$cuenta['cod_persona'];
+    $idUsuario = (int)$cuenta['cod_usuario'];
 
-    $stmt = $conexion->prepare('SELECT cod_docente FROM docentes WHERE cod_persona=? AND cod_docente<>? LIMIT 1');
-    $stmt->bind_param('ii', $idPersona, $idDocente);
+    $stmt = $conexion->prepare('SELECT cod_docente FROM docentes WHERE cod_usuario=? AND cod_docente<>? LIMIT 1');
+    $stmt->bind_param('ii', $idUsuario, $idDocente);
     $stmt->execute();
     $ocupado = $stmt->get_result()->num_rows > 0;
     $stmt->close();
     if ($ocupado) throw new InvalidArgumentException('La cuenta seleccionada ya pertenece a otro docente.');
 
-    $stmt = $conexion->prepare('UPDATE personas SET nombres=?,apellidos=?,telefono=?,correo=? WHERE cod_persona=?');
-    $stmt->bind_param('ssssi', $nombres, $apellidos, $telefonoDb, $correoDb, $idPersona);
+    $stmt = $conexion->prepare('UPDATE usuarios SET nombres=?,apellidos=?,telefono=?,correo=? WHERE cod_usuario=?');
+    $stmt->bind_param('ssssi', $nombres, $apellidos, $telefonoDb, $correoDb, $idUsuario);
     $stmt->execute();
     $stmt->close();
 
-    $stmt = $conexion->prepare('UPDATE docentes SET cod_persona=? WHERE cod_docente=?');
-    $stmt->bind_param('ii', $idPersona, $idDocente);
+    $stmt = $conexion->prepare('UPDATE docentes SET cod_usuario=? WHERE cod_docente=?');
+    $stmt->bind_param('ii', $idUsuario, $idDocente);
     $stmt->execute();
     $stmt->close();
 

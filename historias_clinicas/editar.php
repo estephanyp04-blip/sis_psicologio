@@ -38,14 +38,14 @@ $stmt = $conexion->prepare("
             ORDER BY er.es_principal DESC LIMIT 1) AS nombre_tutor,
         m.nombre AS materia_derivacion,
         d.fecha AS fecha_derivacion,
-        TRIM(CONCAT(COALESCE(dp.nombres,''),' ',COALESCE(dp.apellidos,''))) AS derivado_por,
+        TRIM(CONCAT(COALESCE(du.nombres,''),' ',COALESCE(du.apellidos,''))) AS derivado_por,
         d.prioridad AS prioridad_derivacion,
         d.observaciones AS observaciones_derivacion
     FROM historias_clinicas h
     INNER JOIN vista_estudiantes e ON e.cod_estudiante = h.cod_estudiante
     LEFT JOIN derivaciones d ON d.cod_derivacion = h.cod_derivacion_origen
     LEFT JOIN docentes doc ON doc.cod_docente = d.cod_docente
-    LEFT JOIN personas dp ON dp.cod_persona = doc.cod_persona
+    LEFT JOIN usuarios du ON du.cod_usuario = doc.cod_usuario
     LEFT JOIN materias m ON m.cod_materia = d.cod_materia
     WHERE h.cod_historia = ?
     LIMIT 1
