@@ -6,7 +6,7 @@ $raiz = dirname(__DIR__);
 $permisos = require $raiz . '/config/permisos.php';
 $soloAcceso = in_array('--solo-acceso', $argv, true);
 $internosModulo = [
-    'estudiantes/datos.php', 'estudiantes/csv.php', 'derivaciones/datos.php', 'derivaciones/evidencias.php',
+    'estudiantes/datos.php', 'estudiantes/csv.php', 'derivaciones/datos.php',
     'citas/datos.php', 'citas/formulario.php', 'historias_clinicas/datos.php',
     'historias_clinicas/formulario.php', 'informes/datos.php', 'estadisticas/datos.php',
 ];
@@ -182,6 +182,9 @@ PHP
         comprobar(count(estadoNegocio($r)['derivaciones'] ?? []) === 2, 'Docente eliminó una derivación ajena.');
         $r = peticion('derivaciones/eliminar.php', 'POST', ['rol' => 3, 'negocio' => true], ['csrf' => $token, 'cod_derivacion' => 1]);
         comprobar(count(estadoNegocio($r)['derivaciones'] ?? []) === 1, 'No se pudo eliminar una derivación propia con CSRF válido.');
+        $r = peticion('derivaciones/eliminar.php', 'POST', ['rol' => 1, 'negocio' => true], ['csrf' => $token, 'cod_derivacion' => 2]);
+        $estadoAdministrador = estadoNegocio($r);
+        comprobar($r['codigo'] === 302 && array_column($estadoAdministrador['derivaciones'] ?? [], 'cod_derivacion') === ['1'], 'El administrador no pudo eliminar la derivacion pendiente sin alterar la ajena restante.');
         $r = peticion('citas/cancelar.php?id=1', 'GET', ['rol' => 2, 'negocio' => true]);
         comprobar($r['codigo'] === 405 && (estadoNegocio($r)['cita'] ?? '') === 'Pendiente', 'GET canceló una cita.');
         $r = peticion('citas/cancelar.php', 'POST', ['rol' => 2, 'negocio' => true], ['cod_cita' => 1]);

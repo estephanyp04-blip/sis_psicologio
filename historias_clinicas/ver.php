@@ -13,17 +13,13 @@ require_once __DIR__ . '/datos.php';
 /* =========================================================
    HELPERS GENERALES
    ========================================================= */
-function escapar($valor): string
-{
-    return htmlspecialchars((string)$valor, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-}
 
 function mostrarDato($valor, string $vacio = 'No registrado'): string
 {
     $valor = trim((string)$valor);
     return $valor !== ''
-        ? escapar($valor)
-        : '<span class="sin-dato">' . escapar($vacio) . '</span>';
+        ? login_html($valor)
+        : '<span class="sin-dato">' . login_html($vacio) . '</span>';
 }
 
 function fechaMostrar(?string $fecha, string $defecto = 'No registrada'): string
@@ -259,8 +255,8 @@ include '../includes/navbar.php';
 
     <!-- MENSAJES -->
     <?php if ($mensaje !== ''): ?>
-        <div class="alert alert-<?= escapar($tipoMensaje) ?> d-print-none">
-            <?= nl2br(escapar($mensaje)) ?>
+        <div class="alert alert-<?= login_html($tipoMensaje) ?> d-print-none">
+            <?= nl2br(login_html($mensaje)) ?>
         </div>
     <?php endif; ?>
 
@@ -268,15 +264,15 @@ include '../includes/navbar.php';
     <header class="expediente-head">
         <div class="expediente-identidad">
             <span class="expediente-avatar">
-                <?= escapar($inicialAvatar) ?>
+                <?= login_html($inicialAvatar) ?>
             </span>
 
             <div>
                 <small>HISTORIA CLÍNICA PSICOLÓGICA #<?= (int)$id ?></small>
-                <h1><?= escapar($nombreCompleto) ?></h1>
+                <h1><?= login_html($nombreCompleto) ?></h1>
                 <p>
-                    <?= escapar(($h['curso'] ?? '') . '° ' . ($h['paralelo'] ?? '')) ?>
-                    <?= !empty($h['turno']) ? ' · ' . escapar($h['turno']) : '' ?>
+                    <?= login_html(($h['curso'] ?? '') . '° ' . ($h['paralelo'] ?? '')) ?>
+                    <?= !empty($h['turno']) ? ' · ' . login_html($h['turno']) : '' ?>
                 </p>
             </div>
         </div>
@@ -305,17 +301,17 @@ include '../includes/navbar.php';
 
         <div>
             <span>Fecha de apertura</span>
-            <strong><?= escapar(fechaMostrar($h['fecha_apertura'] ?? null)) ?></strong>
+            <strong><?= login_html(fechaMostrar($h['fecha_apertura'] ?? null)) ?></strong>
         </div>
 
         <div>
             <span>Estado</span>
-            <strong><?= escapar($h['estado'] ?? 'Sin estado') ?></strong>
+            <strong><?= login_html($h['estado'] ?? 'Sin estado') ?></strong>
         </div>
 
         <div>
             <span>Registrado por</span>
-            <strong><?= $registradoPor !== '' ? escapar($registradoPor) : 'No registrado' ?></strong>
+            <strong><?= $registradoPor !== '' ? login_html($registradoPor) : 'No registrado' ?></strong>
         </div>
     </section>
 
@@ -332,13 +328,13 @@ include '../includes/navbar.php';
         </div>
 
         <div class="datos-clinicos-grid">
-            <div><span>Nombre completo</span><strong><?= escapar($nombreCompleto) ?></strong></div>
-            <div><span>Edad</span><strong><?= escapar($edad) ?></strong></div>
-            <div><span>Curso</span><strong><?= escapar(($h['curso'] ?? '') . '° ' . ($h['paralelo'] ?? '')) ?></strong></div>
+            <div><span>Nombre completo</span><strong><?= login_html($nombreCompleto) ?></strong></div>
+            <div><span>Edad</span><strong><?= login_html($edad) ?></strong></div>
+            <div><span>Curso</span><strong><?= login_html(($h['curso'] ?? '') . '° ' . ($h['paralelo'] ?? '')) ?></strong></div>
 
             <div>
                 <span>Fecha de nacimiento</span>
-                <strong><?= escapar(fechaMostrar($h['fecha_nacimiento'] ?? null)) ?></strong>
+                <strong><?= login_html(fechaMostrar($h['fecha_nacimiento'] ?? null)) ?></strong>
             </div>
 
             <div><span>Lugar de nacimiento</span><strong><?= mostrarDato($h['lugar_nacimiento'] ?? '') ?></strong></div>
@@ -348,7 +344,7 @@ include '../includes/navbar.php';
 
             <div>
                 <span>Fecha de derivación</span>
-                <strong><?= escapar(fechaMostrar($h['fecha_derivacion'] ?? null)) ?></strong>
+                <strong><?= login_html(fechaMostrar($h['fecha_derivacion'] ?? null)) ?></strong>
             </div>
 
             <div><span>Tutor de curso</span><strong><?= mostrarDato($h['tutor_curso'] ?? '') ?></strong></div>
@@ -361,7 +357,7 @@ include '../includes/navbar.php';
             <strong>Enfermedades actuales</strong>
             <p>
                 <?= !empty($h['enfermedades_actuales'])
-                    ? nl2br(escapar($h['enfermedades_actuales']))
+                    ? nl2br(login_html($h['enfermedades_actuales']))
                     : 'Sin información registrada.' ?>
             </p>
         </div>
@@ -376,7 +372,7 @@ include '../includes/navbar.php';
 
         <div class="texto-clinico">
             <?= !empty($h['motivo_consulta'])
-                ? nl2br(escapar($h['motivo_consulta']))
+                ? nl2br(login_html($h['motivo_consulta']))
                 : '<span class="sin-dato">Sin información registrada.</span>' ?>
         </div>
     </section>
@@ -400,7 +396,7 @@ include '../includes/navbar.php';
             <strong>Relación con compañeros(as) y profesores(as)</strong>
             <p>
                 <?= !empty($h['relacion_escolar'])
-                    ? nl2br(escapar($h['relacion_escolar']))
+                    ? nl2br(login_html($h['relacion_escolar']))
                     : 'Sin información registrada.' ?>
             </p>
         </div>
@@ -415,7 +411,7 @@ include '../includes/navbar.php';
         <div class="opciones-registradas">
             <?php if (!empty($opciones['conductas_riesgo'])): ?>
                 <?php foreach ($opciones['conductas_riesgo'] as $valor): ?>
-                    <span><i class="bi bi-check2"></i><?= escapar($valor) ?></span>
+                    <span><i class="bi bi-check2"></i><?= login_html($valor) ?></span>
                 <?php endforeach; ?>
             <?php else: ?>
                 <span class="sin-dato">Sin opciones marcadas.</span>
@@ -440,12 +436,12 @@ include '../includes/navbar.php';
 
         <?php foreach ($grupos as $grupo => $titulo): ?>
             <div class="subseccion-clinica ver">
-                <h3><?= escapar($titulo) ?></h3>
+                <h3><?= login_html($titulo) ?></h3>
 
                 <div class="opciones-registradas">
                     <?php if (!empty($opciones[$grupo])): ?>
                         <?php foreach ($opciones[$grupo] as $valor): ?>
-                            <span><i class="bi bi-check2"></i><?= escapar($valor) ?></span>
+                            <span><i class="bi bi-check2"></i><?= login_html($valor) ?></span>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <span class="sin-dato">Sin opciones marcadas.</span>
@@ -468,7 +464,7 @@ include '../includes/navbar.php';
             <strong>Antecedentes familiares</strong>
             <p>
                 <?= !empty($h['antecedentes'])
-                    ? nl2br(escapar($h['antecedentes']))
+                    ? nl2br(login_html($h['antecedentes']))
                     : 'Sin información registrada.' ?>
             </p>
         </div>
@@ -489,12 +485,12 @@ include '../includes/navbar.php';
                 <?php if (!empty($familiares)): ?>
                     <?php foreach ($familiares as $f): ?>
                         <tr>
-                            <td><?= escapar($f['nombre'] ?? '—') ?></td>
+                            <td><?= login_html($f['nombre'] ?? '—') ?></td>
                             <td><?= ($f['edad'] !== null && $f['edad'] !== '') ? (int)$f['edad'] : '—' ?></td>
-                            <td><?= escapar(($f['relacion'] ?? '') ?: '—') ?></td>
-                            <td><?= escapar(($f['profesion'] ?? '') ?: '—') ?></td>
-                            <td><?= escapar(($f['ocupacion'] ?? '') ?: '—') ?></td>
-                            <td><?= escapar(($f['observaciones'] ?? '') ?: '—') ?></td>
+                            <td><?= login_html(($f['relacion'] ?? '') ?: '—') ?></td>
+                            <td><?= login_html(($f['profesion'] ?? '') ?: '—') ?></td>
+                            <td><?= login_html(($f['ocupacion'] ?? '') ?: '—') ?></td>
+                            <td><?= login_html(($f['observaciones'] ?? '') ?: '—') ?></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
@@ -519,7 +515,7 @@ include '../includes/navbar.php';
             <strong>Descripción del contexto familiar</strong>
             <p>
                 <?= !empty($h['contexto_familiar'])
-                    ? nl2br(escapar($h['contexto_familiar']))
+                    ? nl2br(login_html($h['contexto_familiar']))
                     : 'Sin información registrada.' ?>
             </p>
         </div>
@@ -539,7 +535,7 @@ include '../includes/navbar.php';
 
         <div class="texto-clinico">
             <?= !empty($h['impresion_diagnostica'])
-                ? nl2br(escapar($h['impresion_diagnostica']))
+                ? nl2br(login_html($h['impresion_diagnostica']))
                 : '<span class="sin-dato">Sin información registrada.</span>' ?>
         </div>
         <div class="texto-clinico mt-3">
@@ -559,7 +555,7 @@ include '../includes/navbar.php';
 
         <div class="texto-clinico">
             <?= !empty($h['plan_intervencion'])
-                ? nl2br(escapar($h['plan_intervencion']))
+                ? nl2br(login_html($h['plan_intervencion']))
                 : '<span class="sin-dato">Sin información registrada.</span>' ?>
         </div>
     </section>
@@ -579,11 +575,11 @@ include '../includes/navbar.php';
         <?php if (!empty($h['observaciones'])): ?>
             <div class="evolucion-item">
                 <div class="evolucion-fecha">
-                    <?= escapar(fechaMostrar($h['fecha_apertura'] ?? null, 'Inicio')) ?>
+                    <?= login_html(fechaMostrar($h['fecha_apertura'] ?? null, 'Inicio')) ?>
                 </div>
                 <div>
                     <strong>Registro inicial</strong>
-                    <p><?= nl2br(escapar($h['observaciones'])) ?></p>
+                    <p><?= nl2br(login_html($h['observaciones'])) ?></p>
                 </div>
             </div>
         <?php endif; ?>
@@ -591,35 +587,35 @@ include '../includes/navbar.php';
         <?php foreach ($seguimientos as $s): ?>
             <div class="evolucion-item">
                 <div class="evolucion-fecha">
-                    <?= escapar(fechaMostrar($s['fecha'] ?? null, 'Sin fecha')) ?>
+                    <?= login_html(fechaMostrar($s['fecha'] ?? null, 'Sin fecha')) ?>
                 </div>
 
                 <div>
                     <strong>Seguimiento #<?= (int)$s['cod_seguimiento'] ?></strong>
                     <p>
-                        Profesional: <?= escapar($s['profesional'] ?: 'No registrado') ?>
+                        Profesional: <?= login_html($s['profesional'] ?: 'No registrado') ?>
                         <?php if (!empty($s['cod_cita'])): ?>
                             · Cita #<?= (int)$s['cod_cita'] ?>
                             <?php if (!empty($s['fecha_cita'])): ?>
-                                (<?= escapar(fechaMostrar($s['fecha_cita'])) ?><?= !empty($s['hora_cita']) ? ' ' . escapar(substr($s['hora_cita'], 0, 5)) : '' ?>)
+                                (<?= login_html(fechaMostrar($s['fecha_cita'])) ?><?= !empty($s['hora_cita']) ? ' ' . login_html(substr($s['hora_cita'], 0, 5)) : '' ?>)
                             <?php endif; ?>
                         <?php else: ?>
                             · Sin cita asociada
                         <?php endif; ?>
-                        · Registrado: <?= escapar($s['fecha_registro'] ?? 'Sin fecha') ?>
+                        · Registrado: <?= login_html($s['fecha_registro'] ?? 'Sin fecha') ?>
                     </p>
-                    <p><b>Descripción:</b><br><?= nl2br(escapar($s['descripcion'] ?: 'Sin detalle registrado.')) ?></p>
-                    <p><b>Técnicas aplicadas:</b><br><?= nl2br(escapar($s['tecnicas_aplicadas'] ?: 'No registrado')) ?></p>
-                    <p><b>Acuerdos:</b><br><?= nl2br(escapar($s['acuerdos'] ?: 'No registrado')) ?></p>
+                    <p><b>Descripción:</b><br><?= nl2br(login_html($s['descripcion'] ?: 'Sin detalle registrado.')) ?></p>
+                    <p><b>Técnicas aplicadas:</b><br><?= nl2br(login_html($s['tecnicas_aplicadas'] ?: 'No registrado')) ?></p>
+                    <p><b>Acuerdos:</b><br><?= nl2br(login_html($s['acuerdos'] ?: 'No registrado')) ?></p>
 
                     <?php if (!empty($s['recomendaciones'])): ?>
-                        <p><b>Recomendaciones:</b><br><?= nl2br(escapar($s['recomendaciones'])) ?></p>
+                        <p><b>Recomendaciones:</b><br><?= nl2br(login_html($s['recomendaciones'])) ?></p>
                     <?php endif; ?>
 
                     <?php if (!empty($s['proxima_sesion'])): ?>
                         <small>
                             <b>Próxima sesión prevista:</b>
-                            <?= escapar(fechaMostrar($s['proxima_sesion'])) ?>
+                            <?= login_html(fechaMostrar($s['proxima_sesion'])) ?>
                         </small>
                     <?php endif; ?>
                 </div>

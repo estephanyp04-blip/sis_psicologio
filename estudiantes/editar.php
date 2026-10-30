@@ -5,7 +5,7 @@ require_once __DIR__ . '/../config/conexion.php';
 
 $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 if (!$id) { header('Location: listar.php'); exit; }
-$stmt = $conexion->prepare("SELECT e.*,c.orden AS curso,p.nombre AS paralelo,s.cod_institucion,s.gestion,s.turno
+$stmt = $conexion->prepare("SELECT e.*,c.orden AS curso,p.nombre AS paralelo,s.gestion,s.turno
     FROM estudiantes e LEFT JOIN historial_academico i ON i.cod_historial_academico=(
         SELECT i2.cod_historial_academico FROM historial_academico i2 WHERE i2.cod_estudiante=e.cod_estudiante
         AND i2.estado IN ('Activo','Retirado') ORDER BY i2.cod_historial_academico DESC LIMIT 1)
@@ -19,6 +19,15 @@ $paralelos = $conexion->query('SELECT nombre FROM paralelos ORDER BY nombre')->f
 $recuperacion = $_SESSION['edicion_estudiante'] ?? [];
 unset($_SESSION['edicion_estudiante']);
 if (($recuperacion['id'] ?? 0) === $id) $fila = array_replace($fila, $recuperacion['datos']);
+$stmt = $conexion->prepare("SELECT er.parentesco,r.nombres FROM estudiante_responsables er
+    INNER JOIN responsables r ON r.cod_responsable=er.cod_responsable
+    WHERE er.cod_estudiante=? ORDER BY er.es_principal DESC, er.cod_responsable");
+$stmt->bind_param('i', $id); $stmt->execute();
+foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $responsable) {
+    $campo = ['Padre' => 'padre', 'Madre' => 'madre', 'Tutor' => 'tutor'][$responsable['parentesco']] ?? null;
+    if ($campo !== null && empty($fila[$campo])) $fila[$campo] = $responsable['nombres'];
+}
+$stmt->close();
 $mensaje = $_SESSION['mensaje'] ?? '';
 unset($_SESSION['mensaje'], $_SESSION['tipo_mensaje']);
 $tituloPagina = 'Editar estudiante';
@@ -40,14 +49,27 @@ include '../includes/navbar.php';
                 <?= login_campo_csrf() ?>
                 <input type="hidden" name="cod_estudiante" value="<?= $id ?>">
                 <div class="row g-3">
-                    <?php foreach (['ci' => 'CI', 'nombres' => 'Nombres', 'apellidos' => 'Apellidos'] as $campo => $etiqueta): ?>
+                    <?php foreach (['codigo' => 'Código', 'ci' => 'CI', 'nombres' => 'Nombres', 'apellidos' => 'Apellidos'] as $campo => $etiqueta): ?>
                         <div class="col-md-4">
                             <label for="<?= $campo ?>" class="form-label"><?= $etiqueta ?></label>
                             <input type="text" id="<?= $campo ?>" name="<?= $campo ?>" class="form-control"
-                                maxlength="<?= $campo === 'ci' ? 20 : 80 ?>" <?= $campo === 'ci' ? '' : 'required' ?>
+                                maxlength="<?= in_array($campo, ['ci', 'codigo'], true) ? 20 : 80 ?>" <?= in_array($campo, ['codigo', 'nombres', 'apellidos'], true) ? 'required' : '' ?>
                                 value="<?= login_html($fila[$campo] ?? '') ?>">
                         </div>
                     <?php endforeach; ?>
+                    <div class="col-md-4">
+                        <label for="fecha_nacimiento" class="form-label">Fecha de nacimiento</label>
+                        <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" class="form-control" value="<?= login_html($fila['fecha_nacimiento'] ?? '') ?>">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="genero" class="form-label">Género</label>
+                        <select id="genero" name="genero" class="form-select" required>
+                            <option value="">Seleccione...</option>
+                            <?php foreach (['M' => 'Masculino', 'F' => 'Femenino'] as $valor => $etiqueta): ?>
+                                <option value="<?= $valor ?>" <?= ($fila['sexo'] ?? '') === $valor ? 'selected' : '' ?>><?= $etiqueta ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     <div class="col-md-4">
                         <label for="curso" class="form-label">Curso</label>
                         <select id="curso" name="curso" class="form-select" required>
@@ -73,6 +95,24 @@ include '../includes/navbar.php';
                                 <option value="<?= $estado ?>" <?= $fila['estado'] === $estado ? 'selected' : '' ?>><?= $estado ?></option>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="turno" class="form-label">Turno</label>
+                        <select id="turno" name="turno" class="form-select" required>
+                            <?php foreach (['Mañana', 'Tarde'] as $turno): ?>
+                                <option value="<?= login_html($turno) ?>" <?= ($fila['turno'] ?? '') === $turno ? 'selected' : '' ?>><?= login_html($turno) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php foreach (['padre' => 'Nombre del Padre', 'madre' => 'Nombre de la Madre', 'tutor' => 'Tutor', 'telefono' => 'Teléfono'] as $campo => $etiqueta): ?>
+                        <div class="col-md-6">
+                            <label for="<?= $campo ?>" class="form-label"><?= $etiqueta ?></label>
+                            <input type="<?= $campo === 'telefono' ? 'tel' : 'text' ?>" id="<?= $campo ?>" name="<?= $campo ?>" class="form-control" maxlength="<?= $campo === 'telefono' ? 25 : 150 ?>" value="<?= login_html($fila[$campo] ?? '') ?>">
+                        </div>
+                    <?php endforeach; ?>
+                    <div class="col-12">
+                        <label for="direccion" class="form-label">Dirección</label>
+                        <textarea id="direccion" name="direccion" rows="3" maxlength="255" class="form-control"><?= login_html($fila['direccion'] ?? '') ?></textarea>
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary mt-3">Guardar cambios</button>

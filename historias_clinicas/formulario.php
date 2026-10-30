@@ -65,7 +65,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
 ?>
 
 <form
-    action="<?= escapar($accionFormulario) ?>"
+    action="<?= login_html($accionFormulario) ?>"
     method="POST"
     id="formHistoriaClinica"
     autocomplete="off"
@@ -76,7 +76,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
         <p class="alert alert-info">Cita de origen #<?= (int)valorHistoria('cod_cita') ?>. Se conservarán su estudiante y derivación al guardar.</p>
     <?php endif; ?>
     <?php foreach (HISTORIA_OPCIONES as $grupo => $_): ?>
-        <input type="hidden" name="opciones_presentes[<?= escapar($grupo) ?>]" value="1">
+        <input type="hidden" name="opciones_presentes[<?= login_html($grupo) ?>]" value="1">
     <?php endforeach; ?>
     <input type="hidden" name="familiares_presentes" value="1">
     <input type="hidden" name="situacion_escolar" value="">
@@ -165,29 +165,29 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                             ?>
                             <option
                                 value="<?= (int)$estudiante['cod_estudiante'] ?>"
-                                data-nombre="<?= escapar(
+                                data-nombre="<?= login_html(
                                     $estudiante['nombres'] . ' ' . $estudiante['apellidos']
                                 ) ?>"
-                                data-fecha-nacimiento="<?= escapar(
+                                data-fecha-nacimiento="<?= login_html(
                                     $estudiante['fecha_nacimiento'] ?? ''
                                 ) ?>"
-                                data-lugar-nacimiento="<?= escapar(
+                                data-lugar-nacimiento="<?= login_html(
                                     $estudiante['lugar_nacimiento'] ?? ''
                                 ) ?>"
-                                data-celular="<?= escapar(
+                                data-celular="<?= login_html(
                                     $estudiante['telefono'] ?? ''
                                 ) ?>"
-                                data-padre-madre="<?= escapar(
+                                data-padre-madre="<?= login_html(
                                     $estudiante['nombre_tutor'] ?? ''
                                 ) ?>"
-                                data-curso="<?= escapar($estudiante['curso'] ?? '') ?>"
-                                data-paralelo="<?= escapar($estudiante['paralelo'] ?? '') ?>"
+                                data-curso="<?= login_html($estudiante['curso'] ?? '') ?>"
+                                data-paralelo="<?= login_html($estudiante['paralelo'] ?? '') ?>"
                                 <?= $seleccionadoEstudiante ? 'selected' : '' ?>
                             >
-                                <?= escapar(
+                                <?= login_html(
                                     $estudiante['apellidos'] . ' ' . $estudiante['nombres']
                                 ) ?>
-                                - <?= escapar(
+                                - <?= login_html(
                                     ($estudiante['curso'] ?? '') . ' ' .
                                     ($estudiante['paralelo'] ?? '')
                                 ) ?>
@@ -215,7 +215,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                         id="fecha_apertura"
                         class="form-control"
                         max="<?= date('Y-m-d') ?>"
-                        value="<?= escapar(
+                        value="<?= login_html(
                             valorHistoria('fecha_apertura', date('Y-m-d'))
                         ) ?>"
                         required
@@ -269,7 +269,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                         name="lugar_nacimiento"
                         id="lugar_nacimiento"
                         class="form-control"
-                        value="<?= escapar(valorHistoria('lugar_nacimiento')) ?>"
+                        value="<?= login_html(valorHistoria('lugar_nacimiento')) ?>"
                         readonly
                     >
                 </div>
@@ -282,7 +282,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                         name="celular_estudiante"
                         id="celular_estudiante"
                         class="form-control"
-                        value="<?= escapar(valorHistoria('celular_estudiante')) ?>"
+                        value="<?= login_html(valorHistoria('celular_estudiante')) ?>"
                         readonly
                     >
                 </div>
@@ -295,7 +295,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                         name="padre_madre"
                         id="padre_madre"
                         class="form-control"
-                        value="<?= escapar(valorHistoria('padre_madre')) ?>"
+                        value="<?= login_html(valorHistoria('padre_madre')) ?>"
                         readonly
                     >
                 </div>
@@ -308,7 +308,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                         name="derivado_por"
                         id="derivado_por"
                         class="form-control"
-                        value="<?= escapar(valorHistoria('derivado_por')) ?>"
+                        value="<?= login_html(valorHistoria('derivado_por')) ?>"
                         readonly
                     >
                 </div>
@@ -321,7 +321,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                         name="fecha_derivacion"
                         id="fecha_derivacion"
                         class="form-control"
-                        value="<?= escapar(valorHistoria('fecha_derivacion')) ?>"
+                        value="<?= login_html(valorHistoria('fecha_derivacion')) ?>"
                         readonly
                     >
                 </div>
@@ -335,7 +335,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                         type="text"
                         id="materia_derivacion"
                         class="form-control"
-                        value="<?= escapar(valorHistoria('materia_derivacion')) ?>"
+                        value="<?= login_html(valorHistoria('materia_derivacion')) ?>"
                         readonly
                     >
                 </div>
@@ -349,7 +349,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                         type="text"
                         id="prioridad_derivacion"
                         class="form-control"
-                        value="<?= escapar(valorHistoria('prioridad_derivacion')) ?>"
+                        value="<?= login_html(valorHistoria('prioridad_derivacion')) ?>"
                         readonly
                     >
                 </div>
@@ -362,7 +362,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                         name="tutor_curso"
                         maxlength="150"
                         class="form-control"
-                        value="<?= escapar(valorHistoria('tutor_curso')) ?>"
+                        value="<?= login_html(valorHistoria('tutor_curso')) ?>"
                     >
                 </div>
 
@@ -373,7 +373,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                         type="number" min="0" max="999.99" step="0.01"
                         name="talla"
                         class="form-control"
-                        value="<?= escapar(valorHistoria('talla')) ?>"
+                        value="<?= login_html(valorHistoria('talla')) ?>"
                         placeholder="Ej.: 155"
                     >
                 </div>
@@ -385,7 +385,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                         type="number" min="0" max="999.99" step="0.01"
                         name="peso"
                         class="form-control"
-                        value="<?= escapar(valorHistoria('peso')) ?>"
+                        value="<?= login_html(valorHistoria('peso')) ?>"
                         placeholder="Ej.: 48"
                     >
                 </div>
@@ -398,7 +398,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                         name="valoracion"
                         maxlength="255"
                         class="form-control"
-                        value="<?= escapar(valorHistoria('valoracion')) ?>"
+                        value="<?= login_html(valorHistoria('valoracion')) ?>"
                     >
                 </div>
 
@@ -410,7 +410,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                         class="form-control textarea-auto"
                         rows="2"
                         placeholder="Registre enfermedades actuales si corresponde..."
-                    ><?= escapar(valorHistoria('enfermedades_actuales')) ?></textarea>
+                    ><?= login_html(valorHistoria('enfermedades_actuales')) ?></textarea>
                 </div>
 
             </div>
@@ -439,7 +439,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                 maxlength="5000"
                 required
                 placeholder="Describa el motivo de derivación..."
-            ><?= escapar(valorHistoria('motivo_consulta')) ?></textarea>
+            ><?= login_html(valorHistoria('motivo_consulta')) ?></textarea>
 
             <div class="mt-4" id="bloqueObservacionesDeriv"
                 <?= valorHistoria('observaciones_derivacion') === ''
@@ -452,7 +452,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                     rows="4"
                     id="observaciones_derivacion"
                     readonly
-                ><?= escapar(valorHistoria('observaciones_derivacion')) ?></textarea>
+                ><?= login_html(valorHistoria('observaciones_derivacion')) ?></textarea>
             </div>
         </div>
     </section>
@@ -477,32 +477,32 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
             <div class="opciones-clinicas">
                 <?php foreach (['Muy buena', 'Buena', 'Regular', 'Deficiente'] as $situacion): ?>
                     <label class="opcion-radio">
-                        <input type="radio" name="situacion_escolar" value="<?= escapar($situacion) ?>"
+                        <input type="radio" name="situacion_escolar" value="<?= login_html($situacion) ?>"
                             <?= valorHistoria('situacion_escolar') === $situacion ? 'checked' : '' ?>>
-                        <span><?= escapar($situacion) ?></span>
+                        <span><?= login_html($situacion) ?></span>
                     </label>
                 <?php endforeach; ?>
             </div>
             <div class="row g-4 mt-1">
                 <div class="col-md-6">
                     <label class="form-label">Curso(s) repetido(s)</label>
-                    <input type="text" name="cursos_repetidos" class="form-control" maxlength="150" value="<?= escapar(valorHistoria('cursos_repetidos')) ?>">
+                    <input type="text" name="cursos_repetidos" class="form-control" maxlength="150" value="<?= login_html(valorHistoria('cursos_repetidos')) ?>">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Dificultad escolar</label>
-                    <input type="text" name="dificultad_escolar" class="form-control" maxlength="5000" value="<?= escapar(valorHistoria('dificultad_escolar')) ?>">
+                    <input type="text" name="dificultad_escolar" class="form-control" maxlength="5000" value="<?= login_html(valorHistoria('dificultad_escolar')) ?>">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Materia que más le agrada</label>
-                    <input type="text" name="materia_agrada" class="form-control" maxlength="150" value="<?= escapar(valorHistoria('materia_agrada')) ?>">
+                    <input type="text" name="materia_agrada" class="form-control" maxlength="150" value="<?= login_html(valorHistoria('materia_agrada')) ?>">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Materia que menos le agrada</label>
-                    <input type="text" name="materia_desagrada" class="form-control" maxlength="150" value="<?= escapar(valorHistoria('materia_desagrada')) ?>">
+                    <input type="text" name="materia_desagrada" class="form-control" maxlength="150" value="<?= login_html(valorHistoria('materia_desagrada')) ?>">
                 </div>
                 <div class="col-12">
                     <label class="form-label">Relación con compañeros(as) y profesores(as)</label>
-                    <textarea name="relacion_escolar" class="form-control textarea-auto" rows="2" maxlength="5000"><?= escapar(valorHistoria('relacion_escolar')) ?></textarea>
+                    <textarea name="relacion_escolar" class="form-control textarea-auto" rows="2" maxlength="5000"><?= login_html(valorHistoria('relacion_escolar')) ?></textarea>
                 </div>
             </div>
         </div>
@@ -526,9 +526,9 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                 <?php foreach (opcionesHistoria('conductas_riesgo') as $opcion): ?>
                     <label class="opcion-check">
                         <input type="checkbox" name="conductas_riesgo[]"
-                            value="<?= escapar($opcion) ?>"
+                            value="<?= login_html($opcion) ?>"
                             <?= marcado('conductas_riesgo', $opcion) ?>>
-                        <span><?= escapar($opcion) ?></span>
+                        <span><?= login_html($opcion) ?></span>
                     </label>
                 <?php endforeach; ?>
             </div>
@@ -556,9 +556,9 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                     <?php foreach (opcionesHistoria('atencion_distraccion') as $opcion): ?>
                         <label class="opcion-check">
                             <input type="checkbox" name="atencion_distraccion[]"
-                                value="<?= escapar($opcion) ?>"
+                                value="<?= login_html($opcion) ?>"
                                 <?= marcado('atencion_distraccion', $opcion) ?>>
-                            <span><?= escapar($opcion) ?></span>
+                            <span><?= login_html($opcion) ?></span>
                         </label>
                     <?php endforeach; ?>
                 </div>
@@ -571,9 +571,9 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                     <?php foreach (opcionesHistoria('actividad_motora') as $opcion): ?>
                         <label class="opcion-check">
                             <input type="checkbox" name="actividad_motora[]"
-                                value="<?= escapar($opcion) ?>"
+                                value="<?= login_html($opcion) ?>"
                                 <?= marcado('actividad_motora', $opcion) ?>>
-                            <span><?= escapar($opcion) ?></span>
+                            <span><?= login_html($opcion) ?></span>
                         </label>
                     <?php endforeach; ?>
                 </div>
@@ -585,9 +585,9 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                     <?php foreach (opcionesHistoria('adaptacion_normas') as $opcion): ?>
                         <label class="opcion-check">
                             <input type="checkbox" name="adaptacion_normas[]"
-                                value="<?= escapar($opcion) ?>"
+                                value="<?= login_html($opcion) ?>"
                                 <?= marcado('adaptacion_normas', $opcion) ?>>
-                            <span><?= escapar($opcion) ?></span>
+                            <span><?= login_html($opcion) ?></span>
                         </label>
                     <?php endforeach; ?>
                 </div>
@@ -600,9 +600,9 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                     <?php foreach (opcionesHistoria('dificultades_socioemocionales') as $opcion): ?>
                         <label class="opcion-check">
                             <input type="checkbox" name="dificultades_socioemocionales[]"
-                                value="<?= escapar($opcion) ?>"
+                                value="<?= login_html($opcion) ?>"
                                 <?= marcado('dificultades_socioemocionales', $opcion) ?>>
-                            <span><?= escapar($opcion) ?></span>
+                            <span><?= login_html($opcion) ?></span>
                         </label>
                     <?php endforeach; ?>
                 </div>
@@ -615,9 +615,9 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                     <?php foreach (opcionesHistoria('estrategias_previas') as $opcion): ?>
                         <label class="opcion-check">
                             <input type="checkbox" name="estrategias_previas[]"
-                                value="<?= escapar($opcion) ?>"
+                                value="<?= login_html($opcion) ?>"
                                 <?= marcado('estrategias_previas', $opcion) ?>>
-                            <span><?= escapar($opcion) ?></span>
+                            <span><?= login_html($opcion) ?></span>
                         </label>
                     <?php endforeach; ?>
                 </div>
@@ -645,7 +645,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                 enfermedades crónicas y/o congénitas.
             </small>
             <textarea name="antecedentes" class="form-control textarea-auto"
-                rows="3" maxlength="5000"><?= escapar(valorHistoria('antecedentes')) ?></textarea>
+                rows="3" maxlength="5000"><?= login_html(valorHistoria('antecedentes')) ?></textarea>
 
             <div class="familiares-head mt-4">
                 <div>
@@ -679,12 +679,12 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                         ?>
                         <?php foreach (array_values($familiaresFormulario) as $indice => $familiar): ?>
                             <tr>
-                                <td><input type="text" name="familiares[<?= $indice ?>][nombre]" class="form-control" value="<?= escapar($familiar['nombre'] ?? '') ?>"></td>
-                                <td><input type="number" name="familiares[<?= $indice ?>][edad]" class="form-control" min="0" max="120" value="<?= escapar($familiar['edad'] ?? '') ?>"></td>
-                                <td><input type="text" name="familiares[<?= $indice ?>][relacion]" class="form-control" value="<?= escapar($familiar['relacion'] ?? '') ?>"></td>
-                                <td><input type="text" name="familiares[<?= $indice ?>][profesion]" class="form-control" value="<?= escapar($familiar['profesion'] ?? '') ?>"></td>
-                                <td><input type="text" name="familiares[<?= $indice ?>][ocupacion]" class="form-control" value="<?= escapar($familiar['ocupacion'] ?? '') ?>"></td>
-                                <td><input type="text" name="familiares[<?= $indice ?>][observaciones]" class="form-control" value="<?= escapar($familiar['observaciones'] ?? '') ?>"></td>
+                                <td><input type="text" name="familiares[<?= $indice ?>][nombre]" class="form-control" value="<?= login_html($familiar['nombre'] ?? '') ?>"></td>
+                                <td><input type="number" name="familiares[<?= $indice ?>][edad]" class="form-control" min="0" max="120" value="<?= login_html($familiar['edad'] ?? '') ?>"></td>
+                                <td><input type="text" name="familiares[<?= $indice ?>][relacion]" class="form-control" value="<?= login_html($familiar['relacion'] ?? '') ?>"></td>
+                                <td><input type="text" name="familiares[<?= $indice ?>][profesion]" class="form-control" value="<?= login_html($familiar['profesion'] ?? '') ?>"></td>
+                                <td><input type="text" name="familiares[<?= $indice ?>][ocupacion]" class="form-control" value="<?= login_html($familiar['ocupacion'] ?? '') ?>"></td>
+                                <td><input type="text" name="familiares[<?= $indice ?>][observaciones]" class="form-control" value="<?= login_html($familiar['observaciones'] ?? '') ?>"></td>
                                 <td>
                                     <button type="button" class="btn btn-outline-danger btn-sm quitar-familiar" title="Eliminar fila">
                                         <i class="bi bi-trash"></i>
@@ -704,10 +704,10 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
                     ): ?>
                         <label class="opcion-radio">
                             <input type="radio" name="valoracion_familiar"
-                                value="<?= escapar($opcion) ?>"
+                                value="<?= login_html($opcion) ?>"
                                 <?= valorHistoria('valoracion_familiar') === $opcion
                                     ? 'checked' : '' ?>>
-                            <span><?= escapar($opcion) ?></span>
+                            <span><?= login_html($opcion) ?></span>
                         </label>
                     <?php endforeach; ?>
                 </div>
@@ -716,7 +716,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
             <div class="mt-3">
                 <label class="form-label">Descripción del contexto familiar</label>
                 <textarea name="contexto_familiar" class="form-control textarea-auto"
-                    rows="3"><?= escapar(valorHistoria('contexto_familiar')) ?></textarea>
+                    rows="3"><?= login_html(valorHistoria('contexto_familiar')) ?></textarea>
             </div>
         </div>
     </section>
@@ -735,12 +735,12 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
         </button>
         <div class="historia-bloque-contenido">
             <label class="form-label">Evaluación inicial</label>
-            <textarea name="evaluacion_inicial" class="form-control textarea-auto mb-3" rows="4" maxlength="5000"><?= escapar(valorHistoria('evaluacion_inicial')) ?></textarea>
+            <textarea name="evaluacion_inicial" class="form-control textarea-auto mb-3" rows="4" maxlength="5000"><?= login_html(valorHistoria('evaluacion_inicial')) ?></textarea>
             <label class="form-label">Impresión diagnóstica</label>
             <textarea name="impresion_diagnostica" class="form-control textarea-auto"
                 rows="4" maxlength="5000"
                 placeholder="Registre los resultados del diagnóstico psicológico..."
-            ><?= escapar(valorHistoria('impresion_diagnostica')) ?></textarea>
+            ><?= login_html(valorHistoria('impresion_diagnostica')) ?></textarea>
         </div>
     </section>
 
@@ -760,7 +760,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
             <textarea name="plan_intervencion" class="form-control textarea-auto"
                 rows="4" maxlength="5000"
                 placeholder="Registre los acuerdos establecidos..."
-            ><?= escapar(valorHistoria('plan_intervencion')) ?></textarea>
+            ><?= login_html(valorHistoria('plan_intervencion')) ?></textarea>
         </div>
     </section>
 
@@ -779,7 +779,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
 
         <div class="historia-bloque-contenido">
             <label class="form-label mt-3">Observaciones clínicas</label>
-            <textarea name="observaciones" class="form-control textarea-auto" rows="4" maxlength="5000"><?= escapar(valorHistoria('observaciones')) ?></textarea>
+            <textarea name="observaciones" class="form-control textarea-auto" rows="4" maxlength="5000"><?= login_html(valorHistoria('observaciones')) ?></textarea>
         </div>
     </section>
 

@@ -4,10 +4,6 @@ requerir_acceso('historias_clinicas/editar.php');
 
 require_once '../config/conexion.php';
 
-function escapar($v): string
-{
-    return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
-}
 
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
@@ -179,8 +175,8 @@ include '../includes/navbar.php';
         </header>
 
         <?php if ($mensaje): ?>
-            <div class="alert alert-<?= escapar($tipo) ?>">
-                <?= nl2br(escapar($mensaje)) ?>
+            <div class="alert alert-<?= login_html($tipo) ?>">
+                <?= nl2br(login_html($mensaje)) ?>
             </div>
         <?php endif; ?>
 

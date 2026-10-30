@@ -1,4 +1,4 @@
-﻿# Base de datos e instalación
+# Base de datos e instalación
 
 ## Esquema actual
 
@@ -15,7 +15,13 @@ El SQL incluye catálogos, secciones para la gestión 2026 y un usuario administ
 
 ## Instalación en una base nueva
 
-La instalacion inicial crea el usuario administrador `admin` con la clave `admin1234`. Cambiala despues de ingresar.
+La instalación crea la cuenta `admin` sin publicar una contraseña inicial. Después de configurar la base de datos, establece una contraseña propia desde la terminal antes del primer inicio de sesión:
+
+```powershell
+& C:\xampp\php\php.exe herramientas\establecer_clave.php admin
+```
+
+La herramienta solicita la contraseña dos veces y solo guarda su hash. No publiques ni reutilices una contraseña de instalación.
 
 Con MySQL iniciado, desde la raíz del proyecto:
 
@@ -77,7 +83,7 @@ codigo;ci;nombres;apellidos;fecha_nacimiento;genero;curso;paralelo;turno;estado
 EJEMPLO001;EJEMPLOCI001;Ana;Ejemplo;2011-05-12;Femenino;1;A;Mañana;Activo
 ```
 
-Columnas opcionales: `padre`, `madre`, `tutor`, `telefono`, `direccion`. Curso, paralelo y turno deben identificar una sección activa de la gestión actual; la institución y sus catálogos también deben estar activos. Género: `Masculino`/`Femenino`; turno: `Mañana`/`Tarde`; estado: `Activo`/`Retirado`. La fecha debe existir y no ser futura.
+Columnas opcionales: `padre`, `madre`, `tutor`, `telefono`, `direccion`. Curso, paralelo y turno deben identificar una sección activa de la gestión actual; los catalogos deben estar activos. Género: `Masculino`/`Femenino`; turno: `Mañana`/`Tarde`; estado: `Activo`/`Retirado`. La fecha debe existir y no ser futura.
 
 Cada fila válida se guarda con su inscripción y responsables dentro de una transacción. Las filas inválidas o duplicadas se rechazan y el procesamiento continúa; no se actualizan estudiantes existentes. Un encabezado inválido impide comenzar. El resumen muestra las cantidades y los primeros cinco errores por fila.
 

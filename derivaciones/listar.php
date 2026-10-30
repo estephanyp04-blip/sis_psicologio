@@ -18,25 +18,24 @@ $puedeCrear = login_puede('derivaciones/registrar.php');
 
 /* FUNCIONES AUXILIARES */
 
-function e($valor): string
-{
-    return htmlspecialchars(
-        (string) $valor,
-        ENT_QUOTES,
-        'UTF-8'
-    );
-}
 
 function claseEstado(string $estado): string
 {
     return match ($estado) {
-        'Pendiente'               => 'estado-pendiente',
-        'En seguimiento',
-        'En atención'             => 'estado-proceso',
-        'Atendido',
-        'Finalizado'              => 'estado-atendido',
-        'Rechazado'               => 'estado-rechazado',
-        default                   => 'estado-neutro',
+        'Pendiente' => 'estado-pendiente',
+        'En seguimiento' => 'estado-proceso',
+        'Atendido' => 'estado-atendido',
+        default => 'estado-neutro',
+    };
+}
+
+function etiquetaEstado(string $estado): string
+{
+    return match ($estado) {
+        'Pendiente' => 'Pendiente de revision',
+        'En seguimiento' => 'En seguimiento',
+        'Atendido' => 'Atendido',
+        default => $estado,
     };
 }
 
@@ -84,8 +83,6 @@ if ($esDocente) {
         ORDER BY
             CASE d.estado
                 WHEN 'Pendiente' THEN 1
-                WHEN 'En seguimiento' THEN 2
-                WHEN 'En atención' THEN 2
                 WHEN 'Atendido' THEN 3
                 ELSE 4
             END,
@@ -98,7 +95,7 @@ if ($esDocente) {
     if (!$stmt) {
         die(
             "Error al preparar la consulta: " .
-            e($conexion->error)
+            login_html($conexion->error)
         );
     }
 
@@ -113,8 +110,6 @@ if ($esDocente) {
         ORDER BY
             CASE d.estado
                 WHEN 'Pendiente' THEN 1
-                WHEN 'En seguimiento' THEN 2
-                WHEN 'En atención' THEN 2
                 WHEN 'Atendido' THEN 3
                 ELSE 4
             END,
@@ -151,7 +146,7 @@ $atendidas = count(
         $filas,
         fn($fila) => in_array(
             $fila['estado'],
-            ['Atendido', 'Finalizado'],
+            ['Atendido'],
             true
         )
     )
@@ -280,11 +275,11 @@ include '../includes/navbar.php';
         <?php if ($mensaje !== ''): ?>
 
             <div
-                class="alert alert-<?= e($tipoMensaje) ?>
+                class="alert alert-<?= login_html($tipoMensaje) ?>
                        alert-dismissible fade show"
             >
 
-                <?= nl2br(e($mensaje)) ?>
+                <?= nl2br(login_html($mensaje)) ?>
 
                 <button
                     type="button"
@@ -314,7 +309,7 @@ include '../includes/navbar.php';
 
                     <div>
                         <strong><?= $pendientes ?></strong>
-                        <span>Pendientes</span>
+                        <span>Por revisar</span>
                     </div>
 
                 </article>
@@ -330,7 +325,7 @@ include '../includes/navbar.php';
 
                     <div>
                         <strong><?= $atendidas ?></strong>
-                        <span>Atendidas</span>
+                        <span>Atendidos</span>
                     </div>
 
                 </article>
@@ -390,20 +385,13 @@ include '../includes/navbar.php';
                 </option>
 
                 <?php
-                $estados = [
-                    'Pendiente',
-                    'En seguimiento',
-                    'En atención',
-                    'Atendido',
-                    'Finalizado',
-                    'Rechazado'
-                ];
+                $estados = ['Pendiente', 'En seguimiento', 'Atendido'];
                 ?>
 
                 <?php foreach ($estados as $estado): ?>
 
-                    <option value="<?= e($estado) ?>">
-                        <?= e($estado) ?>
+                    <option value="<?= login_html($estado) ?>">
+                        <?= login_html($estado) ?>
                     </option>
 
                 <?php endforeach; ?>
@@ -424,8 +412,8 @@ include '../includes/navbar.php';
 
                 <?php foreach (array_keys($cursos) as $curso): ?>
 
-                    <option value="<?= e($curso) ?>">
-                        <?= e($curso) ?>
+                    <option value="<?= login_html($curso) ?>">
+                        <?= login_html($curso) ?>
                     </option>
 
                 <?php endforeach; ?>
@@ -559,8 +547,8 @@ include '../includes/navbar.php';
 
                             <tr
                                 data-registro="1"
-                                data-estado="<?= e($fila['estado']) ?>"
-                                data-curso="<?= e($fila['curso'] ?? '') ?>"
+                                data-estado="<?= login_html(etiquetaEstado($fila['estado'])) ?>"
+                                data-curso="<?= login_html($fila['curso'] ?? '') ?>"
                             >
 
                                 <!-- ESTUDIANTE -->
@@ -571,7 +559,7 @@ include '../includes/navbar.php';
 
                                         <span class="avatar-estudiante">
 
-                                            <?= e(
+                                            <?= login_html(
                                                 mb_strtoupper(
                                                     mb_substr(
                                                         $estudiante,
@@ -587,15 +575,15 @@ include '../includes/navbar.php';
                                         <div>
 
                                             <strong>
-                                                <?= e($estudiante) ?>
+                                                <?= login_html($estudiante) ?>
                                             </strong>
 
                                             <small>
                                                 Derivación #
                                                 <?= (int) $fila['cod_derivacion'] ?>
                                             </small>
-                                            <small><?= e($fila['materia'] ?? 'Materia no registrada') ?></small>
-                                            <small>Prioridad: <?= e($fila['prioridad']) ?></small>
+                                            <small><?= login_html($fila['materia'] ?? 'Materia no registrada') ?></small>
+                                            <small>Prioridad: <?= login_html($fila['prioridad']) ?></small>
 
                                         </div>
 
@@ -609,7 +597,7 @@ include '../includes/navbar.php';
                                 <td>
 
                                     <span class="curso-chip">
-                                        <?= e($cursoCompleto) ?>
+                                        <?= login_html($cursoCompleto) ?>
                                     </span>
 
                                 </td>
@@ -620,7 +608,7 @@ include '../includes/navbar.php';
                                 <?php if (!$esDocente): ?>
 
                                     <td>
-                                        <?= e($docenteNombre) ?>
+                                        <?= login_html($docenteNombre) ?>
                                     </td>
 
                                 <?php endif; ?>
@@ -634,7 +622,7 @@ include '../includes/navbar.php';
 
                                         <i class="bi bi-calendar3"></i>
 
-                                        <?= e($fecha) ?>
+                                        <?= login_html($fecha) ?>
 
                                     </span>
 
@@ -654,7 +642,7 @@ include '../includes/navbar.php';
 
                                         <i></i>
 
-                                        <?= e($fila['estado']) ?>
+                                        <?= login_html(etiquetaEstado($fila['estado'])) ?>
 
                                     </span>
 

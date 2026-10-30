@@ -94,10 +94,10 @@ function informe_crear(mysqli $conexion, array $datos, int $idUsuario): string
             $stmt->close();
         }
         // La fila única serializa la numeración incluso si todavía no hay informes.
-        $secuencia = $conexion->query('SELECT ultimo FROM informes_secuencia WHERE id = 1 FOR UPDATE')->fetch_assoc();
+        $secuencia = $conexion->query('SELECT ultimo FROM informes_secuencia WHERE cod_secuencia = 1 FOR UPDATE')->fetch_assoc();
         if (!$secuencia) throw new RuntimeException('Falta la migración de informes.');
         $numero = (int)$secuencia['ultimo'] + 1;
-        $conexion->query('UPDATE informes_secuencia SET ultimo = ' . $numero . ' WHERE id = 1');
+        $conexion->query('UPDATE informes_secuencia SET ultimo = ' . $numero . ' WHERE cod_secuencia = 1');
         $ficha = 'INF-' . str_pad((string)$numero, 4, '0', STR_PAD_LEFT);
         $tipoAtencion = implode(', ', $datos['tipo_atencion']);
         $descripcion = $datos['motivo'];

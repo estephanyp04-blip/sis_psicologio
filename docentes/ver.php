@@ -4,10 +4,6 @@ requerir_acceso('docentes/ver.php');
 
 require_once '../config/conexion.php';
 
-function escapar($valor): string
-{
-    return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
-}
 
 $idDocente = filter_input(
     INPUT_GET,
@@ -141,7 +137,7 @@ include '../includes/navbar.php';
 
                 <div>
                     <h2 class="h4 mb-1">
-                        <?= escapar(
+                        <?= login_html(
                             $docente['nombres'] . ' ' .
                             $docente['apellidos']
                         ); ?>
@@ -159,7 +155,7 @@ include '../includes/navbar.php';
 
                     <div class="mt-2">
                         <span class="badge text-bg-primary">
-                            <?= escapar(
+                            <?= login_html(
                                 $docente['materia'] ?: 'Sin materia'
                             ); ?>
                         </span>
@@ -206,7 +202,7 @@ include '../includes/navbar.php';
                             </small>
 
                             <div class="fw-semibold">
-                                <?= escapar($docente['nombres']); ?>
+                                <?= login_html($docente['nombres']); ?>
                             </div>
                         </div>
 
@@ -216,7 +212,7 @@ include '../includes/navbar.php';
                             </small>
 
                             <div class="fw-semibold">
-                                <?= escapar($docente['apellidos']); ?>
+                                <?= login_html($docente['apellidos']); ?>
                             </div>
                         </div>
 
@@ -226,7 +222,7 @@ include '../includes/navbar.php';
                             </small>
 
                             <div class="fw-semibold">
-                                <?= escapar(
+                                <?= login_html(
                                     $docente['telefono']
                                         ?: 'Sin registrar'
                                 ); ?>
@@ -240,10 +236,10 @@ include '../includes/navbar.php';
 
                             <div class="fw-semibold">
                                 <?php if (!empty($docente['correo'])): ?>
-                                    <a href="mailto:<?= escapar(
+                                    <a href="mailto:<?= login_html(
                                         $docente['correo']
                                     ); ?>">
-                                        <?= escapar($docente['correo']); ?>
+                                        <?= login_html($docente['correo']); ?>
                                     </a>
                                 <?php else: ?>
                                     Sin registrar
@@ -257,7 +253,7 @@ include '../includes/navbar.php';
                             </small>
 
                             <div class="fw-semibold">
-                                <?= escapar(
+                                <?= login_html(
                                     $docente['materia']
                                         ?: 'Sin asignar'
                                 ); ?>
@@ -285,7 +281,7 @@ include '../includes/navbar.php';
                         </small>
 
                         <div class="fw-semibold">
-                            <?= escapar(
+                            <?= login_html(
                                 $docente['usuario']
                                     ?: 'Sin cuenta asignada'
                             ); ?>
@@ -298,7 +294,7 @@ include '../includes/navbar.php';
                         </small>
 
                         <div class="fw-semibold">
-                            <?= escapar(
+                            <?= login_html(
                                 $docente['nombre_rol']
                                     ?: 'Sin rol'
                             ); ?>
@@ -311,7 +307,7 @@ include '../includes/navbar.php';
                         </small>
 
                         <div class="fw-semibold">
-                            <?= escapar(
+                            <?= login_html(
                                 $docente['estado_usuario']
                                     ?: 'Sin cuenta'
                             ); ?>

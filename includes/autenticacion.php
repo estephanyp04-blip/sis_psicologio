@@ -19,9 +19,9 @@ function login_ir(string $ruta): void
     header('Location: ' . login_url($ruta), true, 303);
     exit;
 }
-function login_html(string $valor): string
+function login_html($valor): string
 {
-    return htmlspecialchars($valor, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    return htmlspecialchars((string) $valor, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 function login_iniciar_sesion(): void
 {

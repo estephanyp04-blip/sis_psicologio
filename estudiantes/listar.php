@@ -4,9 +4,6 @@ requerir_acceso('estudiantes/listar.php');
 
 require_once '../config/conexion.php';
 
-function e($v):string{
-    return htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
-}
 
 /* CONSULTAR ESTUDIANTES */
 $sql="
@@ -156,7 +153,7 @@ include '../includes/navbar.php';
     <!-- MENSAJE -->
     <?php if($mensaje!==''):?>
 
-        <div class="alert alert-<?= e($tipoMensaje) ?> alert-dismissible fade show" role="alert">
+        <div class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show" role="alert">
 
             <?php if($tipoMensaje==='success'):?>
                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -166,7 +163,7 @@ include '../includes/navbar.php';
                 <i class="bi bi-info-circle-fill me-2"></i>
             <?php endif;?>
 
-            <?= nl2br(e($mensaje)) ?>
+            <?= nl2br(login_html($mensaje)) ?>
 
             <button
                 type="button"
@@ -289,8 +286,8 @@ include '../includes/navbar.php';
 
                         <?php foreach(array_keys($cursos) as $curso):?>
 
-                            <option value="<?= e($curso) ?>">
-                                <?= e($curso) ?>°
+                            <option value="<?= login_html($curso) ?>">
+                                <?= login_html($curso) ?>°
                             </option>
 
                         <?php endforeach;?>
@@ -405,9 +402,9 @@ include '../includes/navbar.php';
 
                     <tr
                         data-registro="1"
-                        data-curso="<?= e($curso) ?>"
-                        data-estado="<?= e($fila['estado']??'') ?>"
-                        data-busqueda="<?= e(
+                        data-curso="<?= login_html($curso) ?>"
+                        data-estado="<?= login_html($fila['estado']??'') ?>"
+                        data-busqueda="<?= login_html(
                             $nombre.' '.
                             ($fila['ci']??'').' '.
                             $codigo
@@ -415,27 +412,27 @@ include '../includes/navbar.php';
                     >
 
                         <td>
-                            <strong><?= e($nombre) ?></strong>
+                            <strong><?= login_html($nombre) ?></strong>
 
                             <div class="small text-muted">
-                                <?= e($cursoCompleto) ?>
+                                <?= login_html($cursoCompleto) ?>
                             </div>
                         </td>
 
                         <td>
-                            <?= e($codigo) ?>
+                            <?= login_html($codigo) ?>
                         </td>
 
                         <td>
-                            <?= e($fila['ci']??'—') ?>
+                            <?= login_html($fila['ci']??'—') ?>
                         </td>
 
                         <td>
-                            <?= e($cursoCompleto) ?>
+                            <?= login_html($cursoCompleto) ?>
                         </td>
 
                         <td>
-                            <?= e($fila['turno']??'—') ?>
+                            <?= login_html($fila['turno']??'—') ?>
                         </td>
 
                         <td>
@@ -449,7 +446,7 @@ include '../includes/navbar.php';
                             <?php else:?>
 
                                 <span class="badge bg-secondary">
-                                    <?= e($fila['estado']??'Retirado') ?>
+                                    <?= login_html($fila['estado']??'Retirado') ?>
                                 </span>
 
                             <?php endif;?>

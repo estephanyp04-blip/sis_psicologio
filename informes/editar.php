@@ -5,10 +5,6 @@ requerir_acceso('informes/editar.php');
 require_once '../config/conexion.php';
 require_once __DIR__ . '/datos.php';
 
-function e($valor): string
-{
-    return htmlspecialchars((string)$valor, ENT_QUOTES, 'UTF-8');
-}
 
 $idInforme = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 if (!$idInforme) {
@@ -63,13 +59,13 @@ include '../includes/navbar.php';
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="<?= login_html(login_inicio_url()) ?>">Inicio</a></li>
                 <li class="breadcrumb-item"><a href="listar.php">Informes</a></li>
-                <li class="breadcrumb-item active">Editar <?= e($informe['numero_ficha']) ?></li>
+                <li class="breadcrumb-item active">Editar <?= login_html($informe['numero_ficha']) ?></li>
             </ol>
         </nav>
 
         <?php if ($mensaje !== ''): ?>
-            <div class="alert alert-<?= e($tipoMensaje) ?> alert-dismissible fade show" role="alert">
-                <?= nl2br(e($mensaje)) ?>
+            <div class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show" role="alert">
+                <?= nl2br(login_html($mensaje)) ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>
         <?php endif; ?>
@@ -79,7 +75,7 @@ include '../includes/navbar.php';
                 <div>
                     <span class="text-primary fw-semibold"><i class="bi bi-pencil-square me-1"></i>Departamento de Psicología</span>
                     <h2 class="mt-2">Editar ficha psicológica</h2>
-                    <p>Actualice la información del informe <?= e($informe['numero_ficha']) ?>.</p>
+                    <p>Actualice la información del informe <?= login_html($informe['numero_ficha']) ?>.</p>
                 </div>
             </div>
 
@@ -93,24 +89,24 @@ include '../includes/navbar.php';
                     <div class="row g-4">
                         <div class="col-12">
                             <label for="titulo" class="form-label">Título <span class="text-danger">*</span></label>
-                            <input type="text" name="titulo" id="titulo" class="form-control" maxlength="180" required value="<?= e($informe['titulo']) ?>">
+                            <input type="text" name="titulo" id="titulo" class="form-control" maxlength="180" required value="<?= login_html($informe['titulo']) ?>">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Ficha psicológica</label>
-                            <input type="text" class="form-control" value="<?= e($informe['numero_ficha']) ?>" readonly>
+                            <input type="text" class="form-control" value="<?= login_html($informe['numero_ficha']) ?>" readonly>
                         </div>
                         <div class="col-md-3">
                             <label for="fecha" class="form-label">Fecha <span class="text-danger">*</span></label>
-                            <input type="date" name="fecha" id="fecha" class="form-control" value="<?= e($informe['fecha']) ?>" max="<?= date('Y-m-d') ?>" required>
+                            <input type="date" name="fecha" id="fecha" class="form-control" value="<?= login_html($informe['fecha']) ?>" max="<?= date('Y-m-d') ?>" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Estudiante</label>
-                            <input type="text" class="form-control" value="<?= e(trim($informe['apellidos'] . ' ' . $informe['nombres'])) ?>" readonly>
+                            <input type="text" class="form-control" value="<?= login_html(trim($informe['apellidos'] . ' ' . $informe['nombres'])) ?>" readonly>
                             <input type="hidden" name="cod_estudiante" value="<?= (int)$informe['cod_estudiante'] ?>">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Curso</label>
-                            <input type="text" class="form-control" value="<?= e($informe['curso'] . ' ' . $informe['paralelo']) ?>" readonly>
+                            <input type="text" class="form-control" value="<?= login_html($informe['curso'] . ' ' . $informe['paralelo']) ?>" readonly>
                         </div>
                         <div class="col-md-4">
                             <label for="numero_atenciones" class="form-label">N.º de atenciones</label>
@@ -118,7 +114,7 @@ include '../includes/navbar.php';
                         </div>
                         <div class="col-md-4">
                             <label for="referido_por" class="form-label">Referido por</label>
-                            <input type="text" name="referido_por" id="referido_por" class="form-control" value="<?= e($informe['referido_por']) ?>" maxlength="150">
+                            <input type="text" name="referido_por" id="referido_por" class="form-control" value="<?= login_html($informe['referido_por']) ?>" maxlength="150">
                         </div>
                     </div>
                 </section>
@@ -131,8 +127,8 @@ include '../includes/navbar.php';
                         <?php foreach ($opcionesAtencion as $indice => $opcion): ?>
                             <div class="col-md-4 col-lg-3">
                                 <div class="form-check border rounded-3 p-3 h-100">
-                                    <input class="form-check-input ms-0 me-2" type="checkbox" name="tipo_atencion[]" value="<?= e($opcion) ?>" id="tipo_<?= $indice ?>" <?= in_array($opcion, $tipos, true) ? 'checked' : '' ?>>
-                                    <label class="form-check-label" for="tipo_<?= $indice ?>"><?= e($opcion) ?></label>
+                                    <input class="form-check-input ms-0 me-2" type="checkbox" name="tipo_atencion[]" value="<?= login_html($opcion) ?>" id="tipo_<?= $indice ?>" <?= in_array($opcion, $tipos, true) ? 'checked' : '' ?>>
+                                    <label class="form-check-label" for="tipo_<?= $indice ?>"><?= login_html($opcion) ?></label>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -140,11 +136,11 @@ include '../includes/navbar.php';
                     <div class="row g-4">
                         <div class="col-md-6">
                             <label for="motivo" class="form-label">Motivo <span class="text-danger">*</span></label>
-                            <textarea name="motivo" id="motivo" class="form-control" rows="5" maxlength="5000" required><?= e($informe['motivo']) ?></textarea>
+                            <textarea name="motivo" id="motivo" class="form-control" rows="5" maxlength="5000" required><?= login_html($informe['motivo']) ?></textarea>
                         </div>
                         <div class="col-md-6">
                             <label for="diagnostico" class="form-label">Diagnóstico</label>
-                            <textarea name="diagnostico" id="diagnostico" class="form-control" rows="5" maxlength="5000"><?= e($informe['diagnostico']) ?></textarea>
+                            <textarea name="diagnostico" id="diagnostico" class="form-control" rows="5" maxlength="5000"><?= login_html($informe['diagnostico']) ?></textarea>
                         </div>
                     </div>
                 </section>
@@ -155,11 +151,11 @@ include '../includes/navbar.php';
                     <div class="row g-4">
                         <div class="col-md-6">
                             <label for="aspecto_cognitivo" class="form-label">Aspecto madurativo y/o cognitivo <span class="text-danger">*</span></label>
-                            <textarea name="aspecto_cognitivo" id="aspecto_cognitivo" class="form-control" rows="6" maxlength="5000" required><?= e($informe['aspecto_cognitivo']) ?></textarea>
+                            <textarea name="aspecto_cognitivo" id="aspecto_cognitivo" class="form-control" rows="6" maxlength="5000" required><?= login_html($informe['aspecto_cognitivo']) ?></textarea>
                         </div>
                         <div class="col-md-6">
                             <label for="aspectos_afectivos" class="form-label">Aspectos afectivos <span class="text-danger">*</span></label>
-                            <textarea name="aspectos_afectivos" id="aspectos_afectivos" class="form-control" rows="6" maxlength="5000" required><?= e($informe['aspectos_afectivos']) ?></textarea>
+                            <textarea name="aspectos_afectivos" id="aspectos_afectivos" class="form-control" rows="6" maxlength="5000" required><?= login_html($informe['aspectos_afectivos']) ?></textarea>
                         </div>
                     </div>
                 </section>
@@ -168,15 +164,15 @@ include '../includes/navbar.php';
                     <h5 class="section-title"><i class="bi bi-check2-square"></i>Acuerdos y recepción</h5>
                     <hr>
                     <label for="diagnostico_acuerdos" class="form-label">Diagnóstico, acuerdos y compromisos</label>
-                    <textarea name="diagnostico_acuerdos" id="diagnostico_acuerdos" class="form-control mb-4" rows="5" maxlength="5000"><?= e($informe['diagnostico_acuerdos']) ?></textarea>
+                    <textarea name="diagnostico_acuerdos" id="diagnostico_acuerdos" class="form-control mb-4" rows="5" maxlength="5000"><?= login_html($informe['diagnostico_acuerdos']) ?></textarea>
                     <label for="recomendaciones" class="form-label">Recomendaciones y sugerencias</label>
-                    <textarea name="recomendaciones" id="recomendaciones" class="form-control mb-4" rows="5" maxlength="5000"><?= e($informe['recomendaciones']) ?></textarea>
+                    <textarea name="recomendaciones" id="recomendaciones" class="form-control mb-4" rows="5" maxlength="5000"><?= login_html($informe['recomendaciones']) ?></textarea>
                     <label for="recibido_por" class="form-label">Recibido por</label>
-                    <input type="text" name="recibido_por" id="recibido_por" class="form-control mb-4" value="<?= e($informe['recibido_por']) ?>" maxlength="150">
+                    <input type="text" name="recibido_por" id="recibido_por" class="form-control mb-4" value="<?= login_html($informe['recibido_por']) ?>" maxlength="150">
                     <label for="estado" class="form-label">Estado</label>
                     <select name="estado" id="estado" class="form-select">
                         <?php foreach (INFORME_ESTADOS as $estado): ?>
-                            <option value="<?= e($estado) ?>" <?= $informe['estado'] === $estado ? 'selected' : '' ?>><?= e($estado) ?></option>
+                            <option value="<?= login_html($estado) ?>" <?= $informe['estado'] === $estado ? 'selected' : '' ?>><?= login_html($estado) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </section>

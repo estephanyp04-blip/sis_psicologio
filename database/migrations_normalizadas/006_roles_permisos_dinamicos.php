@@ -13,7 +13,7 @@ return static function (mysqli $bd): array {
         ['Usuarios', '/usuarios/listar.php', 'bi-person-gear', 7],
         ['Roles y permisos', '/roles/listar.php', 'bi-shield-lock', 8],
         ['Docentes', '/docentes/listar.php', 'bi-person-badge-fill', 9],
-        ['Seguimientos', '/seguimientos/ver.php', 'bi-journal-medical', 10],
+        ['Seguimientos', '/seguimientos/listar.php', 'bi-journal-medical', 10],
         ['Estadísticas', '/estadisticas/index.php', 'bi-bar-chart-line-fill', 11],
     ];
 

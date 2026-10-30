@@ -17,9 +17,6 @@ if (isset($_GET['cod_seguimiento']) && !isset($_SESSION['datos_informe'])) {
 }
 unset($_SESSION['datos_informe']);
 
-function e($valor):string{
-    return htmlspecialchars((string)$valor,ENT_QUOTES,'UTF-8');
-}
 
 $mensaje=$_SESSION['mensaje']??'';
 $tipoMensaje=$_SESSION['tipo_mensaje']??'info';
@@ -91,8 +88,8 @@ include __DIR__ . '/../includes/navbar.php';
     </nav>
 
     <?php if($mensaje!==''): ?>
-        <div class="alert alert-<?= e($tipoMensaje) ?> alert-dismissible fade show">
-            <?= e($mensaje) ?>
+        <div class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show">
+            <?= login_html($mensaje) ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     <?php endif; ?>
@@ -113,7 +110,7 @@ include __DIR__ . '/../includes/navbar.php';
             <?= login_campo_csrf() ?>
             <input type="hidden" name="cod_historia" id="cod_historia"><input type="hidden" name="cod_seguimiento" id="cod_seguimiento"><p id="seguimiento_origen" class="text-muted"></p>
             <input type="hidden" name="cod_derivacion" id="cod_derivacion">
-            <input type="hidden" name="estado" value="<?= e($datosInforme['estado'] ?? 'Borrador') ?>">
+            <input type="hidden" name="estado" value="<?= login_html($datosInforme['estado'] ?? 'Borrador') ?>">
 
             <!-- Datos generales -->
             <section class="form-section mb-4">
@@ -122,17 +119,17 @@ include __DIR__ . '/../includes/navbar.php';
                 <div class="row g-4">
                     <div class="col-12">
                         <label for="titulo" class="form-label">Título <span class="text-danger">*</span></label>
-                        <input type="text" name="titulo" id="titulo" class="form-control" maxlength="180" required value="<?= e($datosInforme['titulo'] ?? 'Informe psicológico individual') ?>">
+                        <input type="text" name="titulo" id="titulo" class="form-control" maxlength="180" required value="<?= login_html($datosInforme['titulo'] ?? 'Informe psicológico individual') ?>">
                     </div>
                     <div class="col-sm-6 col-lg-3">
                         <label class="form-label">Ficha psicológica</label>
-                        <input type="text" class="form-control" value="<?= e($numeroFicha) ?>" readonly>
+                        <input type="text" class="form-control" value="<?= login_html($numeroFicha) ?>" readonly>
                         <small class="text-muted">Se genera automáticamente.</small>
                     </div>
 
                     <div class="col-sm-6 col-lg-3">
                         <label for="fecha" class="form-label">Fecha <span class="text-danger">*</span></label>
-                        <input type="date" name="fecha" id="fecha" class="form-control" value="<?= e($datosInforme['fecha'] ?? date('Y-m-d')) ?>" max="<?= date('Y-m-d') ?>" required>
+                        <input type="date" name="fecha" id="fecha" class="form-control" value="<?= login_html($datosInforme['fecha'] ?? date('Y-m-d')) ?>" max="<?= date('Y-m-d') ?>" required>
                     </div>
 
                     <div class="col-lg-6">
@@ -146,17 +143,17 @@ include __DIR__ . '/../includes/navbar.php';
                                 <option
                                     value="<?= (int)$estudiante['cod_estudiante'] ?>"
                                     <?= (int)($datosInforme['cod_estudiante'] ?? 0) === (int)$estudiante['cod_estudiante'] ? 'selected' : '' ?>
-                                    data-curso="<?= e($estudiante['curso']??'') ?>"
-                                    data-paralelo="<?= e($estudiante['paralelo']??'') ?>"
+                                    data-curso="<?= login_html($estudiante['curso']??'') ?>"
+                                    data-paralelo="<?= login_html($estudiante['paralelo']??'') ?>"
                                     data-seguimiento="<?= (int)($estudiante['cod_seguimiento']??0) ?>" data-historia="<?= (int)($estudiante['cod_historia']??0) ?>"
                                     data-derivacion="<?= (int)($estudiante['cod_derivacion']??0) ?>"
                                     data-atenciones="<?= (int)($estudiante['numero_atenciones']??0) ?>"
-                                    data-docente="<?= e($estudiante['docente_referente']??'') ?>"
-                                    data-motivo-derivacion="<?= e($estudiante['motivo_derivacion']??'') ?>"
-                                    data-motivo-historia="<?= e($estudiante['motivo_consulta']??'') ?>"
-                                    data-diagnostico="<?= e($estudiante['diagnostico']??'') ?>"
-                                    data-recomendaciones="<?= e($estudiante['recomendaciones']??'') ?>">
-                                    <?= e($nombreCompleto) ?> — <?= e($estudiante['curso']??'') ?> <?= e($estudiante['paralelo']??'') ?>
+                                    data-docente="<?= login_html($estudiante['docente_referente']??'') ?>"
+                                    data-motivo-derivacion="<?= login_html($estudiante['motivo_derivacion']??'') ?>"
+                                    data-motivo-historia="<?= login_html($estudiante['motivo_consulta']??'') ?>"
+                                    data-diagnostico="<?= login_html($estudiante['diagnostico']??'') ?>"
+                                    data-recomendaciones="<?= login_html($estudiante['recomendaciones']??'') ?>">
+                                    <?= login_html($nombreCompleto) ?> — <?= login_html($estudiante['curso']??'') ?> <?= login_html($estudiante['paralelo']??'') ?>
                                 </option>
                             <?php endwhile; ?>
                         </select>
@@ -206,7 +203,7 @@ include __DIR__ . '/../includes/navbar.php';
 
                     <div class="col-md-6">
                         <label class="form-label">Psicólogo/a</label>
-                        <input type="text" class="form-control bg-light" value="<?= e($nombrePsicologa) ?>" readonly>
+                        <input type="text" class="form-control bg-light" value="<?= login_html($nombrePsicologa) ?>" readonly>
                     </div>
                 </div>
             </section>
@@ -226,8 +223,8 @@ include __DIR__ . '/../includes/navbar.php';
                     <?php foreach($tiposAtencion as $indice=>$tipo): ?>
                         <div class="col-sm-6 col-md-4">
                             <div class="form-check border rounded-3 p-3 h-100">
-                                <input class="form-check-input ms-0 me-2" type="checkbox" name="tipo_atencion[]" value="<?= e($tipo) ?>" id="tipo_<?= $indice ?>" <?= in_array($tipo, $datosInforme['tipo_atencion'] ?? [], true) ? 'checked' : '' ?>>
-                                <label class="form-check-label" for="tipo_<?= $indice ?>"><?= e($tipo) ?></label>
+                                <input class="form-check-input ms-0 me-2" type="checkbox" name="tipo_atencion[]" value="<?= login_html($tipo) ?>" id="tipo_<?= $indice ?>" <?= in_array($tipo, $datosInforme['tipo_atencion'] ?? [], true) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="tipo_<?= $indice ?>"><?= login_html($tipo) ?></label>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -236,12 +233,12 @@ include __DIR__ . '/../includes/navbar.php';
                 <div class="row g-4">
                     <div class="col-md-6">
                         <label for="motivo" class="form-label">Motivo <span class="text-danger">*</span></label>
-                        <textarea name="motivo" id="motivo" class="form-control" rows="5" maxlength="5000" placeholder="Se cargará desde la última derivación o historia clínica." required><?= e($datosInforme['motivo'] ?? '') ?></textarea>
+                        <textarea name="motivo" id="motivo" class="form-control" rows="5" maxlength="5000" placeholder="Se cargará desde la última derivación o historia clínica." required><?= login_html($datosInforme['motivo'] ?? '') ?></textarea>
                     </div>
 
                     <div class="col-md-6">
                         <label for="diagnostico" class="form-label">Diagnóstico</label>
-                        <textarea name="diagnostico" id="diagnostico" class="form-control" rows="5" maxlength="5000" placeholder="Se cargará desde la impresión diagnóstica de la historia clínica."><?= e($datosInforme['diagnostico'] ?? '') ?></textarea>
+                        <textarea name="diagnostico" id="diagnostico" class="form-control" rows="5" maxlength="5000" placeholder="Se cargará desde la impresión diagnóstica de la historia clínica."><?= login_html($datosInforme['diagnostico'] ?? '') ?></textarea>
                     </div>
                 </div>
             </section>
@@ -253,12 +250,12 @@ include __DIR__ . '/../includes/navbar.php';
                 <div class="row g-4">
                     <div class="col-md-6">
                         <label for="aspecto_cognitivo" class="form-label">Aspecto madurativo y/o cognitivo <span class="text-danger">*</span></label>
-                        <textarea name="aspecto_cognitivo" id="aspecto_cognitivo" class="form-control" rows="6" maxlength="5000" placeholder="Describa los aspectos cognitivos y/o madurativos observados." required><?= e($datosInforme['aspecto_cognitivo'] ?? '') ?></textarea>
+                        <textarea name="aspecto_cognitivo" id="aspecto_cognitivo" class="form-control" rows="6" maxlength="5000" placeholder="Describa los aspectos cognitivos y/o madurativos observados." required><?= login_html($datosInforme['aspecto_cognitivo'] ?? '') ?></textarea>
                     </div>
 
                     <div class="col-md-6">
                         <label for="aspectos_afectivos" class="form-label">Aspectos afectivos <span class="text-danger">*</span></label>
-                        <textarea name="aspectos_afectivos" id="aspectos_afectivos" class="form-control" rows="6" maxlength="5000" placeholder="Describa los aspectos emocionales y afectivos observados." required><?= e($datosInforme['aspectos_afectivos'] ?? '') ?></textarea>
+                        <textarea name="aspectos_afectivos" id="aspectos_afectivos" class="form-control" rows="6" maxlength="5000" placeholder="Describa los aspectos emocionales y afectivos observados." required><?= login_html($datosInforme['aspectos_afectivos'] ?? '') ?></textarea>
                     </div>
                 </div>
             </section>
@@ -267,14 +264,14 @@ include __DIR__ . '/../includes/navbar.php';
             <section class="form-section mb-4">
                 <h5 class="section-title"><i class="bi bi-check2-square me-2"></i>5. Diagnóstico, acuerdos y/o compromisos</h5>
                 <hr>
-                <textarea name="diagnostico_acuerdos" id="diagnostico_acuerdos" class="form-control" rows="6" maxlength="5000" placeholder="Registre acuerdos, compromisos y acciones establecidas."><?= e($datosInforme['diagnostico_acuerdos'] ?? '') ?></textarea>
+                <textarea name="diagnostico_acuerdos" id="diagnostico_acuerdos" class="form-control" rows="6" maxlength="5000" placeholder="Registre acuerdos, compromisos y acciones establecidas."><?= login_html($datosInforme['diagnostico_acuerdos'] ?? '') ?></textarea>
             </section>
 
             <!-- Recomendaciones -->
             <section class="form-section mb-4">
                 <h5 class="section-title"><i class="bi bi-lightbulb me-2"></i>6. Recomendaciones y/o sugerencias</h5>
                 <hr>
-                <textarea name="recomendaciones" id="recomendaciones" class="form-control" rows="6" maxlength="5000" placeholder="Las recomendaciones del último seguimiento se cargarán automáticamente."><?= e($datosInforme['recomendaciones'] ?? '') ?></textarea>
+                <textarea name="recomendaciones" id="recomendaciones" class="form-control" rows="6" maxlength="5000" placeholder="Las recomendaciones del último seguimiento se cargarán automáticamente."><?= login_html($datosInforme['recomendaciones'] ?? '') ?></textarea>
             </section>
 
             <!-- Recepción -->
@@ -284,7 +281,7 @@ include __DIR__ . '/../includes/navbar.php';
                 <div class="row g-4">
                     <div class="col-md-8">
                         <label for="recibido_por" class="form-label">Recibido por</label>
-                        <input type="text" name="recibido_por" id="recibido_por" value="<?= e($datosInforme['recibido_por'] ?? '') ?>" class="form-control" maxlength="150" placeholder="Nombre de la persona que recibe el informe">
+                        <input type="text" name="recibido_por" id="recibido_por" value="<?= login_html($datosInforme['recibido_por'] ?? '') ?>" class="form-control" maxlength="150" placeholder="Nombre de la persona que recibe el informe">
                     </div>
 
                     <div class="col-md-4">

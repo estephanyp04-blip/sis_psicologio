@@ -19,7 +19,6 @@ function estudiante_catalogo(mysqli $conexion): array
 {
     return $conexion->query("SELECT s.cod_seccion, c.nombre AS curso_nombre, p.nombre AS paralelo, s.turno
         FROM secciones s
-        INNER JOIN instituciones i ON i.cod_institucion = s.cod_institucion AND i.estado = 'Activo'
         INNER JOIN cursos c ON c.cod_curso = s.cod_curso AND c.estado = 'Activo'
         INNER JOIN paralelos p ON p.cod_paralelo = s.cod_paralelo AND p.estado = 'Activo'
         WHERE s.estado = 'Activo' AND s.gestion = YEAR(CURRENT_DATE())
@@ -117,17 +116,27 @@ function estudiante_actualizar(mysqli $conexion, int $id, array $entrada): void
 {
     if ($id <= 0) throw new InvalidArgumentException('El estudiante seleccionado no es válido.');
     $datos = [];
-    foreach (['ci' => 20, 'nombres' => 80, 'apellidos' => 80, 'paralelo' => 10, 'estado' => 10] as $campo => $maximo) {
+    foreach (['codigo' => 20, 'ci' => 20, 'nombres' => 80, 'apellidos' => 80, 'paralelo' => 10,
+        'estado' => 10, 'turno' => 20, 'genero' => 1, 'padre' => 150, 'madre' => 150,
+        'tutor' => 150, 'telefono' => 25, 'direccion' => 255] as $campo => $maximo) {
         $valor = $entrada[$campo] ?? null;
         if (!is_string($valor) || !mb_check_encoding($valor, 'UTF-8') || mb_strlen(trim($valor)) > $maximo) {
             throw new InvalidArgumentException("Revise el campo $campo (máximo $maximo caracteres).");
         }
         $datos[$campo] = trim($valor);
     }
+    $fechaNacimiento = $entrada['fecha_nacimiento'] ?? null;
+    if (!is_string($fechaNacimiento) || ($fechaNacimiento !== '' && (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaNacimiento)
+        || !checkdate((int)substr($fechaNacimiento, 5, 2), (int)substr($fechaNacimiento, 8, 2), (int)substr($fechaNacimiento, 0, 4))
+        || $fechaNacimiento > date('Y-m-d')))) {
+        throw new InvalidArgumentException('La fecha de nacimiento no es válida.');
+    }
     $curso = filter_var($entrada['curso'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-    if (!$curso || $datos['nombres'] === '' || $datos['apellidos'] === '' || $datos['paralelo'] === ''
-        || !in_array($datos['estado'], ['Activo', 'Retirado'], true)) {
-        throw new InvalidArgumentException('Complete nombres, apellidos, curso, paralelo y estado correctamente.');
+    if (!$curso || $datos['codigo'] === '' || $datos['nombres'] === '' || $datos['apellidos'] === '' || $datos['paralelo'] === ''
+        || !in_array($datos['estado'], ['Activo', 'Retirado'], true)
+        || !in_array($datos['turno'], ['Mañana', 'Tarde'], true)
+        || !in_array($datos['genero'], ['M', 'F'], true)) {
+        throw new InvalidArgumentException('Complete código, nombres, apellidos, curso, paralelo, turno, género y estado correctamente.');
     }
     $conexion->begin_transaction();
     try {
@@ -135,7 +144,7 @@ function estudiante_actualizar(mysqli $conexion, int $id, array $entrada): void
         $stmt->bind_param('i', $id); $stmt->execute();
         $existe = $stmt->get_result()->fetch_assoc(); $stmt->close();
         if (!$existe) throw new InvalidArgumentException('El estudiante no existe.');
-        $stmt = $conexion->prepare("SELECT i.cod_historial_academico,s.cod_seccion,s.cod_institucion,s.turno,s.gestion,c.orden,p.nombre AS paralelo
+        $stmt = $conexion->prepare("SELECT i.cod_historial_academico,s.cod_seccion,s.turno,s.gestion,c.orden,p.nombre AS paralelo
             FROM historial_academico i INNER JOIN secciones s ON s.cod_seccion=i.cod_seccion
             INNER JOIN cursos c ON c.cod_curso=s.cod_curso INNER JOIN paralelos p ON p.cod_paralelo=s.cod_paralelo
             WHERE i.cod_estudiante=? AND i.estado IN ('Activo','Retirado')
@@ -144,24 +153,57 @@ function estudiante_actualizar(mysqli $conexion, int $id, array $entrada): void
         $inscripcion = $stmt->get_result()->fetch_assoc(); $stmt->close();
         if (!$inscripcion) throw new InvalidArgumentException('El estudiante no tiene una inscripción académica que actualizar.');
         $idSeccion = (int)$inscripcion['cod_seccion'];
-        if ($curso !== (int)$inscripcion['orden'] || $datos['paralelo'] !== $inscripcion['paralelo']) {
+        if ($curso !== (int)$inscripcion['orden'] || $datos['paralelo'] !== $inscripcion['paralelo'] || $datos['turno'] !== $inscripcion['turno']) {
             $stmt = $conexion->prepare("SELECT s.cod_seccion FROM secciones s
                 INNER JOIN cursos c ON c.cod_curso=s.cod_curso INNER JOIN paralelos p ON p.cod_paralelo=s.cod_paralelo
-                INNER JOIN instituciones i ON i.cod_institucion=s.cod_institucion
-                WHERE c.orden=? AND p.nombre=? AND s.turno=? AND s.gestion=? AND s.cod_institucion=?
-                  AND s.estado='Activo' AND c.estado='Activo' AND p.estado='Activo' AND i.estado='Activo' LIMIT 2");
-            $stmt->bind_param('issii', $curso, $datos['paralelo'], $inscripcion['turno'], $inscripcion['gestion'], $inscripcion['cod_institucion']);
+                WHERE c.orden=? AND p.nombre=? AND s.turno=? AND s.gestion=?
+                  AND s.estado='Activo' AND c.estado='Activo' AND p.estado='Activo' LIMIT 2");
+            $stmt->bind_param('issi', $curso, $datos['paralelo'], $datos['turno'], $inscripcion['gestion']);
             $stmt->execute(); $secciones = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
-            if (count($secciones) !== 1) throw new InvalidArgumentException('El curso y paralelo no están disponibles para la institución, gestión y turno del estudiante.');
+            if (count($secciones) !== 1) throw new InvalidArgumentException('El curso, paralelo, gestion y turno no identifican una seccion activa unica.');
             $idSeccion = (int)$secciones[0]['cod_seccion'];
         }
         $ci = $datos['ci'] !== '' ? $datos['ci'] : null;
-        $stmt = $conexion->prepare('UPDATE estudiantes SET ci=?,nombres=?,apellidos=?,estado=? WHERE cod_estudiante=?');
-        $stmt->bind_param('ssssi', $ci, $datos['nombres'], $datos['apellidos'], $datos['estado'], $id);
+        $fecha = $fechaNacimiento !== '' ? $fechaNacimiento : null;
+        $sexo = $datos['genero'];
+        $stmt = $conexion->prepare('UPDATE estudiantes SET codigo=?,ci=?,nombres=?,apellidos=?,fecha_nacimiento=?,sexo=?,direccion=?,telefono=?,estado=? WHERE cod_estudiante=?');
+        $stmt->bind_param('sssssssssi', $datos['codigo'], $ci, $datos['nombres'], $datos['apellidos'], $fecha,
+            $sexo, $datos['direccion'], $datos['telefono'], $datos['estado'], $id);
         $stmt->execute(); $stmt->close();
         $stmt = $conexion->prepare('UPDATE historial_academico SET cod_seccion=?,estado=? WHERE cod_historial_academico=?');
         $stmt->bind_param('isi', $idSeccion, $datos['estado'], $inscripcion['cod_historial_academico']);
         $stmt->execute(); $stmt->close();
+
+        foreach (['padre' => 'Padre', 'madre' => 'Madre', 'tutor' => 'Tutor'] as $campo => $parentesco) {
+            $stmt = $conexion->prepare('SELECT er.cod_responsable FROM estudiante_responsables er
+                WHERE er.cod_estudiante=? AND er.parentesco=? ORDER BY er.es_principal DESC LIMIT 1 FOR UPDATE');
+            $stmt->bind_param('is', $id, $parentesco); $stmt->execute();
+            $responsable = $stmt->get_result()->fetch_assoc(); $stmt->close();
+            if ($datos[$campo] === '') {
+                $stmt = $conexion->prepare('DELETE FROM estudiante_responsables WHERE cod_estudiante=? AND parentesco=?');
+                $stmt->bind_param('is', $id, $parentesco); $stmt->execute(); $stmt->close();
+                continue;
+            }
+            if ($responsable) {
+                $idResponsable = (int)$responsable['cod_responsable'];
+                $stmt = $conexion->prepare('SELECT COUNT(*) AS total FROM estudiante_responsables WHERE cod_responsable=?');
+                $stmt->bind_param('i', $idResponsable); $stmt->execute();
+                $compartido = (int)$stmt->get_result()->fetch_assoc()['total'] > 1; $stmt->close();
+                if (!$compartido) {
+                    $stmt = $conexion->prepare('UPDATE responsables SET nombres=? WHERE cod_responsable=?');
+                    $stmt->bind_param('si', $datos[$campo], $idResponsable); $stmt->execute(); $stmt->close();
+                    continue;
+                }
+                $stmt = $conexion->prepare('DELETE FROM estudiante_responsables WHERE cod_estudiante=? AND parentesco=?');
+                $stmt->bind_param('is', $id, $parentesco); $stmt->execute(); $stmt->close();
+            }
+            $stmt = $conexion->prepare('INSERT INTO responsables (nombres) VALUES (?)');
+            $stmt->bind_param('s', $datos[$campo]); $stmt->execute();
+            $idResponsable = (int)$conexion->insert_id; $stmt->close();
+            $principal = $campo === 'tutor' ? 1 : 0;
+            $stmt = $conexion->prepare('INSERT INTO estudiante_responsables (cod_estudiante,cod_responsable,parentesco,es_principal) VALUES (?,?,?,?)');
+            $stmt->bind_param('iisi', $id, $idResponsable, $parentesco, $principal); $stmt->execute(); $stmt->close();
+        }
         $conexion->commit();
     } catch (Throwable $error) {
         $conexion->rollback();

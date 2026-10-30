@@ -9,14 +9,6 @@ require_once __DIR__ . '/datos.php';
 $baseUrl = rtrim(login_config()['base_url'], '/');
 
 if (!function_exists('escapar')) {
-    function escapar(mixed $valor): string
-    {
-        return htmlspecialchars(
-            (string) $valor,
-            ENT_QUOTES,
-            'UTF-8'
-        );
-    }
 }
 
 /* El acceso se autoriza al inicio; las cuentas ligadas a docentes ven sus propios registros. */
@@ -210,11 +202,15 @@ $clasePrioridad = match ($derivacion['prioridad'] ?? '') {
 
 $claseEstado = match ($derivacion['estado'] ?? '') {
     'Pendiente' => 'bg-warning text-dark',
+    'En seguimiento' => 'bg-primary',
     'Atendido' => 'bg-success',
-    'En atención' => 'bg-primary',
-    'Finalizado' => 'bg-success',
-    'Rechazado' => 'bg-danger',
     default => 'bg-secondary'
+};
+$etiquetaEstado = match ($derivacion['estado'] ?? '') {
+    'Pendiente' => 'Pendiente de revision',
+    'En seguimiento' => 'En seguimiento',
+    'Atendido' => 'Atendido',
+    default => (string)($derivacion['estado'] ?? 'Sin estado')
 };
 
 /* El diseño se carga después de todas las redirecciones */
@@ -329,7 +325,7 @@ include '../includes/navbar.php';
                                 Fecha
                             </small>
                             <strong>
-                                <?= escapar($fechaMostrar) ?>
+                                <?= login_html($fechaMostrar) ?>
                             </strong>
                         </div>
 
@@ -338,7 +334,7 @@ include '../includes/navbar.php';
                                 Prioridad
                             </small>
                             <span class="badge <?= $clasePrioridad ?>">
-                                <?= escapar(
+                                <?= login_html(
                                     $derivacion['prioridad'] ??
                                     'Sin prioridad'
                                 ) ?>
@@ -350,7 +346,7 @@ include '../includes/navbar.php';
                                 Estado
                             </small>
                             <span class="badge <?= $claseEstado ?>">
-                                <?= escapar(
+                                <?= login_html(
                                     $derivacion['estado'] ??
                                     'Sin estado'
                                 ) ?>
@@ -372,7 +368,7 @@ include '../includes/navbar.php';
                                 Nombre completo
                             </small>
                             <strong>
-                                <?= escapar($nombreEstudiante) ?>
+                                <?= login_html($nombreEstudiante) ?>
                             </strong>
                         </div>
 
@@ -381,7 +377,7 @@ include '../includes/navbar.php';
                                 Curso
                             </small>
                             <strong>
-                                <?= escapar($curso) ?>
+                                <?= login_html($curso) ?>
                             </strong>
                         </div>
 
@@ -390,7 +386,7 @@ include '../includes/navbar.php';
                                 Paralelo
                             </small>
                             <strong>
-                                <?= escapar($paralelo) ?>
+                                <?= login_html($paralelo) ?>
                             </strong>
                         </div>
                     </div>
@@ -409,7 +405,7 @@ include '../includes/navbar.php';
                                 Docente que realizó la derivación
                             </small>
                             <strong>
-                                <?= escapar($nombreDocente) ?>
+                                <?= login_html($nombreDocente) ?>
                             </strong>
                         </div>
 
@@ -418,7 +414,7 @@ include '../includes/navbar.php';
                                 Materia
                             </small>
                             <strong>
-                                <?= escapar($materia) ?>
+                                <?= login_html($materia) ?>
                             </strong>
                         </div>
                     </div>
@@ -439,7 +435,7 @@ include '../includes/navbar.php';
 
                         <p class="mb-0">
                             <?= nl2br(
-                                escapar($derivacion['motivo'])
+                                login_html($derivacion['motivo'])
                             ) ?>
                         </p>
 
@@ -458,10 +454,10 @@ include '../includes/navbar.php';
                                target="_blank" rel="noopener">
                                 <img src="<?= $baseUrl ?>/derivaciones/evidencia.php?id=<?= (int)$evidencia['cod_evidencia'] ?>"
                                      class="img-fluid rounded border" style="max-height: 420px"
-                                     alt="<?= escapar($evidencia['descripcion'] ?: 'Imagen de referencia') ?>">
+                                     alt="<?= login_html($evidencia['descripcion'] ?: 'Imagen de referencia') ?>">
                             </a>
                             <?php if (trim((string)($evidencia['descripcion'] ?? '')) !== ''): ?>
-                                <p class="mt-2 mb-0"><strong>Qué se desea destacar:</strong><br><?= nl2br(escapar($evidencia['descripcion'])) ?></p>
+                                <p class="mt-2 mb-0"><strong>Qué se desea destacar:</strong><br><?= nl2br(login_html($evidencia['descripcion'])) ?></p>
                             <?php endif; ?>
                         </div>
                     <?php endif; ?>
@@ -477,7 +473,7 @@ include '../includes/navbar.php';
                     <?php if ($categoriasObservadas): ?>
                         <div class="d-flex flex-wrap gap-2">
                             <?php foreach ($categoriasObservadas as $categoria): ?>
-                                <span class="badge bg-light text-dark border"><?= escapar($categoria) ?></span>
+                                <span class="badge bg-light text-dark border"><?= login_html($categoria) ?></span>
                             <?php endforeach; ?>
                         </div>
                     <?php else: ?>
@@ -495,7 +491,7 @@ include '../includes/navbar.php';
                     </h5>
 
                     <?php if ($observacionesSeparadas['adicionales'] !== ''): ?>
-                        <p class="mb-0" style="white-space: pre-line;"><?= escapar($observacionesSeparadas['adicionales']) ?></p>
+                        <p class="mb-0" style="white-space: pre-line;"><?= login_html($observacionesSeparadas['adicionales']) ?></p>
                     <?php else: ?>
                         <p class="text-muted mb-0">No se registraron observaciones adicionales.</p>
                     <?php endif; ?>
@@ -512,13 +508,13 @@ include '../includes/navbar.php';
                         <div class="alert <?= $citaVinculada ? 'alert-success' : 'alert-info' ?> mb-0">
                             <?php if ($citaVinculada): ?>
                                 <strong>Cita programada:</strong>
-                                <?= escapar(date('d/m/Y', strtotime($citaVinculada['fecha'])) . ' a las ' . substr($citaVinculada['hora'], 0, 5)) ?>
-                                (<?= escapar($citaVinculada['estado']) ?>).
+                                <?= login_html(date('d/m/Y', strtotime($citaVinculada['fecha'])) . ' a las ' . substr($citaVinculada['hora'], 0, 5)) ?>
+                                (<?= login_html($citaVinculada['estado']) ?>).
                             <?php else: ?>
                                 <strong>Solicitud de cita pendiente de programación.</strong>
                             <?php endif; ?>
                             <?php if ($solicitudCitaActiva): ?>
-                                <span class="d-block mt-1">Psicóloga solicitada: <?= escapar($nombrePsicologaSolicitada !== '' ? $nombrePsicologaSolicitada : 'Sin asignar') ?>.</span>
+                                <span class="d-block mt-1">Psicóloga solicitada: <?= login_html($nombrePsicologaSolicitada !== '' ? $nombrePsicologaSolicitada : 'Sin asignar') ?>.</span>
                             <?php endif; ?>
                         </div>
                     <?php else: ?>

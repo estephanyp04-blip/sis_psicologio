@@ -7,10 +7,6 @@ require_once __DIR__ . '/datos.php';
 
 $baseUrl = rtrim(login_config()['base_url'], '/');
 
-function escapar($valor): string
-{
-    return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
-}
 
 $puedeEditar = login_puede('derivaciones/editar.php');
 $idDocenteActual = (int) ($_SESSION['cod_docente'] ?? 0);
@@ -64,7 +60,7 @@ $sql = "SELECT
 $stmt = $conexion->prepare($sql);
 
 if (!$stmt) {
-    die('Error al preparar la consulta: ' . escapar($conexion->error));
+    die('Error al preparar la consulta: ' . login_html($conexion->error));
 }
 
 $stmt->bind_param('iii', $idDerivacion, $idDocenteActual, $idDocenteActual);
@@ -136,8 +132,12 @@ foreach (array_unique(array_merge(array_keys($catalogoCategorias), $categoriasSe
     $categoriasEditar[] = ['valor' => $nombre, 'titulo' => $nombre,
         'detalle' => $activa ? '' : 'Categoría conservada del registro'];
 }
-$stmt = $conexion->prepare("SELECT nombre,estado FROM materias WHERE estado='Activo' OR cod_materia=? ORDER BY nombre");
-$stmt->bind_param('i', $derivacion['cod_materia']); $stmt->execute();
+$stmt = $conexion->prepare("SELECT DISTINCT m.nombre,m.estado
+    FROM materias m
+    LEFT JOIN docente_materias dm ON dm.cod_materia=m.cod_materia AND dm.cod_docente=?
+    WHERE (m.estado='Activo' AND dm.cod_docente IS NOT NULL) OR m.cod_materia=?
+    ORDER BY m.nombre");
+$stmt->bind_param('ii', $derivacion['cod_docente'], $derivacion['cod_materia']); $stmt->execute();
 $materiasEditar = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
 $observacionAdicional = $desglose['adicionales'];
 $descripcionImagenEdit = (string)($evidenciaActual['descripcion'] ?? '');
@@ -163,7 +163,7 @@ include '../includes/navbar.php';
 <main class="main-content">
     <div class="container-fluid">
         <?php if ($mensaje !== ''): ?>
-            <div class="alert alert-danger" role="alert"><?= escapar($mensaje) ?></div>
+            <div class="alert alert-danger" role="alert"><?= login_html($mensaje) ?></div>
         <?php endif; ?>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
@@ -213,7 +213,7 @@ include '../includes/navbar.php';
                             <label class="form-label">Estudiante</label>
                             <input type="text"
                                    class="form-control"
-                                   value="<?= escapar(
+                                   value="<?= login_html(
                                        $nombreEstudiante . ' - ' .
                                        $cursoEstudiante
                                    ); ?>"
@@ -224,7 +224,7 @@ include '../includes/navbar.php';
                             <label class="form-label">Docente</label>
                             <input type="text"
                                    class="form-control"
-                                   value="<?= escapar($nombreDocente); ?>"
+                                   value="<?= login_html($nombreDocente); ?>"
                                    readonly>
                         </div>
 
@@ -238,7 +238,7 @@ include '../includes/navbar.php';
                                    id="fecha"
                                    name="fecha"
                                    class="form-control"
-                                   value="<?= escapar($derivacion['fecha']); ?>"
+                                   value="<?= login_html($derivacion['fecha']); ?>"
                                    max="<?= date('Y-m-d'); ?>"
                                    required>
                         </div>
@@ -255,11 +255,11 @@ include '../includes/navbar.php';
                                     required>
 
                                 <?php foreach (['Alta', 'Media', 'Baja'] as $prioridad): ?>
-                                    <option value="<?= escapar($prioridad); ?>"
+                                    <option value="<?= login_html($prioridad); ?>"
                                         <?= $derivacion['prioridad'] === $prioridad
                                             ? 'selected'
                                             : ''; ?>>
-                                        <?= escapar($prioridad); ?>
+                                        <?= login_html($prioridad); ?>
                                     </option>
                                 <?php endforeach; ?>
 
@@ -275,8 +275,8 @@ include '../includes/navbar.php';
                             <select id="materia" name="materia" class="form-select" required>
                                 <option value="">Seleccione una materia</option>
                                 <?php foreach ($materiasEditar as $materia): ?>
-                                    <option value="<?= escapar($materia['nombre']) ?>" <?= $derivacion['materia'] === $materia['nombre'] ? 'selected' : '' ?>>
-                                        <?= escapar($materia['nombre']) ?><?= $materia['estado'] === 'Activo' ? '' : ' (conservada del registro)' ?>
+                                    <option value="<?= login_html($materia['nombre']) ?>" <?= $derivacion['materia'] === $materia['nombre'] ? 'selected' : '' ?>>
+                                        <?= login_html($materia['nombre']) ?><?= $materia['estado'] === 'Activo' ? '' : ' (conservada del registro)' ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -293,7 +293,7 @@ include '../includes/navbar.php';
                                       class="form-control"
                                       rows="4"
                                       maxlength="2000"
-                                      required><?= escapar(
+                                      required><?= login_html(
                                           $derivacion['motivo']
                                       ); ?></textarea>
                         </div>
@@ -304,7 +304,7 @@ include '../includes/navbar.php';
                                     <p class="form-label mb-2">Imagen adjunta actual</p>
                                     <img src="<?= $baseUrl ?>/derivaciones/evidencia.php?id=<?= (int)$evidenciaActual['cod_evidencia'] ?>"
                                          class="img-fluid rounded border" style="max-height: 280px"
-                                         alt="<?= escapar($descripcionImagenEdit ?: 'Imagen adjunta a la derivación') ?>">
+                                         alt="<?= login_html($descripcionImagenEdit ?: 'Imagen adjunta a la derivación') ?>">
                                 </div>
                             <?php endif; ?>
                             <label for="imagen" class="form-label">Imagen de referencia <span class="text-muted">(opcional; si selecciona otra, reemplazará la actual)</span></label>
@@ -317,7 +317,7 @@ include '../includes/navbar.php';
                             <label for="descripcion_imagen" class="form-label">¿Qué desea destacar en la imagen?</label>
                             <textarea id="descripcion_imagen" name="descripcion_imagen" class="form-control"
                                       rows="3" maxlength="1000"
-                                      placeholder="Explique qué detalle de la imagen desea resaltar..."><?= escapar($descripcionImagenEdit) ?></textarea>
+                                      placeholder="Explique qué detalle de la imagen desea resaltar..."><?= login_html($descripcionImagenEdit) ?></textarea>
                         </div>
 
                         <div class="col-12">
@@ -337,7 +337,7 @@ include '../includes/navbar.php';
                                                 type="checkbox"
                                                 name="categorias[]"
                                                 id="categoria<?= $indice ?>"
-                                                value="<?= escapar($categoria['valor']) ?>"
+                                                value="<?= login_html($categoria['valor']) ?>"
                                                 <?= in_array(
                                                     $categoria['valor'],
                                                     $categoriasSeleccionadas,
@@ -350,13 +350,13 @@ include '../includes/navbar.php';
                                                 for="categoria<?= $indice ?>"
                                             >
                                                 <strong>
-                                                    <?= escapar($categoria['titulo']) ?>
+                                                    <?= login_html($categoria['titulo']) ?>
                                                 </strong>
 
                                                 <br>
 
                                                 <small class="text-muted">
-                                                    <?= escapar($categoria['detalle']) ?>
+                                                    <?= login_html($categoria['detalle']) ?>
                                                 </small>
                                             </label>
 
@@ -382,7 +382,7 @@ include '../includes/navbar.php';
                                 rows="3"
                                 maxlength="3000"
                                 placeholder="Observaciones adicionales (opcional)"
-                            ><?= escapar($observacionAdicional) ?></textarea>
+                            ><?= login_html($observacionAdicional) ?></textarea>
                         </div>
 
                         <input type="hidden" name="observaciones_presentes" value="1">

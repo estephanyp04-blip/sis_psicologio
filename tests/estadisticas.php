@@ -89,8 +89,8 @@ try {
     $bd->query("INSERT INTO historial_academico (cod_estudiante,cod_seccion,fecha_inicio,estado)
         SELECT 1,se.cod_seccion,CURRENT_DATE(),'Activo' FROM secciones se JOIN cursos c ON c.cod_curso=se.cod_curso
         JOIN paralelos p ON p.cod_paralelo=se.cod_paralelo WHERE c.orden=2 AND p.nombre='B' AND se.turno='Mañana' LIMIT 1");
-    $bd->query("INSERT INTO secciones (cod_seccion,cod_institucion,cod_curso,cod_paralelo,turno,gestion,estado)
-        VALUES (101,1,3,1,'Mañana',$anterior,'Activo')");
+    $bd->query("INSERT INTO secciones (cod_seccion,cod_curso,cod_paralelo,turno,gestion,estado)
+        VALUES (101,3,1,'Mañana',$anterior,'Activo')");
     $bd->query("INSERT INTO historial_academico (cod_estudiante,cod_seccion,fecha_inicio,estado) VALUES (1,101,'$anterior-02-01','Finalizado')");
     $bd->query("INSERT INTO seguimientos (cod_seguimiento,cod_historia,cod_psicologa,fecha,descripcion,proxima_sesion) VALUES
         (1,101,102,'$anio-01-01','DETALLE_PRIVADO',NULL),

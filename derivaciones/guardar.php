@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('derivaciones/guardar.php');
 
 require_once '../config/conexion.php';
-require_once __DIR__ . '/evidencias.php';
+require_once __DIR__ . '/datos.php';
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: registrar.php');
     exit;
@@ -198,6 +198,18 @@ try {
         if (!$existeDocente) {
             errorDerivacion('El docente seleccionado no existe. Seleccione un docente válido.');
         }
+    }
+    $stmtMateriaDocente = $conexion->prepare("SELECT 1
+        FROM docente_materias dm
+        INNER JOIN materias m ON m.cod_materia=dm.cod_materia
+        WHERE dm.cod_docente=? AND dm.cod_materia=? AND m.estado='Activo'
+        LIMIT 1");
+    $stmtMateriaDocente->bind_param('ii', $idDocente, $idMateria);
+    $stmtMateriaDocente->execute();
+    $materiaAsignada = $stmtMateriaDocente->get_result()->num_rows === 1;
+    $stmtMateriaDocente->close();
+    if (!$materiaAsignada) {
+        errorDerivacion('La materia seleccionada no está asignada al docente.');
     }
     // Profesional solicitado y observaciones, como en el formulario original.
     $nombreProfesional = '';

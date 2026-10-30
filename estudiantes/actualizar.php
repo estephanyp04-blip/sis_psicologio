@@ -14,7 +14,8 @@ try {
     header('Location: listar.php');
 } catch (Throwable $error) {
     $datos = [];
-    foreach (['ci', 'nombres', 'apellidos', 'curso', 'paralelo', 'estado'] as $campo) {
+    foreach (['codigo', 'ci', 'nombres', 'apellidos', 'fecha_nacimiento', 'genero', 'curso', 'paralelo', 'turno',
+        'estado', 'padre', 'madre', 'tutor', 'telefono', 'direccion'] as $campo) {
         if (is_string($_POST[$campo] ?? null)) $datos[$campo] = $_POST[$campo];
     }
     $_SESSION['edicion_estudiante'] = ['id' => $id, 'datos' => $datos];

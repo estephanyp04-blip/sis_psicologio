@@ -6,9 +6,6 @@ include '../includes/header.php';
 include '../includes/sidebar.php';
 include '../includes/navbar.php';
 
-function escapar(mixed $valor): string {
-    return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
-}
 
 // Datos anteriores (si hubo error al guardar)
 $d = $_SESSION['datos_derivacion'] ?? [];
@@ -123,10 +120,22 @@ $categorias = array_map(
     ],
     $conexion->query("SELECT nombre FROM categorias_derivacion WHERE estado='Activo' ORDER BY nombre")->fetch_all(MYSQLI_ASSOC)
 );
-$materias = array_column(
-    $conexion->query("SELECT nombre FROM materias WHERE estado='Activo' ORDER BY nombre")->fetch_all(MYSQLI_ASSOC),
-    'nombre'
-);
+if ($idDocenteSesion > 0) {
+    $stmtMaterias = $conexion->prepare("SELECT m.nombre
+        FROM docente_materias dm
+        INNER JOIN materias m ON m.cod_materia=dm.cod_materia
+        WHERE dm.cod_docente=? AND m.estado='Activo'
+        ORDER BY m.nombre");
+    $stmtMaterias->bind_param('i', $idDocenteSesion);
+    $stmtMaterias->execute();
+    $materias = array_column($stmtMaterias->get_result()->fetch_all(MYSQLI_ASSOC), 'nombre');
+    $stmtMaterias->close();
+} else {
+    $materias = array_column(
+        $conexion->query("SELECT nombre FROM materias WHERE estado='Activo' ORDER BY nombre")->fetch_all(MYSQLI_ASSOC),
+        'nombre'
+    );
+}
 ?>
 
 <div class="main-content">
@@ -145,9 +154,9 @@ $materias = array_column(
     </div>
 
     <?php if ($mensaje !== ''): ?>
-        <div class="alert alert-<?= escapar($tipoMensaje) ?> alert-dismissible fade show" role="alert">
+        <div class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show" role="alert">
             <i class="bi bi-info-circle-fill me-1"></i>
-            <?= nl2br(escapar($mensaje)) ?>
+            <?= nl2br(login_html($mensaje)) ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
         </div>
     <?php endif; ?>
@@ -170,8 +179,8 @@ $materias = array_column(
                             <select name="curso" id="curso" class="form-select" form="formBuscarEstudiante">
                                 <option value="">Todos los cursos</option>
                                 <?php foreach ($cursos as $c): ?>
-                                    <option value="<?= escapar($c) ?>" <?= $cursoFiltro === $c ? 'selected' : '' ?>>
-                                        Curso <?= escapar($c) ?>
+                                    <option value="<?= login_html($c) ?>" <?= $cursoFiltro === $c ? 'selected' : '' ?>>
+                                        Curso <?= login_html($c) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -181,8 +190,8 @@ $materias = array_column(
                             <select name="paralelo" id="paralelo" class="form-select" form="formBuscarEstudiante">
                                 <option value="">Todos</option>
                                 <?php foreach ($paralelos as $p): ?>
-                                    <option value="<?= escapar($p) ?>" <?= $paraleloFiltro === $p ? 'selected' : '' ?>>
-                                        <?= escapar($p) ?>
+                                    <option value="<?= login_html($p) ?>" <?= $paraleloFiltro === $p ? 'selected' : '' ?>>
+                                        <?= login_html($p) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -206,7 +215,7 @@ $materias = array_column(
                                 <?php
                                 $cursoActual = null;
                                 while ($e = $rsEstudiantes->fetch_assoc()):
-                                    $cursoLabel = 'Curso ' . escapar($e['curso']) . ' - Paralelo ' . escapar($e['paralelo']);
+                                    $cursoLabel = 'Curso ' . login_html($e['curso']) . ' - Paralelo ' . login_html($e['paralelo']);
                                     if ($cursoLabel !== $cursoActual):
                                         if ($cursoActual !== null) echo '</optgroup>';
                                         echo '<optgroup label="' . $cursoLabel . '">';
@@ -214,7 +223,7 @@ $materias = array_column(
                                     endif;
                                     ?>
                                     <option value="<?= (int) $e['cod_estudiante'] ?>" <?= $idEstudianteAnt === (int) $e['cod_estudiante'] ? 'selected' : '' ?>>
-                                        <?= escapar($e['apellidos'] . ' ' . $e['nombres']) ?>
+                                        <?= login_html($e['apellidos'] . ' ' . $e['nombres']) ?>
                                     </option>
                                 <?php endwhile; if ($cursoActual !== null) echo '</optgroup>'; ?>
                             </select>
@@ -223,19 +232,22 @@ $materias = array_column(
                         <div class="col-md-4">
                             <label for="fecha" class="form-label">Fecha de reporte <span class="text-danger">*</span></label>
                             <input type="date" name="fecha" id="fecha" class="form-control"
-                                   value="<?= escapar($fechaAnt) ?>" max="<?= date('Y-m-d') ?>" required>
+                                   value="<?= login_html($fechaAnt) ?>" max="<?= date('Y-m-d') ?>" required>
                         </div>
 
                         <div class="col-md-6">
                             <label for="materia" class="form-label">Materia <span class="text-danger">*</span></label>
-                            <input type="text" name="materia" id="materia" class="form-control" list="listaMaterias"
-                                   value="<?= escapar($materiaAnt) ?>" placeholder="Escriba o seleccione una materia..."
-                                   autocomplete="off" required>
-                            <datalist id="listaMaterias">
+                            <select name="materia" id="materia" class="form-select" required>
+                                <option value="">Seleccione una materia...</option>
                                 <?php foreach ($materias as $m): ?>
-                                    <option value="<?= escapar($m) ?>">
+                                    <option value="<?= login_html($m) ?>" <?= $materiaAnt === $m ? 'selected' : '' ?>><?= login_html($m) ?></option>
                                 <?php endforeach; ?>
-                            </datalist>
+                            </select>
+                            <?php if ($idDocenteSesion > 0 && !$materias): ?>
+                                <div class="form-text text-danger">No tiene materias activas asignadas. Solicite al administrador que actualice su perfil docente.</div>
+                            <?php elseif ($idDocenteSesion > 0): ?>
+                                <div class="form-text">Solo aparecen las materias que tiene asignadas.</div>
+                            <?php endif; ?>
                         </div>
                         <?php if ($idDocenteSesion === 0): ?>
                             <div class="col-md-6">
@@ -244,7 +256,7 @@ $materias = array_column(
                                     <option value="">Seleccione un docente...</option>
                                     <?php foreach ($docentesDisponibles as $docente): ?>
                                         <option value="<?= (int)$docente['cod_docente'] ?>" <?= $idDocenteAnt === (int)$docente['cod_docente'] ? 'selected' : '' ?>>
-                                            <?= escapar(trim($docente['apellidos'] . ' ' . $docente['nombres'])) ?>
+                                            <?= login_html(trim($docente['apellidos'] . ' ' . $docente['nombres'])) ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -268,11 +280,11 @@ $materias = array_column(
                                 <div class="col-lg-4 col-md-6">
                                     <div class="form-check categoria-box">
                                         <input class="form-check-input" type="checkbox" name="categorias[]"
-                                               value="<?= escapar($valor) ?>" id="cat<?= $i ?>"
+                                               value="<?= login_html($valor) ?>" id="cat<?= $i ?>"
                                                <?= in_array($valor, $categoriasAnt, true) ? 'checked' : '' ?>>
                                         <label class="form-check-label" for="cat<?= $i ?>">
-                                            <strong><?= escapar($valor) ?></strong><br>
-                                            <small class="text-muted"><?= escapar($desc) ?></small>
+                                            <strong><?= login_html($valor) ?></strong><br>
+                                            <small class="text-muted"><?= login_html($desc) ?></small>
                                         </label>
                                     </div>
                                 </div>
@@ -286,7 +298,7 @@ $materias = array_column(
                         <label for="motivo" class="form-label">Descripción detallada de la situación <span class="text-danger">*</span></label>
                         <textarea name="motivo" id="motivo" class="form-control" rows="5" maxlength="2000"
                                   placeholder="Describa la situación observada del estudiante..."
-                                  aria-describedby="contadorMotivo" required><?= escapar($motivoAnt) ?></textarea>
+                                  aria-describedby="contadorMotivo" required><?= login_html($motivoAnt) ?></textarea>
                         <div id="contadorMotivo" class="form-text text-end">0 / 2000 caracteres</div>
                     </div>
 
@@ -319,7 +331,7 @@ $materias = array_column(
                     <div class="mt-4">
                         <label for="observaciones" class="form-label">Observaciones adicionales</label>
                         <textarea name="observaciones" id="observaciones" class="form-control" rows="4" maxlength="3000"
-                                  placeholder="Escriba información adicional si es necesario..." aria-describedby="contadorObservaciones"><?= escapar($observacionesAnt) ?></textarea>
+                                  placeholder="Escriba información adicional si es necesario..." aria-describedby="contadorObservaciones"><?= login_html($observacionesAnt) ?></textarea>
                         <div id="contadorObservaciones" class="form-text text-end">0 / 3000 caracteres</div>
                     </div>
                 </div>
@@ -351,7 +363,7 @@ $materias = array_column(
                                     <?php foreach ($profesionales as $p): ?>
                                         <option value="<?= (int) $p['cod_usuario'] ?>"
                                             <?= $idProfesionalAnt === (int) $p['cod_usuario'] ? 'selected' : '' ?>>
-                                            <?= escapar(trim($p['nombre'] . ' ' . ($p['apellido'] ?? ''))) ?>
+                                            <?= login_html(trim($p['nombre'] . ' ' . ($p['apellido'] ?? ''))) ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>

@@ -75,6 +75,23 @@ function estadisticas_datos(mysqli $bd, array $filtros): array
             $uniones INNER JOIN seguimientos s ON s.cod_historia=h.cod_historia
             WHERE $condicion AND s.fecha BETWEEN ? AND ? GROUP BY mes ORDER BY mes",
             array_merge($valores, [$f['desde'], $f['hasta']]));
+        $relacionAcademicaActual = "INNER JOIN estudiantes e ON e.cod_estudiante=x.cod_estudiante
+            LEFT JOIN historial_academico ia ON ia.cod_historial_academico=(
+                SELECT ia2.cod_historial_academico FROM historial_academico ia2
+                INNER JOIN secciones s2 ON s2.cod_seccion=ia2.cod_seccion
+                WHERE ia2.cod_estudiante=e.cod_estudiante
+                ORDER BY s2.gestion DESC,ia2.fecha_inicio DESC,ia2.cod_historial_academico DESC LIMIT 1)
+            LEFT JOIN secciones sec ON sec.cod_seccion=ia.cod_seccion
+            LEFT JOIN cursos curso_actual ON curso_actual.cod_curso=sec.cod_curso";
+        $valoresAtencion = [$f['desde'], $f['hasta'], $f['curso'], $f['curso']];
+        $derivacionesPorEstado = estadisticas_consultar($bd, "SELECT x.estado,COUNT(*) AS total
+            FROM derivaciones x $relacionAcademicaActual
+            WHERE x.fecha BETWEEN ? AND ? AND (?=0 OR curso_actual.cod_curso=?)
+            GROUP BY x.estado", $valoresAtencion);
+        $citasPorEstado = estadisticas_consultar($bd, "SELECT x.estado,COUNT(*) AS total
+            FROM citas x $relacionAcademicaActual
+            WHERE x.fecha BETWEEN ? AND ? AND (?=0 OR curso_actual.cod_curso=?)
+            GROUP BY x.estado", $valoresAtencion);
         $catalogoOpciones = $bd->query("SELECT g.codigo AS grupo,g.nombre AS nombre_grupo,
                 o.cod_opcion,o.descripcion
             FROM grupos_opciones_historia g
@@ -122,6 +139,15 @@ function estadisticas_datos(mysqli $bd, array $filtros): array
         $clave = $mes->format('Y-m');
         $meses[$clave] = (int)($porMes[$clave] ?? 0);
         $mes = $mes->modify('+1 month');
+    }
+
+    $estadosDerivaciones = ['Pendiente' => 0, 'En seguimiento' => 0, 'Atendido' => 0];
+    foreach ($derivacionesPorEstado as $fila) {
+        if (array_key_exists($fila['estado'], $estadosDerivaciones)) $estadosDerivaciones[$fila['estado']] = (int)$fila['total'];
+    }
+    $estadosCitas = ['Pendiente' => 0, 'Reprogramada' => 0, 'Atendida' => 0, 'Cancelada' => 0];
+    foreach ($citasPorEstado as $fila) {
+        if (array_key_exists($fila['estado'], $estadosCitas)) $estadosCitas[$fila['estado']] = (int)$fila['total'];
     }
 
     $distribuciones = [];
@@ -234,6 +260,7 @@ function estadisticas_datos(mysqli $bd, array $filtros): array
 
     return [
         'resumen' => $resumen, 'estados' => $estados, 'meses' => $meses, 'historias' => $historias,
+        'atencion' => ['derivaciones' => $estadosDerivaciones, 'citas' => $estadosCitas],
         'distribuciones' => $distribuciones, 'motivos_derivacion' => $motivos,
         'estudiantes' => array_values($estudiantes), 'valoraciones' => $valoraciones,
         'resumen_clinico' => [

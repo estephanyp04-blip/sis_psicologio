@@ -14,18 +14,19 @@ Ejecutar desde la raíz del proyecto, con MySQL iniciado y la conexión de `conf
 & C:\xampp\php\php.exe tests\estadisticas.php --navegador
 ```
 
-Últimos resultados completos con el esquema normalizado: todas las suites, 17 de octubre de 2026.
+Resultados completos con el esquema normalizado: 30 de octubre de 2026.
 
 | Suite | Comprobaciones |
 |---|---:|
-| Seguridad y flujos | 1029 |
+| Seguridad y flujos | 1041 |
 | Actualización de informes | 31 |
-| Esquema, importación, estudiantes y docentes, con `--navegador` | 347 + 10 verificaciones dentro de Chrome |
+| Identidad e historial académico | 12 |
+| Esquema, importación, estudiantes y docentes, con `--navegador` | 342 + 10 verificaciones dentro de Chrome |
 | Historias y derivaciones, con `--navegador` | 183 + 14 verificaciones dentro de Chrome |
-| Trazabilidad, con `--navegador` | 120 + 11 verificaciones dentro de Chrome |
+| Trazabilidad, con `--navegador` | 134 + 17 verificaciones dentro de Chrome |
 | Estadísticas y panel, con `--navegador` | 74 + 19 verificaciones en Chrome a 1440 px y 19 a 390 px |
 
-Las dos primeras usan tablas MySQL `TEMPORARY`. Las otras cuatro crean y eliminan bases `psicologia_test_*` con sufijo aleatorio, usando solo datos sintéticos. La cuenta necesita permisos para crear tablas temporales, bases, vistas y triggers, aplicar el esquema y eliminar las bases de prueba. No se copian pacientes ni cuentas de la base real.
+`seguridad.php` e `informes_actualizacion.php` usan tablas MySQL `TEMPORARY`. `migracion_identidad_academica.php`, `esquema_informes_importacion.php`, `historias_derivaciones.php`, `trazabilidad.php` y `estadisticas.php` crean y eliminan bases `psicologia_test_*` con sufijo aleatorio y solo datos sintéticos. La cuenta necesita permisos para crear tablas temporales, bases, vistas y triggers, aplicar el esquema y eliminar las bases de prueba. No se copian pacientes ni cuentas de la base real.
 
 La opción `--navegador` busca Chrome en `C:/Program Files/Google/Chrome/Application/chrome.exe`. Se puede omitir para ejecutar solo las comprobaciones de base de datos y HTTP. El navegador usa un perfil temporal y el servidor de prueba bloquea recursos externos mediante CSP.
 
@@ -35,7 +36,7 @@ La opción `--navegador` busca Chrome en `C:/Program Files/Google/Chrome/Applica
 
 Cobertura:
 
-- Las 59 rutas, los cuatro roles, métodos HTTP y tokens CSRF ausentes, incorrectos, enviados como arreglo y válidos.
+- Las 60 rutas, los cuatro roles, métodos HTTP y tokens CSRF ausentes, incorrectos, enviados como arreglo y válidos.
 - Rechazo por servidor de concesiones de base excesivas a Docente y Director en Dashboard, Estadísticas y Estudiantes; edición de una derivación propia no habilita cambiar su estado.
 - El editor y el guardado de permisos mantienen bloqueados esos módulos para Docente y Director, incluso ante un POST manipulado.
 - Sesiones vencidas/revocadas, usuarios y roles inactivos, cambios de contraseña/rol y vínculo docente inválido.
@@ -99,7 +100,7 @@ La política ejecutable está en [config/permisos.php](../config/permisos.php).
 | Iniciar/cerrar/reabrir derivaciones | Administrador, psicóloga |
 | Listar/ver derivaciones | Administrador, psicóloga, docente; docente solo propias |
 | Registrar/editar derivaciones | Administrador, docente; docente solo propias |
-| Eliminar derivación pendiente | Docente, solo propia y sin citas, historias o informes vinculados |
+| Eliminar derivación pendiente | Administrador; Docente solo propia y sin citas, historias o informes vinculados |
 | Listar/ver informes | Administrador, psicóloga, director |
 | Registrar/editar informes | Administrador, psicóloga |
 

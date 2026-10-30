@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('derivaciones/evidencia.php');
 require_once __DIR__ . '/../config/conexion.php';
-require_once __DIR__ . '/evidencias.php';
+require_once __DIR__ . '/datos.php';
 
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 if (!$id) { http_response_code(404); exit; }

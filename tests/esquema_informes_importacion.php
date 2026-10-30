@@ -160,7 +160,7 @@ try {
     $copia->query("INSERT INTO seguimientos (cod_historia,cod_psicologa,fecha,descripcion,acuerdos,proxima_sesion) VALUES (1,101,'2026-01-02','Descripción previa','Acuerdo previo','2026-02-01')");
     $copia->query("INSERT INTO informes (cod_informe,cod_elaborado_por,titulo,numero_ficha,tipo) VALUES (1,101,'Título anterior','INF-0042','Individual')");
     $copia->query('INSERT INTO informe_individual (cod_informe,cod_estudiante,cod_historia) VALUES (1,1,1)');
-    $copia->query('UPDATE informes_secuencia SET ultimo=42 WHERE id=1');
+    $copia->query('UPDATE informes_secuencia SET ultimo=42 WHERE cod_secuencia=1');
     $filasAntes = [];
     foreach (array_keys(estructura($copia)) as $tabla) $filasAntes[$tabla] = $copia->query("SELECT * FROM `$tabla` ORDER BY 1")->fetch_all(MYSQLI_ASSOC);
     $esquemaAntes = estructura($copia);
@@ -182,7 +182,7 @@ try {
         && (int)$permiso($copia, 'Psicóloga', 'Derivaciones')['puede_cambiar_estado'] === 1
         && (int)$permiso($copia, 'Docente', 'Derivaciones')['puede_editar'] === 1
         && (int)$permiso($copia, 'Docente', 'Derivaciones')['puede_cambiar_estado'] === 0, 'La migración mezcla editar derivaciones con cambiar su estado.');
-    verificar((int)consultar($copia, 'SELECT ultimo FROM informes_secuencia WHERE id=1')['ultimo'] === 42, 'La migración altera la secuencia.');
+    verificar((int)consultar($copia, 'SELECT ultimo FROM informes_secuencia WHERE cod_secuencia=1')['ultimo'] === 42, 'La migración altera la secuencia.');
     $planificar = require $raiz . '/database/migrations_normalizadas/001_tutor_historia.php';
     verificar($planificar($copia) === [], 'La migración no es idempotente.');
     $copia->query('DELETE FROM materias WHERE cod_materia BETWEEN 7 AND 10');
@@ -239,9 +239,9 @@ try {
     }
     rechaza(fn()=>informe_actualizar($bd,9999,$informe),'La edición inexistente comunicó éxito.');
     rechaza(fn()=>informe_actualizar($bd,$idInforme,array_replace($informe,['cod_estudiante'=>9999])),'Aceptó cambio de estudiante.');
-    $secuenciaAntes=consultar($bd,'SELECT ultimo FROM informes_secuencia WHERE id=1');
+    $secuenciaAntes=consultar($bd,'SELECT ultimo FROM informes_secuencia WHERE cod_secuencia=1');
     rechaza(fn()=>informe_crear($bd,$informe,9999),'Aceptó autor inexistente.');
-    verificar($secuenciaAntes===consultar($bd,'SELECT ultimo FROM informes_secuencia WHERE id=1'),'No revirtió la numeración tras fallo SQL.');
+    verificar($secuenciaAntes===consultar($bd,'SELECT ultimo FROM informes_secuencia WHERE cod_secuencia=1'),'No revirtió la numeración tras fallo SQL.');
     $bd->query("INSERT INTO historias_clinicas (cod_estudiante,cod_psicologa,fecha_apertura,motivo_consulta) VALUES ($idEstudiante,101,'2026-01-01','Motivo historia')");
     $idHistoria = $bd->insert_id;
     $bd->query("INSERT INTO seguimientos (cod_historia,cod_psicologa,fecha,descripcion,acuerdos,recomendaciones,proxima_sesion) VALUES ($idHistoria,101,'2026-01-02','Evolución','Acuerdos separados','Recomendación verificable','2026-02-01')");
@@ -346,7 +346,7 @@ try {
     $estudianteEditado = consultar($bd, "SELECT * FROM estudiantes WHERE cod_estudiante=$retirado");
     $inscripcionEditada = consultar($bd, "SELECT s.*,i.estado AS estado_inscripcion FROM historial_academico i JOIN secciones s ON s.cod_seccion=i.cod_seccion WHERE i.cod_estudiante=$retirado ORDER BY i.cod_historial_academico DESC LIMIT 1");
     verificar($estudianteEditado['ci'] === null && $estudianteEditado['nombres'] === 'Recuperar <estudiante>' && $estudianteEditado['estado'] === 'Activo' && $inscripcionEditada['estado_inscripcion'] === 'Activo', 'Edición no guarda ambos estados y CI opcional.');
-    foreach (['cod_institucion', 'gestion', 'turno'] as $campo) verificar($inscripcionAntes[$campo] === $inscripcionEditada[$campo], 'Edición cambia ' . $campo);
+    foreach (['gestion', 'turno'] as $campo) verificar($inscripcionAntes[$campo] === $inscripcionEditada[$campo], 'Edición cambia ' . $campo);
     $r = http_prueba('estudiantes/editar.php?id=' . $retirado);
     $actual = formulario($r['cuerpo'], 'formEditarEstudiante');
     verificar($actual['curso'] === '5' && $actual['paralelo'] === 'B' && $actual['ci'] === '', 'No recupera la edición persistida.');
@@ -361,8 +361,8 @@ try {
         (1006,'Ana','Prueba','70000000','ana@example.test','docente_alta','hash-prueba',3,'Activo'),
         (1007,'Bruno','Prueba',NULL,NULL,'docente_otro','hash-prueba',3,'Activo'),
         (1008,'Inactivo','Prueba',NULL,NULL,'docente_inactivo','hash-prueba',3,'Inactivo'),
-        (1010,'María','D''Ávila','71111111','maria@example.test','docente_navegador','hash-prueba',3,'Activo'),
-        (1011,'Luis','Prueba',NULL,NULL,'docente_sin_contacto','hash-prueba',3,'Activo')");
+        (109,'María','D''Ávila','71111111','maria@example.test','docente_navegador','hash-prueba',3,'Activo'),
+        (110,'Luis','Prueba',NULL,NULL,'docente_sin_contacto','hash-prueba',3,'Activo')");
     $r = http_prueba('docentes/registrar.php');
     verificar($r['codigo'] === 200 && str_contains($r['cuerpo'],'data-telefono="70000000"'), 'No ofrece el contacto de la cuenta.');
     $dom = new DOMDocument(); @$dom->loadHTML('<?xml encoding="UTF-8">'.$r['cuerpo']); $xpath = new DOMXPath($dom);
@@ -449,7 +449,7 @@ HTML);
         $dom = new DOMDocument(); @$dom->loadHTML($html);
         $resultado = json_decode($dom->getElementById('resultado')?->textContent ?? '',true);
         verificar(($resultado['ok']??false)===true,'Navegador docentes: '.json_encode($resultado,JSON_UNESCAPED_UNICODE));
-        verificar((int)consultar($bd,'SELECT COUNT(*) n FROM docente_materias dm JOIN docentes d ON d.cod_docente=dm.cod_docente WHERE d.cod_usuario=1010')['n']===2,'Navegador no persistió ambas materias.');
+        verificar((int)consultar($bd,'SELECT COUNT(*) n FROM docente_materias dm JOIN docentes d ON d.cod_docente=dm.cod_docente WHERE d.cod_usuario=109')['n']===2,'Navegador no persistió ambas materias.');
         echo 'Chrome: '.$resultado['total']." comprobaciones de autocompletado y materias correctas.\n";
     }
     echo "OK: $total comprobaciones. Ninguna escritura de prueba en la base real.\n";

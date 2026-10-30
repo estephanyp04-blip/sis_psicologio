@@ -4,10 +4,6 @@ requerir_acceso('docentes/registrar.php');
 
 require_once '../config/conexion.php';
 
-function escapar($valor): string
-{
-    return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
-}
 
 /*
  * Obtener cuentas activas con rol Docente que todavía
@@ -69,12 +65,12 @@ include '../includes/navbar.php';
     </div>
 
     <?php if (isset($_SESSION['mensaje'])): ?>
-        <div class="alert alert-<?= escapar(
+        <div class="alert alert-<?= login_html(
             $_SESSION['tipo_mensaje'] ?? 'danger'
         ); ?> alert-dismissible fade show"
              role="alert">
 
-            <?= escapar($_SESSION['mensaje']); ?>
+            <?= login_html($_SESSION['mensaje']); ?>
 
             <button type="button"
                     class="btn-close"
@@ -137,20 +133,20 @@ include '../includes/navbar.php';
                                     <option
                                         value="<?= (int)
                                             $usuario['cod_usuario']; ?>"
-                                        data-nombres="<?= escapar(
+                                        data-nombres="<?= login_html(
                                             $usuario['nombre']
                                         ); ?>"
-                                        data-apellidos="<?= escapar(
+                                        data-apellidos="<?= login_html(
                                             $usuario['apellido']
                                         ); ?>"
-                                        data-correo="<?= escapar(
+                                        data-correo="<?= login_html(
                                             $usuario['correo']
                                         ); ?>"
-                                        data-telefono="<?= escapar(
+                                        data-telefono="<?= login_html(
                                             $usuario['telefono']
                                         ); ?>">
 
-                                        <?= escapar(
+                                        <?= login_html(
                                             $usuario['apellido'] . ' ' .
                                             $usuario['nombre'] . ' (' .
                                             $usuario['usuario'] . ')'
@@ -257,7 +253,7 @@ include '../includes/navbar.php';
                        <input
                             type="checkbox"
                             name="materias[]"
-                            value="<?= escapar($materia); ?>"
+                            value="<?= login_html($materia); ?>"
                             id="materia<?= $indice; ?>"
                             class="form-check-input materia-check">
 
@@ -265,7 +261,7 @@ include '../includes/navbar.php';
                             for="materia<?= $indice; ?>"
                             class="form-check-label ms-1">
 
-                            <?= escapar($materia); ?>
+                            <?= login_html($materia); ?>
                         </label>
                             </div>
                         </div>

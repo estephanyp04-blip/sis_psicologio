@@ -12,16 +12,17 @@ $gruposMenu = [
     ],
     'Gestión psicológica' => [
         ['estudiantes/listar.php', 'Estudiantes', 'bi-people-fill', 'estudiantes/registrar.php'],
-        ['derivaciones/listar.php', 'Derivaciones', 'bi-send-fill', 'derivaciones/registrar.php'],
+        ['derivaciones/listar.php', 'Derivaciones recibidas', 'bi-send-fill', 'derivaciones/registrar.php'],
         ['citas/listar.php', 'Citas', 'bi-calendar2-week-fill', 'citas/registrar.php'],
         ['historias_clinicas/listar.php', 'Historias clínicas', 'bi-file-earmark-medical-fill', 'historias_clinicas/registrar.php'],
+        ['seguimientos/listar.php', 'Seguimientos', 'bi-journal-medical', null],
     ],
     'Administración' => [
         ['docentes/listar.php', 'Docentes', 'bi-person-badge-fill', 'docentes/registrar.php'],
         ['usuarios/listar.php', 'Usuarios', 'bi-person-gear', 'usuarios/registrar.php'],
         ['roles/listar.php', 'Roles y permisos', 'bi-shield-lock', null],
     ],
-    'Resultados' => [
+    'Informes y resultados' => [
         ['informes/listar.php', 'Informes', 'bi-file-earmark-bar-graph-fill', 'informes/registrar.php'],
         ['estadisticas/index.php', 'Estadísticas', 'bi-bar-chart-line-fill', null],
     ],

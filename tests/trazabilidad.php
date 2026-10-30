@@ -105,6 +105,8 @@ try {
     $bd->set_charset('utf8mb4');
     $bd->query("SET SESSION sql_mode='STRICT_ALL_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
     prueba_autores($bd);
+    $bd->query("INSERT INTO docente_materias (cod_docente,cod_materia)
+        SELECT 201,cod_materia FROM materias WHERE estado='Activo'");
     $bd->query("INSERT INTO usuarios (cod_usuario,nombres,apellidos,usuario,password,cod_rol) VALUES (112,'Psicologa','Dos','prueba_psicologa_dos','hash-prueba',2)");
     prueba_estudiantes($bd, 4);
     $hoy=date('Y-m-d');

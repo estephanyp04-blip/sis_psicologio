@@ -4,10 +4,6 @@ requerir_acceso('docentes/listar.php');
 
 require_once '../config/conexion.php';
 
-function escapar($valor): string
-{
-    return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
-}
 
 $busqueda = trim($_GET['buscar'] ?? '');
 
@@ -89,11 +85,11 @@ include '../includes/navbar.php';
     </nav>
 
     <?php if (isset($_SESSION['mensaje'])): ?>
-        <div class="alert alert-<?= escapar($_SESSION['tipo_mensaje'] ?? 'success'); ?>
+        <div class="alert alert-<?= login_html($_SESSION['tipo_mensaje'] ?? 'success'); ?>
                     alert-dismissible fade show"
              role="alert">
 
-            <?= escapar($_SESSION['mensaje']); ?>
+            <?= login_html($_SESSION['mensaje']); ?>
 
             <button type="button"
                     class="btn-close"
@@ -139,7 +135,7 @@ include '../includes/navbar.php';
                                name="buscar"
                                id="buscar"
                                class="form-control"
-                               value="<?= escapar($busqueda); ?>"
+                               value="<?= login_html($busqueda); ?>"
                                placeholder="Buscar por nombre, materia, correo o teléfono">
                     </div>
 
@@ -184,7 +180,7 @@ include '../includes/navbar.php';
                                 <tr>
                                     <td>
                                         <div class="fw-semibold">
-                                            <?= escapar(
+                                            <?= login_html(
                                                 $docente['nombres'] . ' ' .
                                                 $docente['apellidos']
                                             ); ?>
@@ -201,23 +197,23 @@ include '../includes/navbar.php';
                                     </td>
 
                                     <td>
-                                        <?= escapar(
+                                        <?= login_html(
                                             $docente['materia'] ?: 'Sin asignar'
                                         ); ?>
                                     </td>
 
                                     <td>
-                                        <?= escapar(
+                                        <?= login_html(
                                             $docente['telefono'] ?: 'Sin registrar'
                                         ); ?>
                                     </td>
 
                                     <td>
                                         <?php if (!empty($docente['correo'])): ?>
-                                            <a href="mailto:<?= escapar(
+                                            <a href="mailto:<?= login_html(
                                                 $docente['correo']
                                             ); ?>">
-                                                <?= escapar($docente['correo']); ?>
+                                                <?= login_html($docente['correo']); ?>
                                             </a>
                                         <?php else: ?>
                                             <span class="text-muted">
@@ -229,7 +225,7 @@ include '../includes/navbar.php';
                                     <td>
                                         <?php if (!empty($docente['usuario'])): ?>
                                             <span class="badge text-bg-light">
-                                                <?= escapar($docente['usuario']); ?>
+                                                <?= login_html($docente['usuario']); ?>
                                             </span>
                                         <?php else: ?>
                                             <span class="text-muted">

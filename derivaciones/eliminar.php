@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('derivaciones/eliminar.php');
 
 require_once '../config/conexion.php';
-require_once __DIR__ . '/evidencias.php';
+require_once __DIR__ . '/datos.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: ../index.php');

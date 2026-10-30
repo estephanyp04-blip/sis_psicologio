@@ -9,14 +9,6 @@ $puedeEditar = login_puede('historias_clinicas/editar.php');
 
 /*  FUNCIONES */
 
-function e($valor): string
-{
-    return htmlspecialchars(
-        (string) $valor,
-        ENT_QUOTES,
-        'UTF-8'
-    );
-}
 
 /* CONSULTAR HISTORIAS CLÍNICAS*/
 
@@ -130,11 +122,11 @@ include '../includes/navbar.php';
 
         <?php if ($mensaje !== ''): ?>
             <div
-                class="alert alert-<?= e($tipoMensaje) ?>
+                class="alert alert-<?= login_html($tipoMensaje) ?>
                 alert-dismissible fade show"
                 role="alert">
 
-                <?= nl2br(e($mensaje)) ?>
+                <?= nl2br(login_html($mensaje)) ?>
 
                 <button
                     type="button"
@@ -242,20 +234,20 @@ include '../includes/navbar.php';
 
                             <tr
                                 data-registro="1"
-                                data-estado="<?= e($historia['estado']) ?>">
+                                data-estado="<?= login_html($historia['estado']) ?>">
 
                                 <td>
                                     <div class="historia-estudiante">
-                                        <span><?= e($inicial) ?></span>
+                                        <span><?= login_html($inicial) ?></span>
 
                                         <div>
                                             <strong>
-                                                <?= e($nombreCompleto) ?>
+                                                <?= login_html($nombreCompleto) ?>
                                             </strong>
 
                                             <small>
                                                 CI:
-                                                <?= e(
+                                                <?= login_html(
                                                     $historia['ci'] ?: '—'
                                                 ) ?>
                                             </small>
@@ -264,14 +256,14 @@ include '../includes/navbar.php';
                                 </td>
 
                                 <td>
-                                    <?= e(
+                                    <?= login_html(
                                         $historia['curso'] . '° ' .
                                         $historia['paralelo']
                                     ) ?>
                                 </td>
 
                                 <td>
-                                    <?= e(
+                                    <?= login_html(
                                         date(
                                             'd/m/Y',
                                             strtotime(
@@ -282,7 +274,7 @@ include '../includes/navbar.php';
                                 </td>
 
                                 <td>
-                                    <?= e(
+                                    <?= login_html(
                                         $historia['registrado_por']
                                         ?: 'No registrado'
                                     ) ?>
@@ -291,9 +283,9 @@ include '../includes/navbar.php';
                                 <td>
                                     <span
                                         class="historia-estado
-                                        historia-<?= e($estadoClase) ?>">
+                                        historia-<?= login_html($estadoClase) ?>">
 
-                                        <?= e($historia['estado']) ?>
+                                        <?= login_html($historia['estado']) ?>
                                     </span>
                                 </td>
 

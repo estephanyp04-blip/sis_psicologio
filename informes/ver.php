@@ -6,17 +6,13 @@ require_once '../config/conexion.php';
 
 $puedeEditar = login_puede('informes/editar.php');
 
-function e($valor): string
-{
-    return htmlspecialchars((string)$valor, ENT_QUOTES, 'UTF-8');
-}
 
 function dato($valor, string $vacio = 'No registrado'): string
 {
     $valor = trim((string)$valor);
     return $valor === ''
-        ? '<span class="text-muted">' . e($vacio) . '</span>'
-        : nl2br(e($valor));
+        ? '<span class="text-muted">' . login_html($vacio) . '</span>'
+        : nl2br(login_html($valor));
 }
 
 function fechaInforme($valor): string
@@ -95,25 +91,25 @@ include '../includes/navbar.php';
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="<?= login_html(login_inicio_url()) ?>">Inicio</a></li>
                 <li class="breadcrumb-item"><a href="listar.php">Informes</a></li>
-                <li class="breadcrumb-item active"><?= e($informe['numero_ficha']) ?></li>
+                <li class="breadcrumb-item active"><?= login_html($informe['numero_ficha']) ?></li>
             </ol>
         </nav>
 
         <?php if ($mensaje !== ''): ?>
-            <div class="alert alert-<?= e($tipoMensaje) ?> alert-dismissible fade show d-print-none" role="alert">
-                <?= nl2br(e($mensaje)) ?>
+            <div class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show d-print-none" role="alert">
+                <?= nl2br(login_html($mensaje)) ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>
         <?php endif; ?>
 
         <header class="expediente-head">
             <div class="expediente-identidad">
-                <span class="expediente-avatar"><?= e(mb_strtoupper(mb_substr($informe['nombres'], 0, 1))) ?></span>
+                <span class="expediente-avatar"><?= login_html(mb_strtoupper(mb_substr($informe['nombres'], 0, 1))) ?></span>
                 <div>
                     <small>INFORME PSICOLÓGICO</small>
-                    <h1><?= e($nombreEstudiante) ?></h1>
-                    <p><?= e($informe['titulo']) ?></p>
-                    <p><?= e($informe['estudiante_curso'] . ' ' . $informe['estudiante_paralelo']) ?></p>
+                    <h1><?= login_html($nombreEstudiante) ?></h1>
+                    <p><?= login_html($informe['titulo']) ?></p>
+                    <p><?= login_html($informe['estudiante_curso'] . ' ' . $informe['estudiante_paralelo']) ?></p>
                 </div>
             </div>
             <div class="expediente-acciones d-print-none">
@@ -129,20 +125,20 @@ include '../includes/navbar.php';
         </header>
 
         <section class="expediente-meta">
-            <div><span>Ficha</span><strong><?= e($informe['numero_ficha']) ?></strong></div>
-            <div><span>Fecha</span><strong><?= e(fechaInforme($informe['fecha'])) ?></strong></div>
-            <div><span>Estado</span><strong><span class="badge <?= e($estadoClase) ?>"><?= e($informe['estado']) ?></span></strong></div>
-            <div><span>Psicólogo/a</span><strong><?= e($nombrePsicologo ?: 'Sin asignar') ?></strong></div>
+            <div><span>Ficha</span><strong><?= login_html($informe['numero_ficha']) ?></strong></div>
+            <div><span>Fecha</span><strong><?= login_html(fechaInforme($informe['fecha'])) ?></strong></div>
+            <div><span>Estado</span><strong><span class="badge <?= login_html($estadoClase) ?>"><?= login_html($informe['estado']) ?></span></strong></div>
+            <div><span>Psicólogo/a</span><strong><?= login_html($nombrePsicologo ?: 'Sin asignar') ?></strong></div>
         </section>
 
         <section class="expediente-seccion">
             <div class="expediente-seccion-titulo"><span>1</span><div><h2>Datos generales</h2><p>Información del estudiante y atención</p></div></div>
             <div class="datos-clinicos-grid">
-                <div><span>Nombre completo</span><strong><?= e($nombreEstudiante) ?></strong></div>
+                <div><span>Nombre completo</span><strong><?= login_html($nombreEstudiante) ?></strong></div>
                 <div><span>Código</span><strong><?= dato($informe['codigo']) ?></strong></div>
                 <div><span>C.I.</span><strong><?= dato($informe['ci']) ?></strong></div>
-                <div><span>Curso</span><strong><?= e($informe['estudiante_curso'] . ' ' . $informe['estudiante_paralelo']) ?></strong></div>
-                <div><span>Fecha del informe</span><strong><?= e(fechaInforme($informe['fecha'])) ?></strong></div>
+                <div><span>Curso</span><strong><?= login_html($informe['estudiante_curso'] . ' ' . $informe['estudiante_paralelo']) ?></strong></div>
+                <div><span>Fecha del informe</span><strong><?= login_html(fechaInforme($informe['fecha'])) ?></strong></div>
                 <div><span>N.º de atenciones</span><strong><?= (int)$informe['numero_atenciones'] ?></strong></div>
                 <div><span>Referido por</span><strong><?= dato($informe['referido_por']) ?></strong></div>
                 <div><span>Recibido por</span><strong><?= dato($informe['recibido_por']) ?></strong></div>

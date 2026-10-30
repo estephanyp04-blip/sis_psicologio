@@ -3,9 +3,6 @@ require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('historias_clinicas/registrar.php');
 
 require_once '../config/conexion.php';
-function escapar($v):string{
-    return htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
-}
 $idDerivacion=filter_input(INPUT_GET,'cod_derivacion',FILTER_VALIDATE_INT);
 $idEstudiante=filter_input(INPUT_GET,'cod_estudiante',FILTER_VALIDATE_INT);
 $idCita=filter_input(INPUT_GET,'cod_cita',FILTER_VALIDATE_INT);
@@ -238,8 +235,8 @@ include '../includes/navbar.php';
     <i class="bi bi-file-earmark-medical"></i>
 </header>
 <?php if($mensaje):?>
-<div class="alert alert-<?= escapar($tipo) ?>">
-    <?= nl2br(escapar($mensaje)) ?>
+<div class="alert alert-<?= login_html($tipo) ?>">
+    <?= nl2br(login_html($mensaje)) ?>
 </div>
 <?php endif;?>
 <?php include 'formulario.php';?>
