@@ -47,7 +47,11 @@ $solicitudesPendientes = $stmtSolicitudes->get_result()->fetch_all(MYSQLI_ASSOC)
 $stmtSolicitudes->close();
 ?>
 
-<div class="main-content">
+<main class="main-content">
+    <header class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div><h1 class="h3 mb-1">Citas</h1><p class="text-muted mb-0">Consulta la agenda y administra los horarios de atención.</p></div>
+        <?php if (login_puede('citas/registrar.php')): ?><a class="btn btn-primary" href="registrar.php"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nueva cita</a><?php endif; ?>
+    </header>
     <?php if(login_puede('index.php')): ?><a class="btn btn-outline-primary mb-3" href="<?= login_html(login_url('index.php').'#agenda-calendario') ?>">Calendario del panel principal</a><?php endif; ?>
     <?php if ($solicitudesPendientes): ?>
     <section class="card border-warning shadow-sm mb-4">
@@ -93,6 +97,7 @@ $stmtSolicitudes->close();
 
             <!-- Buscador -->
             <div class="col-md-4">
+                <label class="form-label" for="buscador">Buscar estudiante</label>
                 <input type="text"
                        id="buscador"
                        class="form-control"
@@ -101,6 +106,7 @@ $stmtSolicitudes->close();
 
             <!-- Filtro estado -->
             <div class="col-md-2">
+                <label class="form-label" for="filtroEstado">Estado</label>
                 <select class="form-select"
                         id="filtroEstado">
                     <option value="">Todos los estados</option>
@@ -113,6 +119,7 @@ $stmtSolicitudes->close();
 
             <!-- Filtro fecha -->
             <div class="col-md-2">
+                <label class="form-label" for="filtroFecha">Fecha de la cita</label>
                 <input type="date"
                        id="filtroFecha"
                        class="form-control">
@@ -120,12 +127,6 @@ $stmtSolicitudes->close();
 
         </div>
 
-        <div class="mt-3">
-            <?php if (login_puede('citas/registrar.php')): ?><a href="registrar.php"
-               class="btn btn-primary">
-                + Nueva Cita
-            </a><?php endif; ?>
-        </div>
     </div>
 
     <!-- Mensaje éxito -->
@@ -235,14 +236,14 @@ $stmtSolicitudes->close();
                     </td>
                     <td class="text-center">
                         <?php if (login_puede('citas/editar.php')): ?><a href="editar.php?id=<?= $fila['cod_cita'] ?>"
-                           class="btn btn-sm btn-warning"
-                           title="Editar">✏</a><?php endif; ?>
+                           class="btn btn-sm btn-outline-secondary"
+                           title="Editar cita"><i class="bi bi-pencil" aria-hidden="true"></i> Editar</a><?php endif; ?>
                         <?php if (login_puede('citas/cancelar.php')): ?>
                         <form action="cancelar.php" method="POST" class="d-inline"
                               onsubmit="return confirm('¿Está segura de cancelar esta cita?')">
                             <?= login_campo_csrf() ?>
                             <input type="hidden" name="cod_cita" value="<?= (int) $fila['cod_cita'] ?>">
-                            <button type="submit" class="btn btn-sm btn-danger" title="Cancelar">❌</button>
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancelar cita"><i class="bi bi-x-circle" aria-hidden="true"></i> Cancelar</button>
                         </form>
                         <?php endif; ?>
                     </td>
@@ -272,13 +273,13 @@ $stmtSolicitudes->close();
         </span>
     </div>
 
-</div>
+</main>
 
 <!-- JavaScript -->
 <script>
 // Buscador
 document.getElementById('buscador')
-.addEventListener('keyup', function(){
+.addEventListener('input', function(){
     filtrarTabla();
 });
 
@@ -306,6 +307,7 @@ function filtrarTabla(){
         '#tablaCitas tbody tr');
 
     filas.forEach(function(fila){
+        if (fila.cells.length < 8) return;
         let contenido = fila.textContent.toLowerCase();
         let mostrar = true;
 

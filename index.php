@@ -100,11 +100,12 @@ include __DIR__ . '/includes/navbar.php';
 
                 <?php if(login_puede('citas/listar.php')): ?>
                 <section class="panel-bloque panel-calendario" id="agenda-calendario" aria-labelledby="titulo-agenda">
-                    <header class="panel-bloque-cabecera"><h2 id="titulo-agenda">Agenda y calendario</h2><a href="<?= login_html(login_url('citas/listar.php')) ?>">Todas las citas ↗</a></header>
+                    <header class="panel-bloque-cabecera"><h2 id="titulo-agenda">Agenda de atención</h2><a href="<?= login_html(login_url('citas/listar.php')) ?>">Todas las citas ↗</a></header>
                     <?php if($errorCalendario): ?><p class="alert alert-danger m-3" role="alert"><?= login_html($errorCalendario) ?> <a href="<?= login_html($urlAgenda()) ?>">Volver a hoy</a></p>
                     <?php elseif($calendario): $diaSeleccionado=$calendario['seleccion'];$citasDia=$calendario['por_dia'][$diaSeleccionado]??[]; ?>
                     <?php if(!empty($_SESSION['mensaje_cita_estado'])): ?><p class="alert alert-info m-3" role="status"><?= login_html($_SESSION['mensaje_cita_estado']) ?></p><?php unset($_SESSION['mensaje_cita_estado']);endif; ?>
-                    <div class="panel-calendario-mes">
+                    <details class="panel-calendario-mes" <?= isset($_GET['mes']) ? 'open' : '' ?>>
+                        <summary>Consultar calendario y otras fechas</summary>
                         <nav class="calendario-navegacion" aria-label="Cambiar mes de la agenda">
                             <a class="btn btn-outline-secondary" aria-label="Mes anterior" href="<?= login_html($urlAgenda(['mes'=>$calendario['anterior']])) ?>">‹</a>
                             <h3><?= login_html($calendario['titulo']) ?></h3>
@@ -123,9 +124,9 @@ include __DIR__ . '/includes/navbar.php';
                             <?php endfor; ?>
                         </div>
                         <p class="calendario-ayuda">Selecciona un día para ver sus horarios. El conteo incluye las citas canceladas, identificadas en el listado.</p>
-                    </div>
+                    </details>
                     <div class="calendario-agenda-cabecera"><h3 id="agenda-fecha"><?= $diaSeleccionado===date('Y-m-d')?'Agenda de hoy':'Agenda del día' ?> · <?= $fechaVisible($diaSeleccionado) ?></h3><span><?= count($citasDia) ?> citas</span>
-                        <?php if(login_puede('citas/registrar.php') && $diaSeleccionado>=date('Y-m-d')): ?><a class="btn btn-sm btn-primary" href="<?= login_html(login_url('citas/registrar.php?fecha='.$diaSeleccionado)) ?>">+ Programar cita</a><?php endif; ?>
+                        <?php if(login_puede('citas/registrar.php') && $diaSeleccionado>=date('Y-m-d')): ?><a class="btn btn-sm btn-primary" href="<?= login_html(login_url('citas/registrar.php?fecha='.$diaSeleccionado)) ?>"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nueva cita</a><?php endif; ?>
                     </div>
                     <?php if(!$citasDia): ?><p class="panel-vacio" role="status">No hay citas programadas para esta fecha.</p><?php else: ?>
                     <ol class="panel-agenda" aria-labelledby="agenda-fecha">

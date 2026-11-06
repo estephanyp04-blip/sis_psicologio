@@ -51,20 +51,17 @@ $sqlEstudiantes = "SELECT cod_estudiante, nombres, apellidos, curso, paralelo
                     FROM vista_estudiantes
                     WHERE estado = 'Activo'";
 
-if ($cursoFiltro !== '') {
-    $sqlEstudiantes .= " AND curso = '" . $conexion->real_escape_string($cursoFiltro) . "'";
-}
-
-if ($paraleloFiltro !== '') {
-    $sqlEstudiantes .= " AND paralelo = '" . $conexion->real_escape_string($paraleloFiltro) . "'";
-}
-
-$sqlEstudiantes .= " ORDER BY paralelo ASC, apellidos ASC, nombres ASC";
+$sqlEstudiantes .= " ORDER BY curso ASC, paralelo ASC, apellidos ASC, nombres ASC";
 
 $rsEstudiantes = $conexion->query($sqlEstudiantes);
 if (!$rsEstudiantes) {
     die('Error al consultar estudiantes: ' . $conexion->error);
 }
+$estudiantesActivos = $rsEstudiantes->fetch_all(MYSQLI_ASSOC);
+$estudiantesFiltrados = array_filter($estudiantesActivos, static function (array $e) use ($cursoFiltro, $paraleloFiltro): bool {
+    return ($cursoFiltro === '' || $e['curso'] === $cursoFiltro)
+        && ($paraleloFiltro === '' || $e['paralelo'] === $paraleloFiltro);
+});
 
 // Psicólogas activas disponibles para la atención.
 $rsProfesionales = $conexion->query(
@@ -214,7 +211,7 @@ if ($idDocenteSesion > 0) {
                                 </option>
                                 <?php
                                 $cursoActual = null;
-                                while ($e = $rsEstudiantes->fetch_assoc()):
+                                foreach ($estudiantesFiltrados as $e):
                                     $cursoLabel = 'Curso ' . login_html($e['curso']) . ' - Paralelo ' . login_html($e['paralelo']);
                                     if ($cursoLabel !== $cursoActual):
                                         if ($cursoActual !== null) echo '</optgroup>';
@@ -225,7 +222,7 @@ if ($idDocenteSesion > 0) {
                                     <option value="<?= (int) $e['cod_estudiante'] ?>" <?= $idEstudianteAnt === (int) $e['cod_estudiante'] ? 'selected' : '' ?>>
                                         <?= login_html($e['apellidos'] . ' ' . $e['nombres']) ?>
                                     </option>
-                                <?php endwhile; if ($cursoActual !== null) echo '</optgroup>'; ?>
+                                <?php endforeach; if ($cursoActual !== null) echo '</optgroup>'; ?>
                             </select>
                         </div>
 
@@ -393,6 +390,54 @@ if ($idDocenteSesion > 0) {
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('formDerivacion');
+    const curso = document.getElementById('curso');
+    const paralelo = document.getElementById('paralelo');
+    const estudiante = document.getElementById('cod_estudiante');
+    const estudiantes = <?= json_encode($estudiantesActivos, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+    function actualizarEstudiantes() {
+        const anterior = estudiante.value;
+        const filtrados = estudiantes.filter(function (e) {
+            return (!curso.value || e.curso === curso.value)
+                && (!paralelo.value || e.paralelo === paralelo.value);
+        });
+        estudiante.replaceChildren(new Option(filtrados.length
+            ? 'Seleccione un estudiante...' : 'No hay estudiantes en este curso y paralelo', ''));
+        let grupo;
+        let claveAnterior;
+        filtrados.forEach(function (e) {
+            const clave = JSON.stringify([e.curso, e.paralelo]);
+            if (clave !== claveAnterior) {
+                grupo = document.createElement('optgroup');
+                grupo.label = 'Curso ' + e.curso + ' - Paralelo ' + e.paralelo;
+                estudiante.appendChild(grupo);
+                claveAnterior = clave;
+            }
+            grupo.appendChild(new Option(e.apellidos + ' ' + e.nombres, e.cod_estudiante));
+        });
+        estudiante.value = filtrados.some(function (e) {
+            return String(e.cod_estudiante) === anterior;
+        }) ? anterior : '';
+    }
+
+    function actualizarParalelos() {
+        const anterior = paralelo.value;
+        const disponibles = [...new Set(estudiantes.filter(function (e) {
+            return !curso.value || e.curso === curso.value;
+        }).map(function (e) { return e.paralelo; }))].sort();
+        paralelo.replaceChildren(new Option('Todos', ''));
+        disponibles.forEach(function (valor) { paralelo.add(new Option(valor, valor)); });
+        paralelo.value = disponibles.includes(anterior) ? anterior : '';
+        actualizarEstudiantes();
+    }
+
+    curso.addEventListener('change', actualizarParalelos);
+    paralelo.addEventListener('change', actualizarEstudiantes);
+    document.getElementById('formBuscarEstudiante').addEventListener('submit', function (event) {
+        event.preventDefault();
+        actualizarEstudiantes();
+    });
+    actualizarParalelos();
     const categorias = Array.from(document.querySelectorAll('input[name="categorias[]"]'));
     const grupoCategorias = document.getElementById('grupoCategorias');
     const errorCategorias = document.getElementById('errorCategorias');
@@ -420,7 +465,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function actualizarDescripcionImagen() {
-        descripcionImagen.required = imagen.files.length > 0;
+        if (descripcionImagen) {
+            descripcionImagen.required = imagen.files.length > 0;
+        }
     }
 
     ['motivo', 'observaciones'].forEach(function (campoId) {

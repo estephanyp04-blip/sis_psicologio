@@ -707,7 +707,7 @@ include '../includes/navbar.php';
                                                 onsubmit="return confirm('¿Eliminar esta derivación pendiente?');">
                                                 <?= login_campo_csrf() ?>
                                                 <input type="hidden" name="cod_derivacion" value="<?= (int)$fila['cod_derivacion'] ?>">
-                                                <button type="submit" class="btn-accion" title="Eliminar derivación">
+                                                <button type="submit" class="btn-accion text-danger" title="Eliminar derivación">
                                                     <i class="bi bi-trash"></i><span>Eliminar</span>
                                                 </button>
                                             </form>

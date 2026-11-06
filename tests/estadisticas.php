@@ -163,7 +163,7 @@ try {
     echo "Panel: tarjetas, prioridad por estudiante, agenda y límites de fechas correctos.\n";
     mkdir($temporal . '/app', 0700); mkdir($temporal . '/sesiones', 0700);
     foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($raiz, FilesystemIterator::SKIP_DOTS)) as $archivo) {
-        if (!in_array($archivo->getExtension(), ['php','css','js'], true)) continue;
+        if (!in_array($archivo->getExtension(), ['php','css','js','png','svg','woff','woff2'], true)) continue;
         $relativa = substr($archivo->getPathname(), strlen($raiz) + 1);
         if (str_starts_with($relativa, 'tests' . DIRECTORY_SEPARATOR)) continue;
         $destino = $temporal . '/app/' . $relativa;
@@ -282,6 +282,33 @@ try {
         await abrir(campo('panel-sesiones').closest('a').href);
         comprobar(campo('filtros-estadisticas')!==null,'Tarjeta no abre estadísticas.');
         await abrir('/index.php');
+        await abrir('/estudiantes/listar.php');
+        const fichas=Array.from(app.contentDocument.querySelectorAll('a')).filter(a=>a.textContent.trim()==='Ver ficha' && a.closest('tr').dataset.curso);
+        comprobar(fichas.length>0,'No hay acceso a la ficha del estudiante.');
+        const ficha=fichas[0].href, fila=fichas[0].closest('tr');
+        campo('buscador').value=fila.cells[0].querySelector('strong').textContent;
+        campo('buscador').dispatchEvent(new Event('input',{bubbles:true}));
+        comprobar(fila.style.display!=='none','La búsqueda oculta al estudiante seleccionado.');
+        comprobar(app.contentDocument.documentElement.scrollWidth<=app.contentWindow.innerWidth+1,'Estudiantes desborda la página.');
+        if(Number(ancho)<768) comprobar(fichas[0].getBoundingClientRect().right<=app.contentWindow.innerWidth,'Ver ficha queda fuera del celular.');
+        await abrir(ficha);
+        comprobar(campo('formEditarEstudiante')!==null,'No abre la ficha editable existente.');
+        comprobar(app.contentDocument.documentElement.scrollWidth<=app.contentWindow.innerWidth+1,'La ficha desborda la página.');
+        await abrir('/citas/listar.php');
+        comprobar(campo('filtroFecha').labels.length>0 && campo('filtroEstado').labels.length>0,'Filtros de citas sin etiquetas.');
+        campo('buscador').value='SIN_RESULTADOS_UI';
+        campo('buscador').dispatchEvent(new Event('input',{bubbles:true}));
+        comprobar(Array.from(campo('tablaCitas').tBodies[0].rows).filter(r=>r.cells.length===8).every(r=>r.style.display==='none'),'El buscador de citas no filtra.');
+        campo('buscador').value='';campo('buscador').dispatchEvent(new Event('input',{bubbles:true}));
+        comprobar(app.contentDocument.documentElement.scrollWidth<=app.contentWindow.innerWidth+1,'Citas desborda la página.');
+        const menu=app.contentDocument.querySelector('[data-sidebar-toggle]');
+        if(Number(ancho)<1200) {
+            menu.click();comprobar(menu.getAttribute('aria-expanded')==='true','No abre el menú móvil.');
+            app.contentDocument.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+            comprobar(menu.getAttribute('aria-expanded')==='false' && app.contentDocument.activeElement===menu,'Escape no devuelve el foco.');
+        }
+        const vista=new URL(location.href).searchParams.get('vista');
+        await abrir(vista==='citas'?'/citas/listar.php':vista==='ficha'?ficha:'/index.php');
         app.contentWindow.scrollTo(0,0);
         window.scrollTo(0,0);
         await new Promise(resolve=>setTimeout(resolve,500));
@@ -292,17 +319,19 @@ try {
 HTML;
         $plantilla = str_replace(['__RUTA__','__CURSO__','__HOY__'], [json_encode('/'.$url),json_encode((string)$curso2),json_encode(date('Y-m-d'))], $plantilla);
         file_put_contents($temporal . '/navegador.html', $plantilla);
-        foreach ([1440,390] as $ancho) {
+        foreach ([1440,390,360] as $ancho) {
+          foreach (getenv('CAPTURAS_ESTADISTICAS') ? ['inicio','citas','ficha'] : ['inicio'] as $vista) {
             $argumentos = [$chrome,'--headless','--disable-gpu','--no-first-run','--no-default-browser-check','--disable-background-networking',
                 '--user-data-dir='.$temporal.'/chrome-'.$ancho,'--window-size='.max(500,$ancho).',1800','--dump-dom','--virtual-time-budget=20000',
-                'http://127.0.0.1:'.$puerto.'/__prueba_navegador?secreto='.$secreto.'&ancho='.$ancho];
+                'http://127.0.0.1:'.$puerto.'/__prueba_navegador?secreto='.$secreto.'&ancho='.$ancho.'&vista='.$vista];
             $capturas = getenv('CAPTURAS_ESTADISTICAS');
-            if ($capturas && is_dir($capturas)) array_splice($argumentos, -1, 0, ['--screenshot='.$capturas.'/panel-'.$ancho.'.png']);
+            if ($capturas && is_dir($capturas)) array_splice($argumentos, -1, 0, ['--screenshot='.$capturas.'/'.$vista.'-'.$ancho.'.png']);
             $html = ejecutar($argumentos);
             $dom = new DOMDocument(); @$dom->loadHTML($html);
             $resultado = json_decode($dom->getElementById('resultado')?->textContent ?? '',true);
             verificar(($resultado['ok'] ?? false) === true, 'Navegador: '.json_encode($resultado,JSON_UNESCAPED_UNICODE));
             echo 'Chrome '.$ancho.' px: '.$resultado['total']." comprobaciones correctas.\n";
+          }
         }
     }
     echo "OK: $total comprobaciones de estadísticas. Sin escrituras de prueba en la base real.\n";

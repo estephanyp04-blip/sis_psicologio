@@ -35,5 +35,7 @@ $tituloPagina = $tituloPagina ?? 'Sistema Psicológico - U.E. Cañada Pailita "B
 
     <!-- CSS propio con ruta dinámica -->
     <link rel="stylesheet" href="<?= login_html(login_url('asset/css/estilos.css?v=11')) ?>">
+    <link rel="stylesheet" href="<?= login_html(login_url('asset/css/interfaz.css?v=1')) ?>">
 </head>
-<body>
+<body data-modulo="<?= login_html(basename(dirname($_SERVER['SCRIPT_NAME'] ?? ''))) ?>" data-cuenta="<?= (int)($_SESSION['cod_usuario'] ?? 0) ?>">
+<a class="ui-skip" href="#contenido-principal">Saltar al contenido</a>

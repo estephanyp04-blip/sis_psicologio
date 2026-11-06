@@ -38,7 +38,7 @@ include '../includes/navbar.php';
 <main class="main-content">
     <div class="container-fluid py-4 px-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <div><h1 class="h3 mb-1">Editar estudiante</h1><p class="text-muted mb-0">Actualice los datos del estudiante.</p></div>
+            <div><h1 class="h3 mb-1">Ficha del estudiante</h1><p class="text-muted mb-0"><strong><?= login_html(trim(($fila['nombres'] ?? '').' '.($fila['apellidos'] ?? ''))) ?></strong> · <?= login_html($fila['curso'] ? $fila['curso'].'° '.($fila['paralelo'] ?? '') : 'Sin curso registrado') ?> · <?= login_html($fila['estado']) ?></p><p class="small text-muted mb-0">Consulta o edita los datos. Usa Guardar cambios para confirmar una modificación.</p></div>
             <a href="listar.php" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
         </div>
         <?php if ($mensaje !== ''): ?>
@@ -49,6 +49,7 @@ include '../includes/navbar.php';
                 <?= login_campo_csrf() ?>
                 <input type="hidden" name="cod_estudiante" value="<?= $id ?>">
                 <div class="row g-3">
+                    <div class="col-12"><h2 class="ui-grupo-titulo">Identificación del estudiante</h2></div>
                     <?php foreach (['codigo' => 'Código', 'ci' => 'CI', 'nombres' => 'Nombres', 'apellidos' => 'Apellidos'] as $campo => $etiqueta): ?>
                         <div class="col-md-4">
                             <label for="<?= $campo ?>" class="form-label"><?= $etiqueta ?></label>
@@ -70,6 +71,7 @@ include '../includes/navbar.php';
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <div class="col-12"><h2 class="ui-grupo-titulo">Inscripción y estado</h2></div>
                     <div class="col-md-4">
                         <label for="curso" class="form-label">Curso</label>
                         <select id="curso" name="curso" class="form-select" required>
@@ -104,6 +106,7 @@ include '../includes/navbar.php';
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <div class="col-12"><h2 class="ui-grupo-titulo">Familia y contacto</h2></div>
                     <?php foreach (['padre' => 'Nombre del Padre', 'madre' => 'Nombre de la Madre', 'tutor' => 'Tutor', 'telefono' => 'Teléfono'] as $campo => $etiqueta): ?>
                         <div class="col-md-6">
                             <label for="<?= $campo ?>" class="form-label"><?= $etiqueta ?></label>

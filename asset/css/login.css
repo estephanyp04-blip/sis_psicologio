@@ -216,3 +216,20 @@
 @media (prefers-reduced-motion: reduce) {
     .login-page *, .login-page *::before, .login-page *::after { transition-duration: .01ms !important; }
 }
+
+/* Acceso coherente con los formularios del sistema. */
+:root { --login-blue:#6550a3; --login-blue-hover:#503d89; }
+.login-card { background:#fff; color:#1e293b; box-shadow:0 16px 48px #25233d14; }
+.login-cabecera h1 { color:#25233d; }
+.login-institucion, .login-ayuda, .login-soporte { color:#526077; }
+.login-soporte span, .login-aviso { color:#59428f; }
+.login-campo { display:grid; grid-template-columns:minmax(0,1fr); gap:7px; }
+.login-campo label { font-size:14px; font-weight:600; color:#334155; }
+.login-control { position:relative; width:100%; min-width:0; }
+.login-control .login-icono { top:50%; transform:translateY(-50%); color:#64748b; }
+.login-page .form-control { background:#f8fafc; border-color:#b9c3d2; color:#1e293b; font-size:16px; }
+.login-page .form-control::placeholder { color:#64748b; }
+.login-page .form-control:focus { background:#fff; border-color:#6550a3; box-shadow:0 0 0 3px #6550a324; }
+.login-password button { color:#59428f; }
+.login-password button:hover { color:#44316f; }
+.login-error { color:#a51d2d; background:#fff1f2; border-color:#f5b8c2; }

@@ -1,0 +1,89 @@
+/* Componentes compartidos. Sin fuentes ni recursos externos. */
+:root {
+    --color-primary: #6550a3;
+    --color-primary-hover: #503d89;
+    --color-text: #334155;
+    --bs-primary: #6550a3;
+    --bs-link-color: #59428f;
+    --bs-link-hover-color: #44316f;
+}
+body { background: #f5f6fa; }
+.sidebar { background: #25233d; }
+.sidebar .logo-marca { background: #fff; border-radius: 12px; padding: 5px; }
+.sidebar .nav-link.active { background: #6550a3; box-shadow: inset 3px 0 #9fe0f1; }
+.sidebar-section-title { color:#bbb7d0; }
+.panel-prioridad-alta { background:#fff0ce; color:#754700; }
+.panel-red .panel-icono { background:#fff0ce; color:#754700; }
+.panel-tabla { min-width:0; }
+.panel-persona { min-width:0; }
+.panel-tabla :is(th,td) { overflow-wrap:normal; padding:12px 8px; }
+.panel-tabla :is(th,td):nth-child(4), .panel-prioridad { white-space:nowrap; }
+.panel-tabla th:first-child { width:36%; }
+.panel-tabla :is(th,td):last-child { min-width:76px; }
+@media(min-width:1200px) { .navbar-top .btn-menu-toggle { display:none; } }
+.btn-primary { --bs-btn-bg:#6550a3; --bs-btn-border-color:#6550a3; --bs-btn-hover-bg:#503d89; --bs-btn-hover-border-color:#503d89; --bs-btn-active-bg:#44316f; --bs-btn-active-border-color:#44316f; }
+.panel-bloque a.btn-primary { color:#fff; }
+.btn-outline-primary { --bs-btn-color:#59428f; --bs-btn-border-color:#6550a3; --bs-btn-hover-bg:#6550a3; --bs-btn-hover-border-color:#6550a3; --bs-btn-active-bg:#503d89; }
+.btn-warning, .btn-outline-warning { color:#334155; background:#fff; border-color:#94a3b8; }
+.text-primary { color:#59428f !important; }
+.btn, .btn-accion, .page-link { min-height:44px; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+.btn-accion { min-width:44px; }
+.btn, .form-control, .form-select { border-radius:9px; }
+.form-control, .form-select { min-height:44px; color:#1e293b; }
+.form-label { color:#253047; font-weight:600; }
+.form-label .campo-obligatorio { font-size:.75rem; font-weight:400; color:#596579; }
+.campo-error { display:block; margin-top:4px; color:#a51d2d; font-size:.85rem; }
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline:3px solid #6550a3; outline-offset:3px; }
+.card { border:1px solid #e1e5ee; box-shadow:0 3px 12px #25233d06; }
+.table-responsive, .panel-tabla-scroll, .estadisticas-tabla-scroll { max-width:100%; overscroll-behavior-inline:contain; }
+.table thead th { color:#334155; background:#f1f3f8; }
+.badge { line-height:1.5; white-space:normal; }
+.ui-skip { position:fixed; top:8px; left:12px; z-index:1100; padding:10px 16px; background:#fff; border:2px solid #6550a3; transform:translateY(-160%); }
+.ui-skip:focus { transform:none; }
+.ui-filtro-resumen { margin:10px 0; color:#475569; font-size:.85rem; }
+.ui-grupo-titulo { margin:16px 0 0; padding:12px 0 8px; border-bottom:1px solid #e2e8f0; color:#59428f; font-size:1rem; }
+.navbar-notificaciones-contador { background:#6550a3; }
+.navbar-notificacion[data-leida="true"] { background:#f8fafc; color:#64748b; }
+.navbar-notificacion[data-leida="false"] { border-left:3px solid #6550a3; }
+.ui-notificacion-estado { font-size:.7rem; color:#59428f; }
+.dashboard-page > .container-fluid { display:flex; flex-direction:column; }
+.dashboard-page .panel-cabecera { order:0; }
+.dashboard-page .panel-contenido { order:1; }
+.dashboard-page .panel-resumen { order:2; margin-top:24px; }
+.dashboard-page .panel-definiciones { order:3; }
+.panel-calendario { display:flex; flex-direction:column; }
+.panel-calendario > .panel-bloque-cabecera { order:0; }
+.panel-calendario > .calendario-agenda-cabecera { order:1; }
+.panel-calendario > .panel-agenda, .panel-calendario > .panel-vacio { order:2; }
+.panel-calendario > .panel-calendario-mes { order:3; border-top:1px solid #e2e8f0; }
+.panel-calendario-mes > summary { color:#59428f; font-weight:600; cursor:pointer; min-height:44px; padding:8px 0; }
+.panel-agenda time { font-weight:700; font-variant-numeric:tabular-nums; }
+.ui-agenda-ayuda { margin:0; padding:12px 18px; font-size:.85rem; }
+.evolucion-item { padding:18px; border-left:3px solid #b7a7dc; margin-block:14px; background:#faf9fd; border-radius:0 10px 10px 0; }
+.evolucion-fecha { color:#59428f; font-weight:700; font-variant-numeric:tabular-nums; }
+.expediente-seccion { scroll-margin-top:24px; }
+@media(max-width:767.98px) {
+    .main-content { padding:18px 12px 28px; }
+    .main-content .d-flex.justify-content-between { flex-wrap:wrap; gap:12px; }
+    .main-content .row > [class*="col-"]:has(> .form-control, > .form-select, > .form-label) { width:100%; }
+    .form-control, .form-select { font-size:16px; }
+    .card-body.p-4, .card.p-4 { padding:16px !important; }
+    .ui-tarjetas { min-width:0 !important; width:100%; }
+    .ui-tarjetas thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+    .ui-tarjetas tbody { display:block; }
+    .ui-tarjetas tbody tr { display:flex; flex-wrap:wrap; padding:12px; gap:8px; border-bottom:1px solid #e2e8f0; }
+    .ui-tarjetas tbody :is(td,th) { display:block; border:0; padding:3px 0; white-space:normal; overflow-wrap:anywhere; flex:1 1 45%; min-width:0; }
+    .ui-tarjetas tbody :is(td,th):first-child, .ui-tarjetas tbody td:last-child { flex-basis:100%; text-align:left !important; }
+    .ui-tarjetas :is(td,th)[data-label]::before { content:attr(data-label); display:block; color:#64748b; font-size:.73rem; font-weight:600; }
+    .ui-tarjetas td:last-child > div { flex-wrap:wrap; justify-content:flex-start !important; }
+    .ui-tarjetas td:last-child form { margin-left:8px; }
+    #tablaEstudiantes td:nth-child(2), #tablaEstudiantes td:nth-child(3), #tablaEstudiantes td:nth-child(5) { flex-basis:28%; }
+    .panel-calendario { order:-1; }
+    .navbar-top { padding:10px 12px; }
+    .navbar-notificaciones-menu { position:fixed !important; top:68px !important; right:12px !important; left:auto !important; transform:none !important; max-height:calc(100dvh - 90px); overflow-y:auto; }
+    .panel-cabecera h1 { font-size:1.6rem; }
+    .panel-resumen { gap:10px; }
+    .panel-tarjeta { padding:16px; }
+    .historia-datos-grid, .historia-grid { min-width:0; }
+}
+@media print { .ui-skip, .campo-error { display:none; } .ui-tarjetas tbody, .ui-tarjetas tbody tr { display:table-row-group; } }

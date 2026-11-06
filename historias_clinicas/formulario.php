@@ -63,6 +63,32 @@ function opcionesHistoria(string $grupo): array
 $accionFormulario = $esEdicion ? 'actualizar.php' : 'guardar.php';
 
 $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
+
+$materiasEscolares = array_column($conexion->query("SELECT nombre FROM materias WHERE estado = 'Activo' ORDER BY nombre")->fetch_all(MYSQLI_ASSOC), 'nombre');
+$cursosEscolares = array_column($conexion->query("SELECT DISTINCT curso FROM vista_estudiantes WHERE curso <> '' ORDER BY curso")->fetch_all(MYSQLI_ASSOC), 'curso');
+
+function selectorEscolar(string $campo, string $etiqueta, array $opciones): void
+{
+    $actual = (string) valorHistoria($campo);
+    $opciones = array_values(array_unique($opciones));
+    if ($actual !== '' && !in_array($actual, $opciones, true)) {
+        $opciones[] = $actual;
+    }
+    ?>
+    <label for="<?= login_html($campo) ?>" class="form-label"><?= login_html($etiqueta) ?></label>
+    <select id="<?= login_html($campo) ?>" name="<?= login_html($campo) ?>" class="form-select" data-selector-escolar>
+        <option value="">Seleccione una opción...</option>
+        <?php foreach ($opciones as $opcion): ?>
+            <option value="<?= login_html($opcion) ?>" <?= $actual === $opcion ? 'selected' : '' ?>><?= login_html($opcion) ?></option>
+        <?php endforeach; ?>
+        <option value="__otro__">Otro / especificar...</option>
+    </select>
+    <div data-detalle-escolar hidden class="mt-2">
+        <label for="<?= login_html($campo) ?>_otro" class="form-label">Especifique: <?= login_html($etiqueta) ?></label>
+        <input id="<?= login_html($campo) ?>_otro" type="text" class="form-control" name="<?= login_html($campo) ?>" maxlength="<?= HISTORIA_TEXTOS[$campo] ?>" disabled>
+    </div>
+    <?php
+}
 ?>
 
 <form
@@ -454,24 +480,19 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
             </div>
             <div class="row g-4 mt-1">
                 <div class="col-md-6">
-                    <label class="form-label">Curso(s) repetido(s)</label>
-                    <input type="text" name="cursos_repetidos" class="form-control" maxlength="150" value="<?= login_html(valorHistoria('cursos_repetidos')) ?>">
+                    <?php selectorEscolar('cursos_repetidos', 'Curso(s) repetido(s)', array_merge(['Ninguno'], $cursosEscolares)); ?>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Dificultad escolar</label>
-                    <input type="text" name="dificultad_escolar" class="form-control" maxlength="5000" value="<?= login_html(valorHistoria('dificultad_escolar')) ?>">
+                    <?php selectorEscolar('dificultad_escolar', 'Dificultad escolar', ['Ninguna', 'Lectura', 'Escritura', 'Matemáticas', 'Atención y concentración', 'Comprensión de instrucciones', 'Organización y tareas', 'Asistencia escolar']); ?>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Materia que más le agrada</label>
-                    <input type="text" name="materia_agrada" class="form-control" maxlength="150" value="<?= login_html(valorHistoria('materia_agrada')) ?>">
+                    <?php selectorEscolar('materia_agrada', 'Materia que más le agrada', $materiasEscolares); ?>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Materia que menos le agrada</label>
-                    <input type="text" name="materia_desagrada" class="form-control" maxlength="150" value="<?= login_html(valorHistoria('materia_desagrada')) ?>">
+                    <?php selectorEscolar('materia_desagrada', 'Materia que menos le agrada', $materiasEscolares); ?>
                 </div>
                 <div class="col-12">
-                    <label class="form-label">Relación con compañeros(as) y profesores(as)</label>
-                    <textarea name="relacion_escolar" class="form-control textarea-auto" rows="2" maxlength="5000"><?= login_html(valorHistoria('relacion_escolar')) ?></textarea>
+                    <?php selectorEscolar('relacion_escolar', 'Relación con compañeros(as) y profesores(as)', ['Buena con compañeros y profesores', 'Dificultad para integrarse al grupo', 'Conflictos con compañeros', 'Conflictos con profesores', 'Aislamiento', 'Requiere apoyo para relacionarse']); ?>
                 </div>
             </div>
         </div>
@@ -782,6 +803,25 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-selector-escolar]').forEach(function (selector) {
+        const detalle = selector.nextElementSibling;
+        const entrada = detalle.querySelector('input');
+        const nombre = selector.name;
+        function actualizarDetalle() {
+            const otro = selector.value === '__otro__';
+            detalle.hidden = !otro;
+            entrada.disabled = !otro;
+            entrada.required = otro;
+            // Solo se envía el control activo con el nombre esperado por el servidor.
+            if (otro) selector.removeAttribute('name');
+            else selector.name = nombre;
+        }
+        selector.addEventListener('change', function () {
+            actualizarDetalle();
+            if (!entrada.disabled) entrada.focus();
+        });
+        actualizarDetalle();
+    });
     const esEdicion = <?= $esEdicion ? 'true' : 'false' ?>;
     const recuperando = <?= $datosSesion ? 'true' : 'false' ?>;
 

@@ -73,7 +73,7 @@ include '../includes/navbar.php';
         <div class="card-body p-4 p-md-5">
             <div class="mb-4">
                 <h2 class="mb-1">Editar Usuario</h2>
-                <p class="text-muted mb-0">Modifique los datos de la cuenta seleccionada.</p>
+                <p class="text-muted mb-0">Cuenta: <strong><?= login_html($datos['usuario']) ?></strong> · <?= login_html(trim($datos['nombre'].' '.$datos['apellido'])) ?>. Revise el rol seleccionado antes de guardar.</p>
             </div>
 
             <form action="actualizar.php" method="POST" autocomplete="off">

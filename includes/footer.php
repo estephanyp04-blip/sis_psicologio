@@ -10,5 +10,6 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
 <script src="<?= login_html(login_url('asset/vendor/datatables/jquery.dataTables.min.js')) ?>"></script>
 <script src="<?= login_html(login_url('asset/vendor/datatables/dataTables.bootstrap5.min.js')) ?>"></script>
 <script src="<?= login_html(login_url('asset/js/navegacion.js?v=1')) ?>" defer></script>
+<script src="<?= login_html(login_url('asset/js/interfaz.js?v=1')) ?>" defer></script>
 </body>
 </html>

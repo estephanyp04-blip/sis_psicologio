@@ -142,7 +142,6 @@ include '../includes/navbar.php';
                         </button>
                     </form>
                     <?php endif; ?>
-                    <small class="text-muted d-block mt-1"> 
                 </div>
 
             </div>
@@ -456,6 +455,8 @@ include '../includes/navbar.php';
                         <td class="text-end">
 
                             <div class="d-inline-flex align-items-center gap-1">
+
+                                <?php if (login_puede('estudiantes/editar.php')): ?><a class="btn btn-sm btn-outline-primary" href="editar.php?id=<?= (int)$fila['cod_estudiante'] ?>" aria-label="Ver ficha de <?= login_html($nombre) ?>">Ver ficha</a><?php endif; ?>
 
                                 <?php if(($fila['estado']??'')==='Activo'):?>
 

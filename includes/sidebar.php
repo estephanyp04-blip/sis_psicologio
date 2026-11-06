@@ -50,7 +50,7 @@ $gruposMenu = [
                         : str_starts_with($rutaActual, login_url(dirname($ruta)) . '/');
                     ?>
                     <li class="nav-item">
-                        <a href="<?= login_html(login_url($ruta)) ?>" class="nav-link<?= $activo ? ' active' : '' ?>">
+                        <a href="<?= login_html(login_url($ruta)) ?>" class="nav-link<?= $activo ? ' active' : '' ?>" <?= $activo ? 'aria-current="page"' : '' ?>>
                             <i class="bi <?= login_html($icono) ?>"></i>
                             <span><?= login_html($etiqueta) ?></span>
                         </a>

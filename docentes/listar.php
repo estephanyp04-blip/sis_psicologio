@@ -249,14 +249,14 @@ include '../includes/navbar.php';
                                                 $docente['cod_docente']; ?>"
                                                class="btn btn-sm btn-outline-info"
                                                title="Ver docente">
-                                                <i class="bi bi-eye"></i>
+                                                <i class="bi bi-eye" aria-hidden="true"></i> Ver ficha
                                             </a>
 
                                             <?php if (login_puede('docentes/editar.php')): ?><a href="editar.php?id=<?= (int)
                                                 $docente['cod_docente']; ?>"
                                                class="btn btn-sm btn-outline-warning"
                                                title="Editar docente">
-                                                <i class="bi bi-pencil"></i>
+                                                <i class="bi bi-pencil" aria-hidden="true"></i> Editar
                                             </a><?php endif; ?>
 
                                         </div>

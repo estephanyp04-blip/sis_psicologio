@@ -34,13 +34,14 @@ try {
     <link rel="icon" type="image/png" sizes="512x512" href="<?= login_html(login_url('asset/img/favicon.png?v=2')) ?>">
     <link rel="apple-touch-icon" sizes="180x180" href="<?= login_html(login_url('asset/img/apple-touch-icon.png?v=2')) ?>">
     <meta name="theme-color" content="#0f172a">
-    <link href="<?= login_html(login_url('asset/css/login.css?v=4')) ?>" rel="stylesheet">
+    <link href="<?= login_html(login_url('asset/css/login.css?v=' . filemtime(__DIR__ . '/asset/css/login.css'))) ?>" rel="stylesheet">
 </head>
 <body class="login-page">
 <main class="login-card" aria-labelledby="titulo-login">
     <header class="login-cabecera">
         <img class="login-simbolo" src="<?= login_html(login_url('asset/img/logo-psicologia.png')) ?>" alt="">
         <h1 id="titulo-login">Sistema Psicol&oacute;gico</h1>
+        <p class="login-institucion">U.E. Cañada Pailita “B”</p>
 
     </header>
     <section class="login-formulario" aria-label="Acceso al sistema">
@@ -54,18 +55,20 @@ try {
         <form action="<?= login_html(login_url('login.php')) ?>" method="post">
             <input type="hidden" name="csrf" value="<?= login_html(login_token()) ?>">
             <div class="login-campo">
-                <label class="visually-hidden" for="usuario">Usuario</label>
+                <label for="usuario">Usuario</label>
+                <div class="login-control">
                 <span class="login-icono" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.5-3.5 3.1-5.5 7-5.5s6.5 2 7 5.5"/></svg>
                 </span>
                 <input class="form-control" id="usuario" name="usuario" type="text" maxlength="100" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Usuario" value="<?= login_html($nombreUsuario) ?>" required autofocus>
+                </div>
             </div>
             <div class="login-campo">
-                <label class="visually-hidden" for="password">Contraseña</label>
-                <span class="login-icono" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2"/></svg>
-                </span>
-                <div class="login-password">
+                <label for="password">Contraseña</label>
+                <div class="login-control login-password">
+                    <span class="login-icono" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2"/></svg>
+                    </span>
                     <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" placeholder="Contraseña" required>
                     <button type="button" id="ver-password" aria-label="Mostrar contraseña" aria-controls="password" aria-pressed="false" hidden>
                         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 12s3.3-6 9.5-6 9.5 6 9.5 6-3.3 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/><path class="login-ojo-cubierto" d="m4 4 16 16"/></svg>
