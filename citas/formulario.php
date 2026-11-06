@@ -1,5 +1,6 @@
 <?php
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(404); exit; }
+require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/datos.php';
 $id = isset($editarCita) ? (int)filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT) : 0;
 $cita = $id ? flujo_fila($conexion, 'SELECT c.*,CONCAT(u.nombres,\' \',u.apellidos) profesional
@@ -9,6 +10,9 @@ $cita = $id ? flujo_fila($conexion, 'SELECT c.*,CONCAT(u.nombres,\' \',u.apellid
     WHERE c.cod_cita=?', [$id]) : null;
 if (isset($editarCita) && !$cita) { header('Location: listar.php'); exit; }
 $datos = $cita ?? ['cod_estudiante' => 0,'cod_derivacion' => 0,'cod_psicologa' => 0,'fecha' => date('Y-m-d'),'hora' => '', 'estado' => 'Pendiente','observaciones' => ''];
+if (!$cita && isset($_GET['fecha'])) {
+    try { $datos['fecha']=flujo_fecha($_GET['fecha']); } catch(InvalidArgumentException $e){http_response_code(422);exit(login_html($e->getMessage()));}
+}
 $idDerivacionOrigen = $cita ? (int) ($cita['cod_derivacion'] ?? 0) : (int) filter_var($_GET['cod_derivacion'] ?? 0, FILTER_VALIDATE_INT);
 $origen = null;
 if (!$cita) {
@@ -75,7 +79,7 @@ include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/sid
 <div class="col-md-4"><label for="fecha" class="form-label">Fecha</label><input id="fecha" type="date" name="fecha" class="form-control" value="<?= login_html($datos['fecha']) ?>" required></div>
 <div class="col-md-4"><label for="hora" class="form-label">Hora</label><select id="hora" name="hora" class="form-select" required><option value="">Seleccione</option>
 <?php foreach (cita_horas() as $hora): ?><option value="<?= $hora ?>" <?= $hora===substr($datos['hora'],0,5) ? 'selected' : '' ?>><?= $hora ?></option><?php endforeach; ?></select></div>
-<div class="col-md-4"><label for="estado" class="form-label">Estado</label><select id="estado" name="estado" class="form-select">
+<div class="col-md-4"><label for="estado" class="form-label">Estado</label><select id="estado" name="estado" class="form-select" <?= $id && !login_puede('citas/cancelar.php') ? 'disabled' : '' ?>>
 <?php foreach ($id ? ['Pendiente','Reprogramada','Atendida','Cancelada'] : ['Pendiente'] as $estado): ?><option value="<?= $estado ?>" <?= $estado===$datos['estado'] ? 'selected' : '' ?>><?= $estado ?></option><?php endforeach; ?></select></div>
 <div class="col-12"><label for="observaciones" class="form-label">Observaciones</label><textarea id="observaciones" name="observaciones" class="form-control" rows="4" maxlength="5000"><?= login_html($datos['observaciones'] ?? '') ?></textarea></div>
 <div class="col-md-6">
@@ -98,10 +102,15 @@ include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/sid
 <?php if ($cita):
     require_once __DIR__ . '/../includes/trazabilidad_vista.php';
     flujo_panel($conexion, 'cita', $cita);
-    $historia = flujo_fila($conexion, 'SELECT cod_historia FROM historias_clinicas WHERE cod_estudiante=?', [$cita['cod_estudiante']]);
+    $historiasCita = flujo_historias_cita($conexion, $cita);
     if ($cita['estado'] !== 'Cancelada'):
 ?>
-<a class="btn btn-primary mt-3" href="<?= $historia ? '../seguimientos/registrar.php?cod_historia=' . (int)$historia['cod_historia'] . '&amp;cod_cita=' . $id : '../historias_clinicas/registrar.php?cod_cita=' . $id ?>"><?= $historia ? 'Registrar seguimiento de esta cita' : 'Abrir historia desde esta cita' ?></a>
+<div class="d-flex flex-wrap gap-2 mt-3">
+<?php foreach ($historiasCita as $historiaCita): if ($historiaCita['estado'] === 'Cerrada') continue; ?>
+<a class="btn btn-primary" href="../seguimientos/registrar.php?cod_historia=<?= (int)$historiaCita['cod_historia'] ?>&amp;cod_cita=<?= $id ?>">Registrar seguimiento · Historia #<?= (int)$historiaCita['cod_historia'] ?> (<?= login_html($historiaCita['fecha_apertura']) ?>)</a>
+<?php endforeach; ?>
+<a class="btn btn-outline-primary" href="../historias_clinicas/registrar.php?cod_cita=<?= $id ?>">Abrir nueva historia desde esta cita</a>
+</div>
 <?php endif; endif; ?>
 </div></main>
 <script>

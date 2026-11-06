@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('historias_clinicas/editar.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 
 
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
@@ -34,14 +34,14 @@ $stmt = $conexion->prepare("
             ORDER BY er.es_principal DESC LIMIT 1) AS nombre_tutor,
         m.nombre AS materia_derivacion,
         d.fecha AS fecha_derivacion,
-        TRIM(CONCAT(COALESCE(du.nombres,''),' ',COALESCE(du.apellidos,''))) AS derivado_por,
+        TRIM(CONCAT(COALESCE(d.autor_nombres,du.nombres,''),' ',COALESCE(d.autor_apellidos,du.apellidos,''))) AS derivado_por,
         d.prioridad AS prioridad_derivacion,
         d.observaciones AS observaciones_derivacion
     FROM historias_clinicas h
     INNER JOIN vista_estudiantes e ON e.cod_estudiante = h.cod_estudiante
     LEFT JOIN derivaciones d ON d.cod_derivacion = h.cod_derivacion_origen
     LEFT JOIN docentes doc ON doc.cod_docente = d.cod_docente
-    LEFT JOIN usuarios du ON du.cod_usuario = doc.cod_usuario
+    LEFT JOIN usuarios du ON du.cod_usuario = COALESCE(d.cod_usuario_autor,doc.cod_usuario)
     LEFT JOIN materias m ON m.cod_materia = d.cod_materia
     WHERE h.cod_historia = ?
     LIMIT 1
@@ -142,9 +142,9 @@ unset($_SESSION['mensaje'], $_SESSION['tipo_mensaje']);
 
 $tituloPagina = 'Editar historia clínica';
 
-include '../includes/header.php';
-include '../includes/sidebar.php';
-include '../includes/navbar.php';
+include __DIR__ . '/../includes/header.php';
+include __DIR__ . '/../includes/sidebar.php';
+include __DIR__ . '/../includes/navbar.php';
 ?>
 
 <main class="main-content historia-edicion">
@@ -180,9 +180,9 @@ include '../includes/navbar.php';
             </div>
         <?php endif; ?>
 
-        <?php include 'formulario.php'; ?>
+        <?php include __DIR__ . '/formulario.php'; ?>
 
     </div>
 </main>
 
-<?php include '../includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

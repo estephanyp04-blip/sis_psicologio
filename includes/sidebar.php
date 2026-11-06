@@ -15,7 +15,6 @@ $gruposMenu = [
         ['derivaciones/listar.php', 'Derivaciones recibidas', 'bi-send-fill', 'derivaciones/registrar.php'],
         ['citas/listar.php', 'Citas', 'bi-calendar2-week-fill', 'citas/registrar.php'],
         ['historias_clinicas/listar.php', 'Historias clínicas', 'bi-file-earmark-medical-fill', 'historias_clinicas/registrar.php'],
-        ['seguimientos/listar.php', 'Seguimientos', 'bi-journal-medical', null],
     ],
     'Administración' => [
         ['docentes/listar.php', 'Docentes', 'bi-person-badge-fill', 'docentes/registrar.php'],
@@ -31,7 +30,7 @@ $gruposMenu = [
 
 <aside class="sidebar" id="sidebar-navigation" aria-label="Menú de navegación" tabindex="-1">
     <a href="<?= login_html(login_inicio_url()) ?>" class="logo">
-        <img class="logo-marca" src="<?= login_html(login_url('asset/img/logo-sistema.svg')) ?>" alt="">
+        <img class="logo-marca" src="<?= login_html(login_url('asset/img/logo-psicologia.png')) ?>" alt="">
         <h5>Sistema Psicológico</h5>
     </a>
 

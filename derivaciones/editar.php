@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('derivaciones/editar.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/datos.php';
 
 $baseUrl = rtrim(login_config()['base_url'], '/');
@@ -42,8 +42,8 @@ $sql = "SELECT
             e.apellidos AS estudiante_apellidos,
             e.curso,
             e.paralelo,
-            persona.nombres AS docente_nombres,
-            persona.apellidos AS docente_apellidos
+            COALESCE(d.autor_nombres,persona.nombres) AS docente_nombres,
+            COALESCE(d.autor_apellidos,persona.apellidos) AS docente_apellidos
         FROM derivaciones AS d
         LEFT JOIN vista_estudiantes AS e
             ON d.cod_estudiante = e.cod_estudiante
@@ -52,9 +52,9 @@ $sql = "SELECT
         LEFT JOIN docentes AS doc
             ON d.cod_docente = doc.cod_docente
         LEFT JOIN usuarios AS persona
-            ON persona.cod_usuario = doc.cod_usuario
+            ON persona.cod_usuario = COALESCE(d.cod_usuario_autor,doc.cod_usuario)
         WHERE d.cod_derivacion = ?
-          AND (? <= 0 OR d.cod_docente = ?)
+          AND (? <= 0 OR (d.cod_docente = ? AND (d.cod_usuario_autor IS NULL OR d.cod_usuario_autor=(SELECT cod_usuario FROM docentes WHERE cod_docente=d.cod_docente))))
         LIMIT 1";
 
 $stmt = $conexion->prepare($sql);

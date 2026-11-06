@@ -40,6 +40,7 @@ $catalogo = [
     'docentes/editar.php' => $ruta('Docentes', 'puede_editar', $get),
     'docentes/guardar.php' => $ruta('Docentes', 'puede_crear', $post),
     'docentes/actualizar.php' => $ruta('Docentes', 'puede_editar', $post),
+    'docentes/cambiar_estado.php' => $ruta('Docentes', 'puede_cambiar_estado', $post),
 
     'estudiantes/listar.php' => $ruta('Estudiantes', 'puede_ver', $get, false, false, null, $rolesBloqueadosDatosEstudiantiles),
     'estudiantes/registrar.php' => $ruta('Estudiantes', 'puede_crear', $get, false, false, null, $rolesBloqueadosDatosEstudiantiles),
@@ -60,10 +61,11 @@ $catalogo = [
     'derivaciones/eliminar.php' => $ruta('Derivaciones', 'puede_eliminar', $post),
     'derivaciones/cambiar_estado.php' => $ruta('Derivaciones', 'puede_cambiar_estado', $post),
 
-    'seguimientos/registrar.php' => $ruta('Seguimientos', 'puede_crear', $get),
-    'seguimientos/guardar.php' => $ruta('Seguimientos', 'puede_crear', $post),
-    'seguimientos/listar.php' => $ruta('Seguimientos', 'puede_ver', $get),
-    'seguimientos/ver.php' => $ruta('Seguimientos', 'puede_ver', $get),
+    // Compatibilidad con enlaces antiguos; los registros previos son solo de consulta.
+    'seguimientos/registrar.php' => $ruta('Historias clinicas', 'puede_crear', $get, false, false, null, $rolesBloqueadosDatosEstudiantiles),
+    'seguimientos/guardar.php' => $ruta('Historias clinicas', 'puede_crear', $post, false, false, null, $rolesBloqueadosDatosEstudiantiles),
+    'seguimientos/listar.php' => $ruta('Historias clinicas', 'puede_ver', $get, false, false, null, $rolesBloqueadosDatosEstudiantiles),
+    'seguimientos/ver.php' => $ruta('Historias clinicas', 'puede_ver', $get, false, false, null, $rolesBloqueadosDatosEstudiantiles),
 
     'citas/listar.php' => $ruta('Citas', 'puede_ver', $get),
     'citas/registrar.php' => $ruta('Citas', 'puede_crear', $get),
@@ -86,6 +88,10 @@ $catalogo = [
     'informes/editar.php' => $ruta('Informes', 'puede_editar', $get),
     'informes/guardar.php' => $ruta('Informes', 'puede_crear', $post),
     'informes/actualizar.php' => $ruta('Informes', 'puede_editar', $post),
+    'informes/antecedentes.php' => $ruta('Informes', 'puede_crear', $get, false, true),
+    'informes/mensual.php' => $ruta('Informes', 'puede_ver', $get),
+    'informes/ver_mensual.php' => $ruta('Informes', 'puede_ver', $get),
+    'informes/guardar_mensual.php' => $ruta('Informes', 'puede_crear', $post),
 
     'roles/listar.php' => $ruta('Roles y permisos', 'puede_ver', $get, true),
     'roles/registrar.php' => $ruta('Roles y permisos', 'puede_crear', $get, true),
@@ -102,6 +108,7 @@ $rolesBase = [
     'usuarios/editar.php' => [1], 'usuarios/guardar.php' => [1], 'usuarios/actualizar.php' => [1], 'usuarios/cambiar_estado.php' => [1],
     'docentes/listar.php' => [1], 'docentes/ver.php' => [1], 'docentes/registrar.php' => [1], 'docentes/editar.php' => [1],
     'docentes/guardar.php' => [1], 'docentes/actualizar.php' => [1],
+    'docentes/cambiar_estado.php' => [1],
     'estudiantes/listar.php' => [1, 2], 'estudiantes/registrar.php' => [1, 2], 'estudiantes/editar.php' => [1, 2],
     'estudiantes/guardar.php' => [1, 2], 'estudiantes/actualizar.php' => [1, 2], 'estudiantes/cambiar_estado.php' => [1, 2], 'estudiantes/importar.php' => [1, 2],
     'derivaciones/listar.php' => [1, 2, 3], 'derivaciones/ver.php' => [1, 2, 3], 'derivaciones/evidencia.php' => [1, 2, 3],
@@ -114,6 +121,7 @@ $rolesBase = [
     'historias_clinicas/editar.php' => [1, 2], 'historias_clinicas/guardar.php' => [1, 2], 'historias_clinicas/actualizar.php' => [1, 2], 'historias_clinicas/ajax_derivaciones.php' => [1, 2],
     'informes/listar.php' => [1, 2, 4], 'informes/ver.php' => [1, 2, 4], 'informes/registrar.php' => [1, 2],
     'informes/editar.php' => [1, 2], 'informes/guardar.php' => [1, 2], 'informes/actualizar.php' => [1, 2],
+    'informes/antecedentes.php' => [1, 2], 'informes/mensual.php' => [1, 2, 4], 'informes/ver_mensual.php' => [1, 2, 4], 'informes/guardar_mensual.php' => [1, 2],
     'roles/listar.php' => [1], 'roles/registrar.php' => [1], 'roles/guardar.php' => [1], 'roles/editar.php' => [1], 'roles/actualizar.php' => [1],
 ];
 foreach ($catalogo as $nombre => &$definicion) $definicion['roles'] = $rolesBase[$nombre] ?? [1];

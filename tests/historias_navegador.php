@@ -52,6 +52,25 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
         await enviar();
         comprobar(app.contentWindow.location.pathname.endsWith('/ver.php') && app.contentDocument.body.textContent.includes('Alta sin derivación desde navegador'), 'No guarda sin derivación desde navegador.');
 
+        await abrir('/informes/registrar.php?cod_estudiante=1');
+        await esperar(() => campo('cod_historia').options.length === 3 && campo('historia_estado').value.includes('Seleccione'));
+        comprobar(app.contentDocument.querySelectorAll('#cod_estudiante option[value="1"]').length === 1, 'Duplica al estudiante con varias historias.');
+        comprobar(campo('cod_historia').value === '' && campo('btnGuardar').disabled, 'Elige automáticamente una historia entre varias.');
+        cambiar('cod_historia', '1');
+        await esperar(() => !campo('btnGuardar').disabled);
+        comprobar(campo('cod_historia').value === '1' && campo('cod_derivacion').value === '1', 'No carga la historia anterior seleccionada.');
+        const segundaHistoria = Array.from(campo('cod_historia').options).find(opcion => opcion.value && opcion.value !== '1').value;
+        cambiar('cod_historia', segundaHistoria);
+        await esperar(() => !campo('btnGuardar').disabled);
+        comprobar(campo('cod_historia').value === segundaHistoria && campo('cod_derivacion').value === '2', 'Mezcla derivaciones al cambiar de historia.');
+        cambiar('cod_historia', '1');
+        await esperar(() => !campo('btnGuardar').disabled);
+        campo('aspecto_cognitivo').value = 'Informe de la primera historia';
+        campo('aspectos_afectivos').value = 'Datos de la historia seleccionada';
+        app.contentDocument.querySelector('input[name="tipo_atencion[]"]').checked = true;
+        await new Promise(resolve => { app.onload = resolve; campo('formInforme').requestSubmit(); });
+        comprobar(app.contentWindow.location.pathname.endsWith('/informes/listar.php') && app.contentDocument.body.textContent.includes('guardado correctamente'), 'No guarda el informe de una historia anterior.');
+
         await abrir('/historias_clinicas/registrar.php');
         const win = app.contentWindow;
         const solicitudes = [];

@@ -93,6 +93,10 @@ CREATE TABLE `derivacion_evidencias` (
 
 DROP TABLE IF EXISTS `derivaciones`;
 CREATE TABLE `derivaciones` (
+  `cod_usuario_autor` int(10) unsigned DEFAULT NULL,
+  `autor_nombres` varchar(80) DEFAULT NULL,
+  `autor_apellidos` varchar(80) DEFAULT NULL,
+  CONSTRAINT `fk_derivacion_autor` FOREIGN KEY (`cod_usuario_autor`) REFERENCES `usuarios` (`cod_usuario`),
   `cod_derivacion` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `fecha` date NOT NULL,
   `cod_estudiante` int(10) unsigned NOT NULL,
@@ -238,6 +242,7 @@ CREATE TABLE `historial_academico` (
 
 DROP TABLE IF EXISTS `historias_clinicas`;
 CREATE TABLE `historias_clinicas` (
+  `motivo_cierre` text DEFAULT NULL,
   `cod_historia` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `cod_estudiante` int(10) unsigned NOT NULL,
   `cod_psicologa` int(10) unsigned NOT NULL,
@@ -267,7 +272,7 @@ CREATE TABLE `historias_clinicas` (
   `fecha_registro` timestamp NOT NULL DEFAULT current_timestamp(),
   `fecha_actualizacion` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`cod_historia`),
-  UNIQUE KEY `uk_historia_estudiante` (`cod_estudiante`),
+  KEY `idx_historias_estudiante` (`cod_estudiante`,`fecha_apertura`,`cod_historia`),
   KEY `idx_historias_psicologa` (`cod_psicologa`),
   KEY `idx_historias_derivacion` (`cod_derivacion_origen`),
   KEY `idx_historias_cita` (`cod_cita_origen`),
@@ -307,6 +312,8 @@ CREATE TABLE `informe_individual` (
 
 DROP TABLE IF EXISTS `informe_resumen`;
 CREATE TABLE `informe_resumen` (
+  `total_sesiones` int(10) unsigned DEFAULT NULL,
+  `filtros_json` text DEFAULT NULL,
   `cod_informe` int(10) unsigned NOT NULL,
   `total_estudiantes` int(10) unsigned NOT NULL DEFAULT 0,
   `total_derivaciones` int(10) unsigned NOT NULL DEFAULT 0,
@@ -460,6 +467,10 @@ INSERT INTO `secciones` VALUES (1,1,1,'Mañana',2026,'Activo'),(2,1,1,'Tarde',20
 
 DROP TABLE IF EXISTS `seguimientos`;
 CREATE TABLE `seguimientos` (
+  `cod_derivacion` int(10) unsigned DEFAULT NULL,
+  `cod_proxima_cita` int(10) unsigned DEFAULT NULL,
+  CONSTRAINT `fk_seguimiento_episodio` FOREIGN KEY (`cod_derivacion`) REFERENCES `derivaciones` (`cod_derivacion`),
+  CONSTRAINT `fk_seguimiento_proxima` FOREIGN KEY (`cod_proxima_cita`) REFERENCES `citas` (`cod_cita`),
   `cod_seguimiento` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `cod_historia` int(10) unsigned NOT NULL,
   `cod_psicologa` int(10) unsigned NOT NULL,
@@ -516,7 +527,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vista_estudiantes` AS select `e`.`cod_estudiante` AS `cod_estudiante`,`e`.`codigo` AS `codigo`,`e`.`ci` AS `ci`,`e`.`rude` AS `rude`,`e`.`nombres` AS `nombres`,`e`.`apellidos` AS `apellidos`,`e`.`fecha_nacimiento` AS `fecha_nacimiento`,`e`.`lugar_nacimiento` AS `lugar_nacimiento`,`e`.`sexo` AS `sexo`,`e`.`direccion` AS `direccion`,`e`.`telefono` AS `telefono`,`e`.`estado` AS `estado`,`s`.`cod_seccion` AS `cod_seccion`,`c`.`cod_curso` AS `cod_curso`,`c`.`nombre` AS `curso`,`p`.`cod_paralelo` AS `cod_paralelo`,`p`.`nombre` AS `paralelo`,`s`.`turno` AS `turno`,`s`.`gestion` AS `gestion` from (((((`estudiantes` `e` left join `historial_academico` `ha` on(`ha`.`cod_estudiante` = `e`.`cod_estudiante` and `ha`.`estado` = 'Activo')) left join `secciones` `s` on(`s`.`cod_seccion` = `ha`.`cod_seccion`)) left join `cursos` `c` on(`c`.`cod_curso` = `s`.`cod_curso`)) left join `paralelos` `p` on(`p`.`cod_paralelo` = `s`.`cod_paralelo`)));
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vista_derivaciones` AS select `d`.`cod_derivacion` AS `cod_derivacion`,`d`.`fecha` AS `fecha`,`d`.`cod_estudiante` AS `cod_estudiante`,`d`.`cod_docente` AS `cod_docente`,`d`.`cod_materia` AS `cod_materia`,`m`.`nombre` AS `materia`,`d`.`motivo` AS `motivo`,`d`.`observaciones` AS `observaciones`,`d`.`prioridad` AS `prioridad`,`d`.`estado` AS `estado`,`d`.`solicitar_cita` AS `solicitar_cita`,`d`.`cod_psicologa_solicitada` AS `cod_psicologa_solicitada`,`d`.`fecha_registro` AS `fecha_registro`,`d`.`fecha_actualizacion` AS `fecha_actualizacion`,concat(`e`.`apellidos`,' ',`e`.`nombres`) AS `estudiante`,`ve`.`curso` AS `curso`,`ve`.`paralelo` AS `paralelo`,`ve`.`turno` AS `turno`,concat(`u`.`nombres`,' ',`u`.`apellidos`) AS `docente` from (((((`derivaciones` `d` join `estudiantes` `e` on(`e`.`cod_estudiante` = `d`.`cod_estudiante`)) join `docentes` `doc` on(`doc`.`cod_docente` = `d`.`cod_docente`)) join `usuarios` `u` on(`u`.`cod_usuario` = `doc`.`cod_usuario`)) left join `materias` `m` on(`m`.`cod_materia` = `d`.`cod_materia`)) left join `vista_estudiantes` `ve` on(`ve`.`cod_estudiante` = `e`.`cod_estudiante`));
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vista_derivaciones` AS select `d`.`cod_derivacion` AS `cod_derivacion`,`d`.`fecha` AS `fecha`,`d`.`cod_estudiante` AS `cod_estudiante`,`d`.`cod_docente` AS `cod_docente`,`d`.`cod_materia` AS `cod_materia`,`m`.`nombre` AS `materia`,`d`.`motivo` AS `motivo`,`d`.`observaciones` AS `observaciones`,`d`.`prioridad` AS `prioridad`,`d`.`estado` AS `estado`,`d`.`solicitar_cita` AS `solicitar_cita`,`d`.`cod_psicologa_solicitada` AS `cod_psicologa_solicitada`,`d`.`fecha_registro` AS `fecha_registro`,`d`.`fecha_actualizacion` AS `fecha_actualizacion`,concat(`e`.`apellidos`,' ',`e`.`nombres`) AS `estudiante`,`ve`.`curso` AS `curso`,`ve`.`paralelo` AS `paralelo`,`ve`.`turno` AS `turno`,concat(COALESCE(`d`.`autor_nombres`,`u`.`nombres`),' ',COALESCE(`d`.`autor_apellidos`,`u`.`apellidos`)) AS `docente` from (((((`derivaciones` `d` join `estudiantes` `e` on(`e`.`cod_estudiante` = `d`.`cod_estudiante`)) join `docentes` `doc` on(`doc`.`cod_docente` = `d`.`cod_docente`)) join `usuarios` `u` on(`u`.`cod_usuario` = COALESCE(`d`.`cod_usuario_autor`,`doc`.`cod_usuario`))) left join `materias` `m` on(`m`.`cod_materia` = `d`.`cod_materia`)) left join `vista_estudiantes` `ve` on(`ve`.`cod_estudiante` = `e`.`cod_estudiante`));
 
 SET UNIQUE_CHECKS = 1;
 

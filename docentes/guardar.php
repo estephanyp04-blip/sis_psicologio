@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('docentes/guardar.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 
 function regresarConError(string $mensaje): void
 {

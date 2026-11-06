@@ -2,12 +2,13 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('informes/ver.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__.'/datos.php';
 
 $puedeEditar = login_puede('informes/editar.php');
 
 
-function dato($valor, string $vacio = 'No registrado'): string
+function dato(mixed $valor, string $vacio = 'No registrado'): string
 {
     $valor = trim((string)$valor);
     return $valor === ''
@@ -15,7 +16,7 @@ function dato($valor, string $vacio = 'No registrado'): string
         : nl2br(login_html($valor));
 }
 
-function fechaInforme($valor): string
+function fechaInforme(mixed $valor): string
 {
     if (!$valor) {
         return 'No registrada';
@@ -67,7 +68,9 @@ if (!$informe) {
     exit;
 }
 
+if($informe['tipo']==='Mensual'){header('Location: ver_mensual.php?id='.$idInforme,true,303);exit;}
 $nombreEstudiante = trim($informe['nombres'] . ' ' . $informe['apellidos']);
+$atencionesAlCorte=informe_total_atenciones($conexion,(int)($informe['cod_estudiante']??0),(string)$informe['fecha']);
 $nombrePsicologo = trim(($informe['psicologo_nombre'] ?? '') . ' ' . ($informe['psicologo_apellido'] ?? ''));
 $estadoClase = [
     'Borrador' => 'bg-warning-subtle text-warning-emphasis',
@@ -139,7 +142,7 @@ include '../includes/navbar.php';
                 <div><span>C.I.</span><strong><?= dato($informe['ci']) ?></strong></div>
                 <div><span>Curso</span><strong><?= login_html($informe['estudiante_curso'] . ' ' . $informe['estudiante_paralelo']) ?></strong></div>
                 <div><span>Fecha del informe</span><strong><?= login_html(fechaInforme($informe['fecha'])) ?></strong></div>
-                <div><span>N.º de atenciones</span><strong><?= (int)$informe['numero_atenciones'] ?></strong></div>
+                <div><span>Atenciones registradas hasta la fecha del informe</span><strong><?= $atencionesAlCorte ?></strong><?php if($atencionesAlCorte!==(int)$informe['numero_atenciones']): ?><small>Valor guardado al emitir: <?= (int)$informe['numero_atenciones'] ?>. El total consultado cuenta seguimientos; el registro original se conserva.</small><?php endif; ?></div>
                 <div><span>Referido por</span><strong><?= dato($informe['referido_por']) ?></strong></div>
                 <div><span>Recibido por</span><strong><?= dato($informe['recibido_por']) ?></strong></div>
             </div>

@@ -2,13 +2,17 @@
 
 Aplicación PHP para gestionar estudiantes, docentes, derivaciones, citas, historias clínicas, seguimientos e informes de la U.E. Cañada Pailita «B».
 
+Las correcciones por fases, resultados y decisiones pendientes están en [CORRECCIONES_FASES_2026-11-02.md](CORRECCIONES_FASES_2026-11-02.md). Incluyen calendario, filtros, informes mensuales, recursos locales, baja del perfil docente y continuidad por episodio. Para actualizar una base existente, consultar [la migración 013](database/CONTINUIDAD_013.md).
+
+El calendario está integrado en **Panel principal → Agenda y calendario**. Permite consultar meses y días, programar y gestionar estados desde la misma sección, con adaptación de 320 a 1440 px. Sus consultas se reutilizan desde `citas/datos.php` y las acciones de estado se centralizan en `citas/cancelar.php`; se retiraron las pantallas/acciones separadas de calendario y cambio de estado de citas.
+
 ## Requisitos
 
 - PHP 8.2 con `mysqli`, `mysqlnd` y `mbstring`; las pruebas de formularios también usan `dom`.
 - MariaDB; el entorno local utiliza XAMPP y MariaDB 10.4.
 - Apache para abrir la aplicación. Las pruebas HTTP arrancan su propio servidor PHP local.
 
-Para guardar versiones y actualizar el esquema de forma segura, consulta la [guía de versiones](docs/GUIA_VERSIONES.md) y el [registro de cambios](CHANGELOG.md).
+Para guardar versiones y actualizar el esquema de forma segura, consulta las [correcciones por fases](CORRECCIONES_FASES_2026-11-02.md) y el [registro de cambios](CHANGELOG.md).
 
 ## Uso local
 
@@ -59,7 +63,7 @@ La zona horaria es `America/La_Paz`. La aplicación no carga archivos `.env` aut
 
 Los archivos específicos viven dentro de su módulo: `datos.php` reúne la validación y persistencia de estudiantes, citas, historias clínicas, derivaciones e informes; `estudiantes/csv.php` procesa la importación. Los formularios compartidos de alta y edición están en `citas/formulario.php` e `historias_clinicas/formulario.php`. Estos archivos internos rechazan el acceso directo por HTTP; las páginas del módulo los incluyen cuando corresponde.
 
-Las rutas se declaran en [config/permisos.php](config/permisos.php), y los permisos efectivos se consultan en las tablas `modulos` y `permisos`. El administrador puede crear roles y marcar para cada módulo si el rol puede ver, crear, editar, cambiar estados o eliminar. En Dashboard, Estadísticas y Estudiantes, Docente y Director permanecen bloqueados aunque la tabla de permisos les conceda acceso; los demás roles siguen la configuración de la base. Cambiar estados es un permiso separado de editar; solo se ofrece en Usuarios, Estudiantes, Derivaciones y Citas. El menú también se ajusta a esos permisos; las rutas comprueban el permiso en el servidor y las escrituras requieren token CSRF.
+Las rutas se declaran en [config/permisos.php](config/permisos.php), y los permisos efectivos se consultan en las tablas `modulos` y `permisos`. El administrador puede crear roles y marcar para cada módulo si el rol puede ver, crear, editar, cambiar estados o eliminar. En Dashboard, Estadísticas y Estudiantes, Docente y Director permanecen bloqueados aunque la tabla de permisos les conceda acceso; los demás roles siguen la configuración de la base. Cambiar estados es un permiso separado de editar; solo se ofrece en Usuarios, Docentes, Estudiantes, Derivaciones y Citas. El menú también se ajusta a esos permisos; las rutas comprueban el permiso en el servidor y las escrituras requieren token CSRF.
 
 Para habilitar esta configuración en una base existente, aplicar la migración normalizada:
 
@@ -95,6 +99,7 @@ La última sesión y el acumulado se calculan hasta la fecha final seleccionada.
 
 ```powershell
 & C:\xampp\php\php.exe tests\seguridad.php
+& C:\xampp\php\php.exe tests\fases.php
 & C:\xampp\php\php.exe tests\informes_actualizacion.php
 & C:\xampp\php\php.exe tests\esquema_informes_importacion.php --navegador
 & C:\xampp\php\php.exe tests\historias_derivaciones.php --navegador
@@ -102,4 +107,4 @@ La última sesión y el acumulado se calculan hasta la fecha final seleccionada.
 & C:\xampp\php\php.exe tests\estadisticas.php --navegador
 ```
 
-Cobertura, resultados y requisitos en [tests/README.md](tests/README.md). Las seis suites usan el esquema normalizado; `--navegador` requiere Chrome instalado. Para una base existente, aplicar también la migración del tutor de curso según [database/README.md](database/README.md).
+Cobertura, resultados y requisitos en [tests/README.md](tests/README.md). Las suites usan el esquema normalizado; `--navegador` requiere Chrome instalado. Para una base existente, aplicar también la migración del tutor de curso según [database/README.md](database/README.md).

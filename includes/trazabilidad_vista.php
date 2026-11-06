@@ -19,16 +19,20 @@ function flujo_panel(mysqli $bd, string $tipo, array $registro): void
         $c = (int)($seguimiento['cod_cita'] ?? 0);
     }
     if ($tipo === 'cita') {
-        $historia = flujo_fila($bd,'SELECT cod_historia FROM historias_clinicas WHERE cod_estudiante=?',[$registro['cod_estudiante']]);
-        $h = (int)($historia['cod_historia'] ?? 0);
+        foreach (flujo_historias_cita($bd, $registro) as $historia) {
+            $agregar('historias_clinicas/ver.php', 'Historia', (int)$historia['cod_historia']);
+        }
     }
     foreach ([['derivaciones/ver.php','Derivación',$d],['citas/editar.php','Cita',$c],['historias_clinicas/ver.php','Historia',$h],['seguimientos/ver.php','Seguimiento',$s]] as [$ruta,$titulo,$id]) $agregar($ruta,$titulo,$id);
     $consultas = [];
     if ($tipo === 'derivacion') {
         $consultas = [
             ['SELECT cod_cita id FROM citas WHERE cod_derivacion=? ORDER BY fecha,cod_cita',[$d],'citas/editar.php','Cita'],
-            ['SELECT cod_historia id FROM historias_clinicas WHERE cod_estudiante=?',[$registro['cod_estudiante']],'historias_clinicas/ver.php','Historia del estudiante'],
-            ['SELECT s.cod_seguimiento id FROM seguimientos s JOIN historias_clinicas h ON h.cod_historia=s.cod_historia LEFT JOIN citas c ON c.cod_cita=s.cod_cita WHERE COALESCE(c.cod_derivacion,h.cod_derivacion_origen)=? ORDER BY s.fecha,s.cod_seguimiento',[$d],'seguimientos/ver.php','Seguimiento'],
+            ['SELECT h.cod_historia id FROM historias_clinicas h WHERE h.cod_derivacion_origen=?
+                OR EXISTS (SELECT 1 FROM seguimientos s LEFT JOIN citas c ON c.cod_cita=s.cod_cita
+                    WHERE s.cod_historia=h.cod_historia AND COALESCE(s.cod_derivacion,c.cod_derivacion)=?)
+                ORDER BY h.fecha_apertura,h.cod_historia',[$d,$d],'historias_clinicas/ver.php','Historia de esta derivación'],
+            ['SELECT s.cod_seguimiento id FROM seguimientos s JOIN historias_clinicas h ON h.cod_historia=s.cod_historia LEFT JOIN citas c ON c.cod_cita=s.cod_cita WHERE COALESCE(s.cod_derivacion,c.cod_derivacion,h.cod_derivacion_origen)=? ORDER BY s.fecha,s.cod_seguimiento',[$d],'seguimientos/ver.php','Seguimiento'],
             ['SELECT i.cod_informe id FROM informes i JOIN informe_individual ii ON ii.cod_informe=i.cod_informe WHERE ii.cod_derivacion=? ORDER BY i.fecha_inicio,i.cod_informe',[$d],'informes/ver.php','Informe']];
     } elseif ($tipo === 'historia') {
         $consultas = [
@@ -40,7 +44,7 @@ function flujo_panel(mysqli $bd, string $tipo, array $registro): void
         $consultas = [['SELECT i.cod_informe id FROM informes i JOIN informe_individual ii ON ii.cod_informe=i.cod_informe WHERE ii.cod_seguimiento=? ORDER BY i.fecha_inicio,i.cod_informe',[$s],'informes/ver.php','Informe']];
     }
     foreach ($consultas as [$sql,$valores,$ruta,$titulo]) {
-        $stmt=$bd->prepare($sql); $stmt->bind_param('i',...$valores); $stmt->execute();
+        $stmt=$bd->prepare($sql); $stmt->bind_param(str_repeat('i', count($valores)),...$valores); $stmt->execute();
         foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $fila) $agregar($ruta,$titulo,(int)$fila['id']);
         $stmt->close();
     }

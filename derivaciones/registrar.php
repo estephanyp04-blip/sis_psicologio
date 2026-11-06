@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('derivaciones/registrar.php');
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
 include '../includes/navbar.php';

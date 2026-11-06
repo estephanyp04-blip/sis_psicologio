@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('roles/registrar.php');
 require_once __DIR__ . '/../config/conexion.php';
 $modulos = $conexion->query("SELECT cod_modulo,nombre,orden FROM modulos WHERE estado='Activo' ORDER BY orden,cod_modulo")->fetch_all(MYSQLI_ASSOC);
-$modulosConCambioEstado = ['Usuarios', 'Estudiantes', 'Derivaciones', 'Citas'];
+$modulosConCambioEstado = ['Usuarios', 'Estudiantes', 'Derivaciones', 'Citas', 'Docentes'];
 $acciones = ['puede_ver' => 'Ver', 'puede_crear' => 'Crear', 'puede_editar' => 'Editar', 'puede_cambiar_estado' => 'Cambiar estado', 'puede_eliminar' => 'Eliminar'];
 include __DIR__ . '/../includes/header.php';
 include __DIR__ . '/../includes/sidebar.php';

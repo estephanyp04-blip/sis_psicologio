@@ -31,7 +31,7 @@ $stmt->close();
 if ($duplicado) roles_actualizar_error('Ya existe otro rol con ese nombre.', $idRol);
 
 $modulos = $conexion->query('SELECT cod_modulo,nombre FROM modulos ORDER BY cod_modulo')->fetch_all(MYSQLI_ASSOC);
-$modulosConCambioEstado = ['Usuarios', 'Estudiantes', 'Derivaciones', 'Citas'];
+$modulosConCambioEstado = ['Usuarios', 'Estudiantes', 'Derivaciones', 'Citas', 'Docentes'];
 $modulosBloqueadosRolesBase = ['Dashboard', 'Estadísticas', 'Estudiantes'];
 try {
     $conexion->begin_transaction();

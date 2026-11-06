@@ -3,9 +3,18 @@ require_once __DIR__ . '/includes/autenticacion.php';
 requerir_acceso('index.php');
 require_once __DIR__ . '/config/conexion.php';
 require_once __DIR__ . '/estadisticas/datos.php';
+require_once __DIR__ . '/citas/datos.php';
 
 $tituloPagina = 'Panel principal';
 $panel = null;
+$calendario = null;
+$errorCalendario = '';
+if(login_puede('citas/listar.php')) {
+    try { $calendario=cita_calendario_datos($conexion,$_GET); }
+    catch(InvalidArgumentException $error) { http_response_code(422);$errorCalendario=$error->getMessage(); }
+    catch(Throwable $error) { http_response_code(503);$errorCalendario='No se pudo consultar el calendario. Intente nuevamente.';error_log('Calendario del panel: '.$error->getMessage()); }
+}
+$urlAgenda = static fn(array $filtros=[]): string => login_url('index.php'.($filtros?'?'.http_build_query($filtros):'')).'#agenda-calendario';
 try {
     $panel = estadisticas_panel($conexion);
 } catch (Throwable $error) {
@@ -89,28 +98,59 @@ include __DIR__ . '/includes/navbar.php';
                     <?php endif; ?>
                 </section>
 
-                <section class="panel-bloque" aria-labelledby="titulo-agenda">
-                    <header class="panel-bloque-cabecera"><h2 id="titulo-agenda">Agenda de hoy</h2>
-                        <a href="<?= login_html(login_url('citas/listar.php')) ?>">Ver todas las citas <span aria-hidden="true">↗</span></a></header>
-                    <p class="panel-contexto"><?= $fechaVisible($panel['hoy']) ?> · <?= count($panel['agenda']) ?> citas, sin canceladas.</p>
-                    <?php if (!$panel['agenda']): ?>
-                        <p class="panel-vacio" role="status">No hay citas programadas para hoy.</p>
-                    <?php else: ?>
-                        <ol class="panel-agenda">
-                            <?php foreach ($panel['agenda'] as $cita): ?>
-                                <li data-cita="<?= (int)$cita['cod_cita'] ?>">
-                                    <time datetime="<?= login_html($panel['hoy'].'T'.$cita['hora']) ?>"><?= substr($cita['hora'],0,5) ?></time>
-                                    <div class="panel-cita panel-cita-<?= strtolower($cita['estado']) ?>">
-                                        <a href="<?= login_html(login_url('citas/editar.php?id='.(int)$cita['cod_cita'])) ?>"><?= login_html($cita['nombres'].' '.$cita['apellidos']) ?></a>
-                                        <span><?= login_html($cita['estado']) ?></span><small>Profesional: <?= login_html($cita['profesional']) ?></small>
-                                    </div>
-                                </li>
-                            <?php endforeach; ?>
-                        </ol>
+                <?php if(login_puede('citas/listar.php')): ?>
+                <section class="panel-bloque panel-calendario" id="agenda-calendario" aria-labelledby="titulo-agenda">
+                    <header class="panel-bloque-cabecera"><h2 id="titulo-agenda">Agenda y calendario</h2><a href="<?= login_html(login_url('citas/listar.php')) ?>">Todas las citas ↗</a></header>
+                    <?php if($errorCalendario): ?><p class="alert alert-danger m-3" role="alert"><?= login_html($errorCalendario) ?> <a href="<?= login_html($urlAgenda()) ?>">Volver a hoy</a></p>
+                    <?php elseif($calendario): $diaSeleccionado=$calendario['seleccion'];$citasDia=$calendario['por_dia'][$diaSeleccionado]??[]; ?>
+                    <?php if(!empty($_SESSION['mensaje_cita_estado'])): ?><p class="alert alert-info m-3" role="status"><?= login_html($_SESSION['mensaje_cita_estado']) ?></p><?php unset($_SESSION['mensaje_cita_estado']);endif; ?>
+                    <div class="panel-calendario-mes">
+                        <nav class="calendario-navegacion" aria-label="Cambiar mes de la agenda">
+                            <a class="btn btn-outline-secondary" aria-label="Mes anterior" href="<?= login_html($urlAgenda(['mes'=>$calendario['anterior']])) ?>">‹</a>
+                            <h3><?= login_html($calendario['titulo']) ?></h3>
+                            <a class="btn btn-outline-secondary" aria-label="Mes siguiente" href="<?= login_html($urlAgenda(['mes'=>$calendario['siguiente']])) ?>">›</a>
+                        </nav>
+                        <form method="get" action="<?= login_html(login_url('index.php').'#agenda-calendario') ?>" class="calendario-selector" id="filtro-calendario">
+                            <label class="visually-hidden" for="mes">Consultar mes</label><input type="month" id="mes" name="mes" class="form-control" value="<?= login_html($calendario['mes']) ?>" required>
+                            <button class="btn btn-primary">Ver mes</button><a class="btn btn-outline-primary" href="<?= login_html($urlAgenda()) ?>">Hoy</a>
+                        </form>
+                        <div class="calendario-cuadricula" aria-label="<?= login_html($calendario['titulo']) ?>">
+                            <?php foreach(['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'] as $nombreDia): ?><strong class="calendario-semana"><?= $nombreDia ?></strong><?php endforeach; ?>
+                            <?php for($vacio=1;$vacio<(int)$calendario['inicio']->format('N');$vacio++): ?><span aria-hidden="true"></span><?php endfor; ?>
+                            <?php for($numeroDia=1;$numeroDia<=(int)$calendario['inicio']->format('t');$numeroDia++):
+                                $fechaDia=$calendario['mes'].'-'.str_pad((string)$numeroDia,2,'0',STR_PAD_LEFT);$cantidadDia=count($calendario['por_dia'][$fechaDia]??[]); ?>
+                                <a class="calendario-dia <?= $fechaDia===$diaSeleccionado?'calendario-seleccionado':'' ?> <?= $fechaDia===date('Y-m-d')?'calendario-hoy':'' ?>" href="<?= login_html($urlAgenda(['mes'=>$calendario['mes'],'fecha'=>$fechaDia])) ?>" data-fecha="<?= $fechaDia ?>" <?= $fechaDia===$diaSeleccionado?'aria-current="date"':'' ?> aria-label="<?= login_html($fechaVisible($fechaDia).', '.$cantidadDia.' citas') ?>"><strong><?= $numeroDia ?></strong><small><?= $cantidadDia ?> <span>citas</span></small></a>
+                            <?php endfor; ?>
+                        </div>
+                        <p class="calendario-ayuda">Selecciona un día para ver sus horarios. El conteo incluye las citas canceladas, identificadas en el listado.</p>
+                    </div>
+                    <div class="calendario-agenda-cabecera"><h3 id="agenda-fecha"><?= $diaSeleccionado===date('Y-m-d')?'Agenda de hoy':'Agenda del día' ?> · <?= $fechaVisible($diaSeleccionado) ?></h3><span><?= count($citasDia) ?> citas</span>
+                        <?php if(login_puede('citas/registrar.php') && $diaSeleccionado>=date('Y-m-d')): ?><a class="btn btn-sm btn-primary" href="<?= login_html(login_url('citas/registrar.php?fecha='.$diaSeleccionado)) ?>">+ Programar cita</a><?php endif; ?>
+                    </div>
+                    <?php if(!$citasDia): ?><p class="panel-vacio" role="status">No hay citas programadas para esta fecha.</p><?php else: ?>
+                    <ol class="panel-agenda" aria-labelledby="agenda-fecha">
+                        <?php foreach($citasDia as $cita): ?><li data-cita="<?= (int)$cita['cod_cita'] ?>">
+                            <time datetime="<?= login_html($diaSeleccionado.'T'.$cita['hora']) ?>"><?= substr($cita['hora'],0,5) ?></time>
+                            <div class="panel-cita panel-cita-<?= strtolower($cita['estado']) ?>">
+                                <?php if(login_puede('citas/editar.php')): ?><a href="<?= login_html(login_url('citas/editar.php?id='.(int)$cita['cod_cita'])) ?>"><?= login_html($cita['nombres'].' '.$cita['apellidos']) ?></a><?php else: ?><strong><?= login_html($cita['nombres'].' '.$cita['apellidos']) ?></strong><?php endif; ?>
+                                <span>Estado: <?= login_html($cita['estado']) ?></span><small>Profesional: <?= login_html($cita['profesional']) ?></small>
+                                <?php if(login_puede('citas/cancelar.php') && in_array($cita['estado'],['Pendiente','Reprogramada'],true)): ?><details class="calendario-acciones"><summary>Cambiar estado o reprogramar</summary>
+                                    <form action="<?= login_html(login_url('citas/cancelar.php')) ?>" method="post" class="row g-2 mt-1">
+                                        <?= login_campo_csrf() ?><input type="hidden" name="cod_cita" value="<?= (int)$cita['cod_cita'] ?>"><input type="hidden" name="volver" value="panel"><input type="hidden" name="agenda_mes" value="<?= login_html($calendario['mes']) ?>"><input type="hidden" name="agenda_fecha" value="<?= $diaSeleccionado ?>">
+                                        <div class="col-12"><label for="estado-<?= (int)$cita['cod_cita'] ?>" class="form-label">Estado</label><select id="estado-<?= (int)$cita['cod_cita'] ?>" name="estado" class="form-select"><?php foreach(array_unique([$cita['estado'],'Reprogramada','Atendida','Cancelada']) as $estadoCita): ?><option><?= $estadoCita ?></option><?php endforeach; ?></select></div>
+                                        <div class="col-12 col-sm-6"><label for="fecha-<?= (int)$cita['cod_cita'] ?>" class="form-label">Fecha</label><input id="fecha-<?= (int)$cita['cod_cita'] ?>" name="fecha" type="date" class="form-control" value="<?= $cita['fecha'] ?>" required></div>
+                                        <div class="col-12 col-sm-6"><label for="hora-<?= (int)$cita['cod_cita'] ?>" class="form-label">Hora</label><select id="hora-<?= (int)$cita['cod_cita'] ?>" name="hora" class="form-select"><?php foreach(cita_horas() as $horaCita): ?><option <?= substr($cita['hora'],0,5)===$horaCita?'selected':'' ?>><?= $horaCita ?></option><?php endforeach; ?></select></div>
+                                        <div class="col-12"><button class="btn btn-primary btn-sm">Guardar estado/horario</button></div>
+                                    </form></details><?php endif; ?>
+                            </div>
+                        </li><?php endforeach; ?>
+                    </ol><?php endif; ?>
                     <?php endif; ?>
-                </section>
+                </section><?php endif; ?>
             </div>
             <p class="panel-definiciones">Cada seguimiento guardado cuenta como una sesión. Las citas pendientes incluyen las reprogramadas. Los datos se actualizan al abrir o recargar el panel.</p>
         <?php endif; ?>
 
+    </div>
+</main>
 <?php include __DIR__ . '/includes/footer.php'; ?>

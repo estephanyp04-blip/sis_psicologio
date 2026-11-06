@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('derivaciones/ver.php');
 
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/datos.php';
 
 $baseUrl = rtrim(login_config()['base_url'], '/');
@@ -52,8 +52,8 @@ $sql = "SELECT
             e.apellidos AS estudiante_apellidos,
             e.curso,
             e.paralelo,
-            persona.nombres AS docente_nombres,
-            persona.apellidos AS docente_apellidos
+            COALESCE(d.autor_nombres,persona.nombres) AS docente_nombres,
+            COALESCE(d.autor_apellidos,persona.apellidos) AS docente_apellidos
         FROM derivaciones d
         LEFT JOIN vista_estudiantes e
             ON e.cod_estudiante = d.cod_estudiante
@@ -62,11 +62,11 @@ $sql = "SELECT
         LEFT JOIN docentes doc
             ON doc.cod_docente = d.cod_docente
         LEFT JOIN usuarios persona
-            ON persona.cod_usuario = doc.cod_usuario
+            ON persona.cod_usuario = COALESCE(d.cod_usuario_autor,doc.cod_usuario)
         LEFT JOIN usuarios psicologa_usuario
             ON psicologa_usuario.cod_usuario = d.cod_psicologa_solicitada
         WHERE d.cod_derivacion = ?
-          AND (? <= 0 OR d.cod_docente = ?)
+          AND (? <= 0 OR (d.cod_docente = ? AND (d.cod_usuario_autor IS NULL OR d.cod_usuario_autor=(SELECT cod_usuario FROM docentes WHERE cod_docente=d.cod_docente))))
         LIMIT 1";
 
 $stmt = $conexion->prepare($sql);
@@ -237,7 +237,9 @@ include '../includes/navbar.php';
                 <?php elseif ($citaVinculada && login_puede('citas/editar.php')): ?>
                 <a class="btn btn-primary" href="../citas/editar.php?id=<?= (int)$citaVinculada['cod_cita'] ?>">Ver cita programada</a>
                 <?php endif; ?>
-                <a class="btn btn-outline-primary" href="../historias_clinicas/registrar.php?cod_derivacion=<?= (int)$idDerivacion ?>">Abrir historia</a>
+                <?php if (login_puede('historias_clinicas/registrar.php')): ?>
+                <a class="btn btn-outline-primary" href="../historias_clinicas/registrar.php?cod_derivacion=<?= (int)$idDerivacion ?>">Crear nueva historia clínica</a>
+                <?php endif; ?>
             </div>
             <form action="cambiar_estado.php" method="POST">
                 <?= login_campo_csrf() ?><input type="hidden" name="cod_derivacion" value="<?= (int)$idDerivacion ?>">

@@ -12,6 +12,10 @@ $filtros = estadisticas_filtros([]);
 $pagina = 1;
 $paginaEstudiantes = 1;
 $porPagina = 20;
+$filas = [];
+$filasEstudiantes = [];
+$paginas = 1;
+$paginasEstudiantes = 1;
 try {
     $cursos = $conexion->query('SELECT cod_curso,nombre FROM cursos ORDER BY orden,nombre')->fetch_all(MYSQLI_ASSOC);
     $filtros = estadisticas_filtros($_GET);

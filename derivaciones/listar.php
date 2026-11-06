@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('derivaciones/listar.php');
 
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 
 /*  CONFIGURACIÓN Y SESIÓN */
 
@@ -41,6 +41,13 @@ function etiquetaEstado(string $estado): string
 
 
 
+require_once __DIR__.'/../includes/trazabilidad_datos.php';
+try {
+    [$desde,$hasta]=flujo_filtro_fechas($_GET);
+    $prioridadFiltro=flujo_texto($_GET['prioridad']??'',10);
+    if(!in_array($prioridadFiltro,['','Alta','Media','Baja'],true))throw new InvalidArgumentException('Prioridad no válida.');
+}catch(InvalidArgumentException $e){http_response_code(422);exit(login_html($e->getMessage()));}
+$condicionesFiltro=($desde!==''?" AND d.fecha>='$desde'":'').($hasta!==''?" AND d.fecha<='$hasta'":'').($prioridadFiltro!==''?" AND d.prioridad='$prioridadFiltro'":'');
 $sql = "
     SELECT
         d.cod_derivacion,
@@ -54,8 +61,8 @@ $sql = "
         e.curso,
         e.paralelo,
 
-        persona.nombres AS docente_nombres,
-        persona.apellidos AS docente_apellidos
+        COALESCE(d.autor_nombres,persona.nombres) AS docente_nombres,
+        COALESCE(d.autor_apellidos,persona.apellidos) AS docente_apellidos
 
     FROM derivaciones d
 
@@ -67,7 +74,8 @@ $sql = "
     LEFT JOIN docentes doc
         ON doc.cod_docente = d.cod_docente
     LEFT JOIN usuarios persona
-        ON persona.cod_usuario = doc.cod_usuario
+        ON persona.cod_usuario = COALESCE(d.cod_usuario_autor,doc.cod_usuario)
+    WHERE 1=1 $condicionesFiltro
 ";
 
 
@@ -76,7 +84,7 @@ $sql = "
 if ($esDocente) {
 
     $sql .= "
-        WHERE d.cod_docente = ?
+        AND d.cod_docente = ? AND (d.cod_usuario_autor IS NULL OR d.cod_usuario_autor=(SELECT cod_usuario FROM docentes WHERE cod_docente=d.cod_docente))
     ";
 
     $sql .= "
@@ -353,6 +361,7 @@ include '../includes/navbar.php';
 
         <!-- FILTROS-->
 
+        <form method="get" class="card p-3 mb-3"><div class="row g-3"><div class="col-md-3"><label for="desde" class="form-label">Desde</label><input type="date" id="desde" name="desde" class="form-control" value="<?= login_html($desde) ?>"></div><div class="col-md-3"><label for="hasta" class="form-label">Hasta</label><input type="date" id="hasta" name="hasta" class="form-control" value="<?= login_html($hasta) ?>"></div><div class="col-md-3"><label for="prioridad" class="form-label">Prioridad</label><select name="prioridad" id="prioridad" class="form-select"><option value="">Todas</option><?php foreach(['Alta','Media','Baja'] as $p): ?><option <?= $p===$prioridadFiltro?'selected':'' ?>><?= $p ?></option><?php endforeach; ?></select></div><div class="col-md-3 d-flex gap-2 align-items-end"><button class="btn btn-primary">Aplicar</button><a class="btn btn-light" href="listar.php">Restablecer</a></div></div></form>
         <section class="derivaciones-filtros">
 
             <!-- BÚSQUEDA -->
@@ -547,6 +556,7 @@ include '../includes/navbar.php';
 
                             <tr
                                 data-registro="1"
+                                data-derivacion-id="<?= (int) $fila['cod_derivacion'] ?>"
                                 data-estado="<?= login_html(etiquetaEstado($fila['estado'])) ?>"
                                 data-curso="<?= login_html($fila['curso'] ?? '') ?>"
                             >

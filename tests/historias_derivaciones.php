@@ -87,7 +87,7 @@ function formulario(string $html, string $id): array
         if ($campo->tagName === 'textarea') $valor = $campo->textContent;
         if ($campo->tagName === 'select') {
             $opcion = $xpath->query('.//option[@selected]', $campo)->item(0) ?? $xpath->query('.//option', $campo)->item(0);
-            $valor = $opcion ? $opcion->getAttribute('value') : '';
+            $valor = $opcion ? ($opcion->hasAttribute('value') ? $opcion->getAttribute('value') : trim($opcion->textContent)) : '';
         }
         $pares[] = rawurlencode($campo->getAttribute('name')) . '=' . rawurlencode($valor);
     }
@@ -147,7 +147,11 @@ try {
     $antes = foto($bd);
     rechaza(fn() => historia_guardar($bd, array_replace($entrada, ['observaciones' => 'Cambio que debe revertirse']), 9999, $id), 'Acepta auditor inexistente.');
     verificar(foto($bd) === $antes, 'Fallo de auditoría no revierte historia e hijos.');
-    rechaza(fn() => historia_guardar($bd, $entrada, 101), 'Permite dos historias para un estudiante.');
+    $segundaHistoria = historia_guardar($bd, array_replace($entrada, ['cod_derivacion' => 2, 'motivo_consulta' => 'Segunda historia independiente']), 102);
+    verificar($segundaHistoria !== $id, 'No asigna un código propio a la segunda historia.');
+    verificar((int)fila($bd, 'SELECT COUNT(*) n FROM historias_clinicas WHERE cod_estudiante=1')['n'] === 2, 'No permite dos historias para el mismo estudiante.');
+    verificar(fila($bd, "SELECT motivo_consulta FROM historias_clinicas WHERE cod_historia=$id")['motivo_consulta'] === $guardada['motivo_consulta'], 'Crear otra historia modifica la anterior.');
+    verificar((int)fila($bd, "SELECT cod_derivacion_origen FROM historias_clinicas WHERE cod_historia=$segundaHistoria")['cod_derivacion_origen'] === 2, 'La segunda historia pierde su derivación.');
     rechaza(fn() => historia_guardar($bd, array_replace($entrada, ['cod_estudiante' => 2, 'cod_derivacion' => 1]), 101), 'Alta vincula derivación ajena.');
     $sinDerivacion = historia_guardar($bd, array_replace($entrada, ['cod_estudiante' => 2, 'cod_derivacion' => '']), 101);
     $sin = fila($bd, "SELECT * FROM historias_clinicas WHERE cod_historia=$sinDerivacion");
@@ -194,6 +198,21 @@ try {
         [0 => ['pipe', 'r'], 1 => ['file', $temporal . '/servidor.log', 'a'], 2 => ['file', $temporal . '/servidor.log', 'a']], $pipes, $temporal);
     fclose($pipes[0]);
     for ($i = 0; $i < 40; ++$i) { $s = @fsockopen('127.0.0.1', $puerto, $errno, $error, 0.1); if ($s) { fclose($s); break; } usleep(100000); }
+    foreach (['historias_clinicas/registrar.php?cod_estudiante=1', 'historias_clinicas/registrar.php?cod_derivacion=2'] as $rutaAlta) {
+        $r = http($rutaAlta, null, 'prueba_psicologa');
+        verificar($r['codigo'] === 200 && str_contains($r['cuerpo'], 'formHistoriaClinica'), 'Bloquea el formulario de otra historia del mismo estudiante.');
+        $nueva = formulario($r['cuerpo'], 'formHistoriaClinica');
+        verificar((int)$nueva['cod_estudiante'] === 1, 'Pierde el estudiante al abrir otra historia.');
+    }
+    $r = http('informes/registrar.php?cod_estudiante=1');
+    $docHistorias = new DOMDocument();
+    @$docHistorias->loadHTML('<?xml encoding="UTF-8">' . $r['cuerpo']);
+    $xpathHistorias = new DOMXPath($docHistorias);
+    verificar($xpathHistorias->query('//select[@id="cod_estudiante"]/option[@value="1"]')->length === 1, 'Duplica al estudiante en el selector de informes.');
+    verificar($xpathHistorias->query('//select[@id="cod_historia"]/option[@value!=""]')->length === 2, 'El informe no permite elegir las dos historias.');
+    $r = http('informes/antecedentes.php?cod_estudiante=1&fecha=' . date('Y-m-d'));
+    $antecedentes = json_decode($r['cuerpo'], true, 512, JSON_THROW_ON_ERROR);
+    verificar($r['codigo'] === 200 && $antecedentes['requiere_historia'] && $antecedentes['cod_historia'] === 0, 'Elige una historia arbitraria para el informe.');
     foreach (['' => 400, '?cod_estudiante=0' => 400, '?cod_estudiante[]=1' => 400, '?cod_estudiante=9999' => 404, '?cod_estudiante=1' => 200, '?cod_estudiante=4' => 200] as $consulta => $codigo) {
         $r = http('historias_clinicas/ajax_derivaciones.php' . $consulta);
         verificar($r['codigo'] === $codigo && str_contains($r['cabeceras'], 'application/json'), 'Contrato JSON incorrecto.');
@@ -287,6 +306,7 @@ try {
         verificar(($resultado['ok'] ?? false) === true, 'Prueba navegador: ' . json_encode($resultado, JSON_UNESCAPED_UNICODE));
         echo 'Navegador Chrome: ' . $resultado['total'] . " comprobaciones correctas.\n";
         verificar(fila($bd, 'SELECT motivo_consulta FROM historias_clinicas WHERE cod_estudiante=5')['motivo_consulta'] === 'Alta sin derivación desde navegador', 'El alta de navegador no persistió.');
+        verificar((int)fila($bd, 'SELECT cod_historia FROM informe_individual ORDER BY cod_informe DESC LIMIT 1')['cod_historia'] === $id, 'El informe del navegador guarda otra historia.');
         verificar((int)fila($bd, 'SELECT cod_psicologa FROM historias_clinicas WHERE cod_estudiante=1')['cod_psicologa'] === 101, 'La edición de navegador cambia autor.');
     }
     echo "OK: $total comprobaciones. Ninguna escritura en la base real.\n";

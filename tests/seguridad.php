@@ -6,7 +6,7 @@ $raiz = dirname(__DIR__);
 $permisos = require $raiz . '/config/permisos.php';
 $soloAcceso = in_array('--solo-acceso', $argv, true);
 $internosModulo = [
-    'estudiantes/datos.php', 'estudiantes/csv.php', 'derivaciones/datos.php',
+    'estudiantes/datos.php', 'estudiantes/csv.php', 'derivaciones/datos.php', 'docentes/datos.php',
     'citas/datos.php', 'citas/formulario.php', 'historias_clinicas/datos.php',
     'historias_clinicas/formulario.php', 'informes/datos.php', 'estadisticas/datos.php',
 ];
@@ -101,7 +101,7 @@ PHP
     foreach ($permisos as $ruta => $permiso) {
         $metodo = $permiso['metodos'][0];
         $r = peticion($ruta, $metodo);
-        if ($ruta === 'historias_clinicas/ajax_derivaciones.php') {
+        if (($permiso['formato'] ?? '') === 'json') {
             comprobar($r['codigo'] === 401, 'El endpoint JSON debe devolver 401 sin sesión.');
             comprobar(isset(json_decode($r['cuerpo'], true)['error']), 'El error de sesión no es JSON.');
         } else {

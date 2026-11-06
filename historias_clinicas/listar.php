@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('historias_clinicas/listar.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 
 $puedeCrear = login_puede('historias_clinicas/registrar.php');
 $puedeEditar = login_puede('historias_clinicas/editar.php');
@@ -16,6 +16,7 @@ $sql = "
     SELECT
         h.cod_historia,
         h.fecha_apertura,
+        h.cod_derivacion_origen,
         h.estado,
         e.ci,
         e.nombres,
@@ -245,6 +246,10 @@ include '../includes/navbar.php';
                                                 <?= login_html($nombreCompleto) ?>
                                             </strong>
 
+                                            <small>
+                                                Historia #<?= (int)$historia['cod_historia'] ?>
+                                                · <?= $historia['cod_derivacion_origen'] ? 'Derivación #' . (int)$historia['cod_derivacion_origen'] : 'Sin derivación' ?>
+                                            </small>
                                             <small>
                                                 CI:
                                                 <?= login_html(

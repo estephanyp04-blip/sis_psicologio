@@ -11,10 +11,11 @@ try {
     $_SESSION['tipo_mensaje'] = 'success';
     header('Location: ver.php?id=' . $id);
 } catch (Throwable $error) {
+    error_log('Guardado de historia clínica: ' . $error->getMessage());
     $_SESSION['datos_historia'] = ['id' => 0, 'datos' => historia_recuperar_entrada($_POST)];
     $_SESSION['mensaje'] = $error instanceof InvalidArgumentException ? $error->getMessage()
         : ($error instanceof mysqli_sql_exception && $error->getCode() === 1062
-            ? 'El estudiante ya tiene una historia clínica.' : 'No se pudo guardar la historia clínica.');
+            ? 'No se pudo guardar por un registro duplicado. Revise que la base de datos esté actualizada.' : 'No se pudo guardar la historia clínica.');
     $_SESSION['tipo_mensaje'] = 'danger';
     header('Location: registrar.php');
 }

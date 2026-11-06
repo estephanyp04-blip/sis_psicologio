@@ -2,7 +2,8 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('docentes/actualizar.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__ . '/datos.php';
 
 function regresarConError(
     string $mensaje,
@@ -217,6 +218,7 @@ try {
     $stmt->execute();
     $stmt->close();
 
+    docente_conservar_autoria($conexion, $idDocente);
     $stmt = $conexion->prepare('UPDATE docentes SET cod_usuario=? WHERE cod_docente=?');
     $stmt->bind_param('ii', $idUsuario, $idDocente);
     $stmt->execute();

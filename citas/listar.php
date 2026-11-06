@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('citas/listar.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
 include '../includes/navbar.php';
@@ -23,13 +23,13 @@ $rolUsuarioSesion = (int) ($_SESSION['cod_rol'] ?? 0);
 $idUsuarioSesion = (int) ($_SESSION['cod_usuario'] ?? 0);
 $solicitudesSql = "SELECT d.cod_derivacion,d.fecha_registro,d.prioridad,
         e.nombres,e.apellidos,ve.curso,ve.paralelo,
-        pd.nombres AS docente_nombres,pd.apellidos AS docente_apellidos,
+        COALESCE(d.autor_nombres,pd.nombres) AS docente_nombres,COALESCE(d.autor_apellidos,pd.apellidos) AS docente_apellidos,
         pu.nombres AS psicologa_nombres,pu.apellidos AS psicologa_apellidos
     FROM derivaciones d
     INNER JOIN estudiantes e ON e.cod_estudiante=d.cod_estudiante
     LEFT JOIN vista_estudiantes ve ON ve.cod_estudiante=e.cod_estudiante
     LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
-    LEFT JOIN usuarios pd ON pd.cod_usuario=doc.cod_usuario
+    LEFT JOIN usuarios pd ON pd.cod_usuario=COALESCE(d.cod_usuario_autor,doc.cod_usuario)
     LEFT JOIN usuarios pu ON pu.cod_usuario=d.cod_psicologa_solicitada
 
     WHERE d.solicitar_cita=1
@@ -48,6 +48,7 @@ $stmtSolicitudes->close();
 ?>
 
 <div class="main-content">
+    <?php if(login_puede('index.php')): ?><a class="btn btn-outline-primary mb-3" href="<?= login_html(login_url('index.php').'#agenda-calendario') ?>">Calendario del panel principal</a><?php endif; ?>
     <?php if ($solicitudesPendientes): ?>
     <section class="card border-warning shadow-sm mb-4">
         <div class="card-header bg-warning-subtle d-flex justify-content-between align-items-center flex-wrap gap-2">

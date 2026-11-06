@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('derivaciones/guardar.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/datos.php';
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: registrar.php');
@@ -14,7 +14,7 @@ function textoDerivacion(string $campo): string
     $valor = $_POST[$campo] ?? '';
     return is_string($valor) ? trim($valor) : '';
 }
-function enteroDerivacion($valor): int
+function enteroDerivacion(mixed $valor): int
 {
     if (!is_int($valor) && !is_string($valor)) {
         return 0;
@@ -28,7 +28,7 @@ function errorDerivacion(string $mensaje): void
     header('Location: registrar.php');
     exit;
 }
-function escaparDerivacion($valor): string
+function escaparDerivacion(mixed $valor): string
 {
     return htmlspecialchars((string) $valor, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
@@ -245,6 +245,8 @@ try {
     $archivoGuardado = null;
     $conexion->begin_transaction();
     try {
+        $docenteBloqueado=flujo_fila($conexion,"SELECT cod_usuario FROM docentes WHERE cod_docente=? AND estado='Activo' FOR UPDATE",[$idDocente]);
+        if(!$docenteBloqueado || ((int)$_SESSION['cod_rol']===3 && (int)$docenteBloqueado['cod_usuario']!==(int)$_SESSION['cod_usuario'])) throw new InvalidArgumentException('El perfil docente cambió o está inactivo. Actualice la sesión antes de continuar.');
         $stmt = $conexion->prepare('INSERT INTO derivaciones
             (fecha,cod_estudiante,cod_docente,cod_materia,motivo,observaciones,prioridad,estado,cod_psicologa_solicitada,solicitar_cita)
             VALUES (?,?,?,?,?,?,?,?,?,?)');
@@ -253,6 +255,7 @@ try {
         $idDerivacion = (int)$conexion->insert_id;
         $stmt->close();
         $stmtCategoria = $conexion->prepare('INSERT INTO derivacion_categorias (cod_derivacion,cod_categoria) VALUES (?,?)');
+        flujo_ejecutar($conexion, 'UPDATE derivaciones d JOIN docentes doc ON doc.cod_docente=d.cod_docente JOIN usuarios u ON u.cod_usuario=doc.cod_usuario SET d.cod_usuario_autor=u.cod_usuario,d.autor_nombres=u.nombres,d.autor_apellidos=u.apellidos WHERE d.cod_derivacion=?', [$idDerivacion]);
         foreach ($categoriasLimpias as $categoria) {
             $idCategoria = $categoriasPorNombre[$categoria];
             $stmtCategoria->bind_param('ii', $idDerivacion, $idCategoria);

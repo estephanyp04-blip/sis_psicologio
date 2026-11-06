@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('estudiantes/registrar.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 
 $datosEstudiante = $_SESSION['datos_estudiante'] ?? [];
 $mensajeRegistro = $_SESSION['mensaje'] ?? '';

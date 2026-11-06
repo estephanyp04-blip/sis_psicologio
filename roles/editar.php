@@ -19,7 +19,7 @@ $permisos = [];
 foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $permiso) $permisos[(int)$permiso['cod_modulo']] = $permiso;
 $stmt->close();
 $modulos = $conexion->query("SELECT cod_modulo,nombre,orden FROM modulos WHERE estado='Activo' ORDER BY orden,cod_modulo")->fetch_all(MYSQLI_ASSOC);
-$modulosConCambioEstado = ['Usuarios', 'Estudiantes', 'Derivaciones', 'Citas'];
+$modulosConCambioEstado = ['Usuarios', 'Estudiantes', 'Derivaciones', 'Citas', 'Docentes'];
 $modulosBloqueadosRolesBase = ['Dashboard', 'Estadísticas', 'Estudiantes'];
 $acciones = ['puede_ver' => 'Ver', 'puede_crear' => 'Crear', 'puede_editar' => 'Editar', 'puede_cambiar_estado' => 'Cambiar estado', 'puede_eliminar' => 'Eliminar'];
 include __DIR__ . '/../includes/header.php';

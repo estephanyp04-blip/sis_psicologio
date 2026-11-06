@@ -2,10 +2,13 @@
 
 ## Pruebas vigentes
 
+Las pruebas de historias y de fases cubren varias historias por estudiante: migración 014 sin pérdida de datos, altas desde una derivación existente, selección de historia en informes, separación de seguimientos y conteos del panel sin duplicar estudiantes. La opción `--navegador` de `historias_derivaciones.php` también comprueba el selector y el guardado de un informe asociado a una historia anterior.
+
 Ejecutar desde la raíz del proyecto, con MySQL iniciado y la conexión de `config/login.php` configurada:
 
 ```powershell
 & C:\xampp\php\php.exe tests\seguridad.php
+& C:\xampp\php\php.exe tests\fases.php
 & C:\xampp\php\php.exe tests\informes_actualizacion.php
 & C:\xampp\php\php.exe tests\migracion_identidad_academica.php
 & C:\xampp\php\php.exe tests\esquema_informes_importacion.php --navegador
@@ -14,16 +17,17 @@ Ejecutar desde la raíz del proyecto, con MySQL iniciado y la conexión de `conf
 & C:\xampp\php\php.exe tests\estadisticas.php --navegador
 ```
 
-Resultados completos con el esquema normalizado: 30 de octubre de 2026.
+Resultados completos con el esquema normalizado y migración 013: 2 de noviembre de 2026.
 
 | Suite | Comprobaciones |
 |---|---:|
-| Seguridad y flujos | 1041 |
+| Seguridad y flujos | 1116 |
+| Correcciones por fases y migración 013 | 44 |
 | Actualización de informes | 31 |
 | Identidad e historial académico | 12 |
 | Esquema, importación, estudiantes y docentes, con `--navegador` | 342 + 10 verificaciones dentro de Chrome |
 | Historias y derivaciones, con `--navegador` | 183 + 14 verificaciones dentro de Chrome |
-| Trazabilidad, con `--navegador` | 134 + 17 verificaciones dentro de Chrome |
+| Trazabilidad, con `--navegador` | 190 + 34 verificaciones dentro de Chrome; calendario integrado a 320, 390, 768, 1024 y 1440 px |
 | Estadísticas y panel, con `--navegador` | 74 + 19 verificaciones en Chrome a 1440 px y 19 a 390 px |
 
 `seguridad.php` e `informes_actualizacion.php` usan tablas MySQL `TEMPORARY`. `migracion_identidad_academica.php`, `esquema_informes_importacion.php`, `historias_derivaciones.php`, `trazabilidad.php` y `estadisticas.php` crean y eliminan bases `psicologia_test_*` con sufijo aleatorio y solo datos sintéticos. La cuenta necesita permisos para crear tablas temporales, bases, vistas y triggers, aplicar el esquema y eliminar las bases de prueba. No se copian pacientes ni cuentas de la base real.

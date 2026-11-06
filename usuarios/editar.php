@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('usuarios/editar.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 
 if(!$id){

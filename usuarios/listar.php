@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('usuarios/listar.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 $rolActual = (int) ($_SESSION['cod_rol'] ?? 0);
 $filtroRol = $rolActual === 1 ? '' : 'WHERE u.cod_rol=' . $rolActual;
 

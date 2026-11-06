@@ -2,7 +2,10 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('informes/listar.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__.'/datos.php';
+try {[$desde,$hasta]=flujo_filtro_fechas($_GET);}catch(InvalidArgumentException $e){http_response_code(422);exit(login_html($e->getMessage()));}
+$condicionFecha=($desde!==''?" AND i.fecha_inicio>='$desde'":'').($hasta!==''?" AND i.fecha_inicio<='$hasta'":'');
 
 $puedeCrear = login_puede('informes/registrar.php');
 $puedeEditar = login_puede('informes/editar.php');
@@ -14,7 +17,7 @@ $sql = "SELECT
             i.cod_informe,
             i.numero_ficha,
             i.fecha_inicio AS fecha,
-            d.numero_atenciones,
+            (SELECT COUNT(*) FROM seguimientos sx JOIN historias_clinicas hx ON hx.cod_historia=sx.cod_historia WHERE hx.cod_estudiante=d.cod_estudiante AND sx.fecha<=i.fecha_inicio) AS numero_atenciones,
             d.tipo_atencion,
             d.referido_por,
             i.estado,
@@ -30,7 +33,7 @@ $sql = "SELECT
         INNER JOIN vista_estudiantes e ON d.cod_estudiante=e.cod_estudiante
         INNER JOIN usuarios u ON i.cod_elaborado_por=u.cod_usuario
 
-        ORDER BY i.fecha_inicio DESC, i.cod_informe DESC";
+        WHERE 1=1 $condicionFecha ORDER BY i.fecha_inicio DESC, i.cod_informe DESC";
 
 $resultado = $conexion->query($sql);
 
@@ -42,8 +45,8 @@ $sqlEstadisticas = "SELECT
     COUNT(*) AS total,
     SUM(CASE WHEN estado = 'Borrador' THEN 1 ELSE 0 END) AS borradores,
     SUM(CASE WHEN estado = 'Finalizado' THEN 1 ELSE 0 END) AS finalizados
-    FROM informes
-    WHERE tipo = 'Individual'";
+    FROM informes i
+    WHERE tipo = 'Individual' $condicionFecha";
 
 $resultadoEstadisticas = $conexion->query($sqlEstadisticas);
 
@@ -131,7 +134,9 @@ include '../includes/navbar.php';
 
     </div>
 
+    <form method="get" class="card p-3 mb-3"><div class="row g-3"><div class="col-md-5"><label for="desde" class="form-label">Fecha desde</label><input type="date" id="desde" name="desde" class="form-control" value="<?= login_html($desde) ?>"></div><div class="col-md-5"><label for="hasta" class="form-label">Fecha hasta</label><input type="date" id="hasta" name="hasta" class="form-control" value="<?= login_html($hasta) ?>"></div><div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary">Filtrar fechas</button></div></div><a class="mt-2" href="listar.php">Restablecer fechas</a></form>
     <div class="derivaciones-filtros">
+        <a class="btn btn-outline-primary" href="mensual.php">Informes mensuales</a>
 
         <div class="filtro-busqueda">
             <i class="bi bi-search"></i>
@@ -161,7 +166,7 @@ include '../includes/navbar.php';
         <div class="tabla-titulo">
             <div>
                 <h2>Fichas psicológicas</h2>
-                <p>Informes registrados en el sistema</p>
+                <p>Informes registrados. Las atenciones cuentan seguimientos acumulados hasta la fecha de cada informe.</p>
             </div>
         </div>
 

@@ -8,7 +8,7 @@ try {
     unset($_SESSION['datos_seguimiento']);
     header('Location: ver.php?id=' . $id);
 } catch (Throwable $error) {
-    $_SESSION['datos_seguimiento'] = array_filter(array_intersect_key($_POST,array_flip(['cod_historia','cod_cita','fecha','descripcion','tecnicas_aplicadas','acuerdos','recomendaciones','proxima_sesion'])), 'is_scalar');
+    $_SESSION['datos_seguimiento'] = array_filter(array_intersect_key($_POST,array_flip(['cod_historia','cod_cita','fecha','descripcion','tecnicas_aplicadas','acuerdos','recomendaciones','proxima_sesion','cod_derivacion','reservar_proxima','proxima_hora','proxima_psicologa'])), 'is_scalar');
     $_SESSION['mensaje_seguimiento'] = $error instanceof InvalidArgumentException ? $error->getMessage() : 'No se pudo guardar el seguimiento.';
     header('Location: registrar.php?cod_historia=' . (int)filter_var($_POST['cod_historia'] ?? 0,FILTER_VALIDATE_INT));
 }

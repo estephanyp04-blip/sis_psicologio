@@ -6,7 +6,7 @@ El archivo [psicologia_db.sql](psicologia_db.sql) contiene el esquema final que 
 
 - `usuarios` guarda los datos de identidad y acceso; `docentes` se vincula mediante `cod_usuario`.
 - `secciones` e `historial_academico` relacionan curso, paralelo, turno y gestión de los estudiantes.
-- `historias_clinicas` usa `cod_psicologa`, `cod_derivacion_origen` e `cod_cita_origen`.
+- `historias_clinicas` usa `cod_psicologa`, `cod_derivacion_origen` e `cod_cita_origen`. Un estudiante puede tener varias historias, cada una con su código, autor, estado y seguimientos. La migración `014_historias_por_estudiante.php` reemplaza el índice único del estudiante por uno no único, sin modificar registros existentes. Los informes individuales permiten elegir la historia y conservan ese vínculo. La migración `015_seguimiento_desde_historias.php` solo registra la adopción de la comparación entre historias: no desactiva ni borra los seguimientos, que continúan siendo el registro cronológico de cada sesión.
 - Las columnas identificadoras que antes comenzaban con `id_` ahora comienzan con `cod_`.
 - `informes` guarda la cabecera y `informe_individual` el detalle y las relaciones del informe.
 - Las opciones clínicas, materias y categorías de derivación se guardan en catálogos relacionados.
@@ -40,6 +40,8 @@ Para establecer la contraseña de una cuenta importada:
 La herramienta usa la base configurada, solicita la contraseña por terminal y guarda su hash. No crea cuentas.
 
 ## Comprobación y actualización
+
+La migración normalizada `013_continuidad_atencion.php` conserva autoría de derivaciones, agrega el episodio y la próxima cita del seguimiento, motivo de cierre y totales/filtros del resumen mensual. El SQL de instalación incluye las columnas. Aplicación, recuperación y estado de la base local en [CONTINUIDAD_013.md](CONTINUIDAD_013.md).
 
 ```powershell
 & C:\xampp\php\php.exe database\migrar.php --base=psicologia_db --comprobar

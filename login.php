@@ -31,15 +31,15 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Iniciar sesión | Sistema Psicológico</title>
-    <link rel="icon" type="image/png" sizes="512x512" href="<?= login_html(login_url('asset/img/favicon.png')) ?>">
-    <link rel="apple-touch-icon" sizes="180x180" href="<?= login_html(login_url('asset/img/apple-touch-icon.png')) ?>">
+    <link rel="icon" type="image/png" sizes="512x512" href="<?= login_html(login_url('asset/img/favicon.png?v=2')) ?>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?= login_html(login_url('asset/img/apple-touch-icon.png?v=2')) ?>">
     <meta name="theme-color" content="#0f172a">
     <link href="<?= login_html(login_url('asset/css/login.css?v=4')) ?>" rel="stylesheet">
 </head>
 <body class="login-page">
 <main class="login-card" aria-labelledby="titulo-login">
     <header class="login-cabecera">
-        <img class="login-simbolo" src="<?= login_html(login_url('asset/img/logo-sistema.svg')) ?>" alt="">
+        <img class="login-simbolo" src="<?= login_html(login_url('asset/img/logo-psicologia.png')) ?>" alt="">
         <h1 id="titulo-login">Sistema Psicol&oacute;gico</h1>
 
     </header>

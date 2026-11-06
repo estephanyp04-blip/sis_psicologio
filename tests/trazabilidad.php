@@ -87,7 +87,7 @@ function formulario(string $html, string $id): array
         if ($campo->tagName === 'textarea') $valor = $campo->textContent;
         if ($campo->tagName === 'select') {
             $opcion = $xpath->query('.//option[@selected]', $campo)->item(0) ?? $xpath->query('.//option', $campo)->item(0);
-            $valor = $opcion ? $opcion->getAttribute('value') : '';
+            $valor = $opcion ? ($opcion->hasAttribute('value') ? $opcion->getAttribute('value') : trim($opcion->textContent)) : '';
         }
         $pares[] = rawurlencode($campo->getAttribute('name')) . '=' . rawurlencode($valor);
     }
@@ -113,7 +113,7 @@ try {
     $bd->query("INSERT INTO derivaciones (cod_derivacion,fecha,cod_estudiante,cod_docente,motivo,solicitar_cita,cod_psicologa_solicitada) VALUES (1,'$hoy',1,201,'Origen primero',1,102),(2,'$hoy',1,201,'Nuevo motivo distinto',0,NULL),(3,'$hoy',2,202,'Ajena',0,NULL)");
     mkdir($temporal . '/app', 0700); mkdir($temporal . '/sesiones', 0700);
     foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($raiz, FilesystemIterator::SKIP_DOTS)) as $archivo) {
-        if ($archivo->getExtension() !== 'php') continue;
+        if (!in_array($archivo->getExtension(),['php','css','js','woff','woff2','svg','png'],true)) continue;
         $relativa = substr($archivo->getPathname(), strlen($raiz) + 1);
         if (str_starts_with($relativa, 'tests' . DIRECTORY_SEPARATOR)) continue;
         $destino = $temporal . '/app/' . $relativa;
@@ -170,6 +170,13 @@ try {
     verificar((int)$historia['cod_cita']===$idCita && (int)$historia['cod_derivacion']===1,'No precarga el origen de la historia.');
     $historia['motivo_consulta']='Atención clínica <privada>';
     $r=http('historias_clinicas/guardar.php',$historia,'prueba_psicologa');
+    if (!str_contains($r['cabeceras'], 'ver.php?id=')) {
+        $errorAlta = http('historias_clinicas/registrar.php', null, 'prueba_psicologa');
+        $docError = new DOMDocument();
+        @$docError->loadHTML('<?xml encoding="UTF-8">' . $errorAlta['cuerpo']);
+        $alerta = (new DOMXPath($docError))->query('//*[contains(@class,"alert-danger")]')->item(0);
+        throw new RuntimeException('No se guardó la historia: ' . trim($alerta?->textContent ?? $r['cabeceras']));
+    }
     $h=fila($bd,'SELECT * FROM historias_clinicas WHERE cod_estudiante=1'); $idHistoria=(int)$h['cod_historia'];
     verificar((int)$h['cod_cita_origen']===$idCita && (int)$h['cod_derivacion_origen']===1,'Historia sin origen exacto.');
     $r=http('seguimientos/registrar.php?cod_historia='.$idHistoria.'&cod_cita='.$idCita);
@@ -199,7 +206,7 @@ try {
 
     // Nuevo episodio en el mismo expediente, sin reemplazar su derivación original.
     $segunda=cita_guardar($bd,['cod_estudiante'=>1,'cod_derivacion'=>2,'cod_psicologa'=>102,'fecha'=>$hoy,'hora'=>'10:00','estado'=>'Pendiente'],101);
-    $seguimiento2=seguimiento_guardar($bd,array_replace($seguimiento,['cod_cita'=>$segunda,'recomendaciones'=>'Recomendación segunda']),101);
+    $seguimiento2=seguimiento_guardar($bd,array_replace($seguimiento,['cod_cita'=>$segunda,'cod_derivacion'=>2,'recomendaciones'=>'Recomendación segunda']),101);
     informe_crear($bd,informe_datos(array_replace($informe,['cod_seguimiento'=>$seguimiento2])),101);
     verificar((int)fila($bd,'SELECT cod_derivacion FROM informe_individual ORDER BY cod_informe DESC LIMIT 1')['cod_derivacion']===2,'Informe del segundo episodio usa la primera derivación.');
     verificar((int)fila($bd,'SELECT cod_derivacion_origen FROM historias_clinicas WHERE cod_historia='.$idHistoria)['cod_derivacion_origen']===1,'Segundo episodio reemplaza origen del expediente.');
@@ -210,7 +217,7 @@ try {
     rechaza(fn()=>informe_actualizar($bd,$idInforme,informe_datos(array_replace($informe,['cod_seguimiento'=>$seguimiento2])),101),'Permite cambiar seguimiento de origen.');
     $r=http('derivaciones/cambiar_estado.php',['cod_derivacion'=>1,'estado'=>'Atendido']+$token,'prueba_psicologa');
     verificar(fila($bd,'SELECT estado FROM derivaciones WHERE cod_derivacion=1')['estado']==='Atendido','No cierra atención explícitamente.');
-    rechaza(fn()=>seguimiento_guardar($bd,array_replace($seguimiento,['cod_cita'=>0]),101),'Admite seguimiento de derivación cerrada.');
+    rechaza(fn()=>seguimiento_guardar($bd,array_replace($seguimiento,['cod_cita'=>0,'cod_derivacion'=>1]),101),'Admite seguimiento de derivación cerrada.');
     derivacion_cambiar_estado($bd,1,'En seguimiento',101);
     rechaza(fn()=>derivacion_cambiar_estado($bd,1,'Pendiente',101),'Regresa una atención a pendiente.');
     rechaza(fn()=>derivacion_cambiar_estado($bd,3,'Atendido',101),'Cierra una derivación sin historia/seguimiento.');
@@ -286,6 +293,53 @@ try {
     $r=http('derivaciones/eliminar.php',['cod_derivacion'=>40]+$token,'prueba_docente');
     verificar(fila($bd,'SELECT estado FROM derivaciones WHERE cod_derivacion=40')===['estado'=>'Pendiente'],'Elimina una derivación pendiente con cita y rompe el origen.');
     verificar((int)fila($bd,"SELECT COUNT(*) n FROM auditoria WHERE modulo IN ('citas','seguimientos','informes','derivaciones')")['n']>=10,'Falta auditoría del flujo.');
+    foreach (['index.php?mes='.date('Y-m').'&fecha='.$hoy,'informes/mensual.php','derivaciones/listar.php?desde='.$hoy.'&hasta='.$hoy.'&prioridad=Media','informes/listar.php?desde='.$hoy.'&hasta='.$hoy] as $rutaNueva) verificar(http($rutaNueva)['codigo']===200,'Falla nueva pantalla '.$rutaNueva);
+    verificar(http('index.php?mes=2026-13')['codigo']===422,'Calendario acepta mes inválido.');
+    verificar(http('derivaciones/listar.php?desde=2026-11-30&hasta=2026-11-01')['codigo']===422,'Filtro acepta rango invertido.');
+    verificar(http('informes/listar.php?desde=fecha-invalida')['codigo']===422,'Filtro de informe acepta fecha inválida.');
+    $r=http('informes/listar.php?desde=1900-01-01&hasta=1900-01-31');
+    verificar(!str_contains($r['cuerpo'],'data-ficha="'.$actual['numero_ficha'].'"'),'Filtro de fechas conserva informe fuera del período.');
+    $r=http('derivaciones/listar.php?desde=1900-01-01&hasta=1900-01-31');
+    verificar(!str_contains($r['cuerpo'],'ver.php?id=1"'),'Filtro de derivaciones conserva datos fuera del período.');
+    $bd->query("INSERT INTO derivaciones(cod_derivacion,fecha,cod_estudiante,cod_docente,motivo,prioridad) VALUES(900,'$hoy',4,201,'Solo prioridad alta ficticia','Alta')");
+    $r=http('derivaciones/listar.php?prioridad=Baja');
+    verificar(!str_contains($r['cuerpo'],'data-derivacion-id="900"'),'Filtro de prioridad no aplica.');
+    $r=http('derivaciones/listar.php?prioridad=Alta');
+    verificar(str_contains($r['cuerpo'],'data-derivacion-id="900"'),'Filtro de prioridad oculta coincidencia.');
+    $bd->query('DELETE FROM derivaciones WHERE cod_derivacion=900');
+    foreach(['prueba_docente','prueba_director'] as $rolRestringido) verificar(http('index.php',null,$rolRestringido)['codigo']===403,'Calendario expone citas a rol restringido.');
+    verificar(http('informes/antecedentes.php?cod_estudiante=1&fecha='.$hoy,null,'prueba_director')['codigo']===403,'Director consulta antecedentes clínicos.');
+    $r=http('informes/antecedentes.php?cod_estudiante=1&fecha='.$hoy,null,'prueba_psicologa');
+    verificar($r['codigo']===200 && isset(json_decode($r['cuerpo'],true)['numero_atenciones']),'No responde antecedentes al corte.');
+    $r=http('informes/guardar_mensual.php',['mes'=>date('Y-m')]+$token,'prueba_psicologa');
+    verificar($r['codigo']===303,'No guarda informe mensual por HTTP.');
+    $mensualId=(int)fila($bd,"SELECT cod_informe FROM informes WHERE tipo='Mensual' ORDER BY cod_informe DESC LIMIT 1")['cod_informe'];
+    verificar(http('informes/ver_mensual.php?id='.$mensualId,null,'prueba_director')['codigo']===200,'Director no consulta mensual.');
+    verificar(http('informes/ver.php?id='.$mensualId,null,'prueba_director')['codigo']===303,'Ruta individual no dirige al informe mensual.');
+    $atencionesGuardadas=(int)fila($bd,'SELECT numero_atenciones FROM informe_individual WHERE cod_informe='.$idInforme)['numero_atenciones'];
+    $bd->query('UPDATE informe_individual SET numero_atenciones=999 WHERE cod_informe='.$idInforme);
+    $r=http('informes/ver.php?id='.$idInforme);
+    verificar(str_contains($r['cuerpo'],'Valor guardado al emitir: 999') && str_contains($r['cuerpo'],'Atenciones registradas hasta la fecha del informe'),'Informe anterior no diferencia conteo actual y valor original.');
+    $bd->query('UPDATE informe_individual SET numero_atenciones='.$atencionesGuardadas.' WHERE cod_informe='.$idInforme);
+    verificar(http('informes/guardar_mensual.php',['mes'=>date('Y-m')]+$token,'prueba_director')['codigo']===403,'Director crea mensual.');
+    $bd->query("UPDATE permisos p JOIN modulos m ON m.cod_modulo=p.cod_modulo SET p.puede_cambiar_estado=0 WHERE p.cod_rol=2 AND m.nombre='Citas'");
+    $r=http('citas/procesar_editar.php',['cod_cita'=>$reutilizada,'estado'=>'Cancelada']+$token,'prueba_psicologa');
+    verificar(fila($bd,'SELECT estado FROM citas WHERE cod_cita='.$reutilizada)['estado']==='Pendiente','POST directo ignora permiso de estado.');
+    $bd->query("UPDATE permisos p JOIN modulos m ON m.cod_modulo=p.cod_modulo SET p.puede_cambiar_estado=1 WHERE p.cod_rol=2 AND m.nombre='Citas'");
+    $bd->query("UPDATE permisos p JOIN modulos m ON m.cod_modulo=p.cod_modulo SET p.puede_editar=0 WHERE p.cod_rol=2 AND m.nombre='Citas'");
+    verificar(http('citas/procesar_editar.php',['cod_cita'=>$reutilizada,'observaciones'=>'No autorizado']+$token,'prueba_psicologa')['codigo']===403,'Permiso de estado permite editar datos.');
+    $r=http('citas/cancelar.php',['cod_cita'=>$reutilizada,'estado'=>'Atendida','observaciones'=>'No autorizado','volver'=>'panel','agenda_mes'=>date('Y-m'),'agenda_fecha'=>$hoy]+$token,'prueba_psicologa');
+    $cambiada=fila($bd,'SELECT estado,observaciones FROM citas WHERE cod_cita='.$reutilizada);
+    verificar($r['codigo']===303 && $cambiada['estado']==='Atendida' && $cambiada['observaciones']!=='No autorizado','No separa permiso de estado de edición de datos.');
+    verificar(str_contains($r['cabeceras'],'index.php?mes='.date('Y-m').'&fecha='.$hoy.'#agenda-calendario'),'La acción no conserva el día seleccionado en el panel.');
+    $bd->query("UPDATE permisos p JOIN modulos m ON m.cod_modulo=p.cod_modulo SET p.puede_editar=1 WHERE p.cod_rol=2 AND m.nombre='Citas'");
+    verificar(http('docentes/cambiar_estado.php',['cod_docente'=>201,'estado'=>'Inactivo']+$token,'prueba_psicologa')['codigo']===403,'Psicóloga da de baja perfil docente.');
+    http('docentes/cambiar_estado.php',['cod_docente'=>201,'estado'=>'Inactivo']+$token);
+    verificar(fila($bd,'SELECT estado FROM docentes WHERE cod_docente=201')['estado']==='Inactivo' && fila($bd,'SELECT estado FROM usuarios WHERE cod_usuario=103')['estado']==='Activo','Baja de perfil altera cuenta.');
+    $r=http('derivaciones/listar.php',null,'prueba_docente');
+    verificar($r['codigo']!==200,'Perfil inactivo conserva sesión docente.');
+    http('docentes/cambiar_estado.php',['cod_docente'=>201,'estado'=>'Activo']+$token);
+    verificar(http('derivaciones/listar.php',null,'prueba_docente')['codigo']===200,'No restablece acceso al reactivar perfil.');
     if (in_array('--navegador',$argv,true)) {
         $bd->query("INSERT INTO derivaciones (cod_derivacion,fecha,cod_estudiante,cod_docente,motivo,solicitar_cita,cod_psicologa_solicitada) VALUES (41,'$hoy',3,201,'Motivo navegador del flujo',1,102)");
         $chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';

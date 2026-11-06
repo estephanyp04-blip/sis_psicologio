@@ -72,8 +72,8 @@ foreach ($permisosPrueba as $clave => $valores) {
 $insertPermiso->close();
 $db->query("CREATE TEMPORARY TABLE usuarios (cod_usuario INT PRIMARY KEY, nombres VARCHAR(60), apellidos VARCHAR(60), correo VARCHAR(120), usuario VARCHAR(40), password VARCHAR(255), estado VARCHAR(20), cod_rol INT)");
 $db->query("INSERT INTO usuarios VALUES (101,'Admin','Prueba','admin@example.test','prueba_admin','hash-prueba','Activo',1),(102,'Psicologa','Prueba','psicologa@example.test','prueba_psicologa','hash-prueba','Activo',2),(103,'Docente','Prueba','docente@example.test','prueba_docente','hash-prueba','Activo',3),(104,'Director','Prueba','director@example.test','prueba_director','hash-prueba','Activo',4),(105,'Otro','Docente','otro@example.test','otro_docente','hash-prueba','Activo',3)");
-$db->query("CREATE TEMPORARY TABLE docentes (cod_docente INT PRIMARY KEY, cod_usuario INT)");
-$db->query("INSERT INTO docentes VALUES (303,103),(305,105)");
+$db->query("CREATE TEMPORARY TABLE docentes (cod_docente INT PRIMARY KEY, cod_usuario INT, estado VARCHAR(10) DEFAULT 'Activo')");
+$db->query("INSERT INTO docentes (cod_docente,cod_usuario) VALUES (303,103),(305,105)");
 
 login_iniciar_sesion();
 // Cada petición construye su propio caso, sin heredar estado de otro ensayo.
@@ -94,7 +94,7 @@ switch ($caso['sesion'] ?? '') {
     case 'clave_cambiada': $db->query("UPDATE usuarios SET password='nuevo-hash' WHERE cod_usuario=" . (100 + $rol)); break;
     case 'rol_cambiado': $db->query('UPDATE usuarios SET cod_rol=4 WHERE cod_usuario=' . (100 + $rol)); break;
     case 'sin_docente': $db->query('DELETE FROM docentes WHERE cod_usuario=103'); break;
-    case 'docente_duplicado': $db->query('INSERT INTO docentes VALUES (306,103)'); break;
+    case 'docente_duplicado': $db->query('INSERT INTO docentes (cod_docente,cod_usuario) VALUES (306,103)'); break;
 }
 
 $GLOBALS['prueba_negocio'] = !empty($caso['negocio']);
@@ -118,7 +118,7 @@ if ($GLOBALS['prueba_negocio']) {
     $db->query("CREATE TEMPORARY TABLE categorias_derivacion (cod_categoria INT PRIMARY KEY, nombre VARCHAR(100), estado VARCHAR(20))");
     $db->query("INSERT INTO categorias_derivacion VALUES (1,'Rendimiento Académico','Activo')");
     $db->query('CREATE TEMPORARY TABLE derivacion_categorias (cod_derivacion INT, cod_categoria INT)');
-    $db->query("CREATE TEMPORARY TABLE derivaciones (cod_derivacion INT PRIMARY KEY, fecha DATE, cod_estudiante INT, cod_docente INT, cod_materia INT, motivo TEXT, observaciones TEXT, prioridad VARCHAR(20), estado VARCHAR(30), solicitar_cita TINYINT(1) NOT NULL DEFAULT 0, cod_psicologa_solicitada INT NULL, fecha_registro DATETIME)");
+    $db->query("CREATE TEMPORARY TABLE derivaciones (cod_derivacion INT PRIMARY KEY, fecha DATE, cod_estudiante INT, cod_docente INT, cod_usuario_autor INT NULL, autor_nombres VARCHAR(80), autor_apellidos VARCHAR(80), cod_materia INT, motivo TEXT, observaciones TEXT, prioridad VARCHAR(20), estado VARCHAR(30), solicitar_cita TINYINT(1) NOT NULL DEFAULT 0, cod_psicologa_solicitada INT NULL, fecha_registro DATETIME)");
     $db->query("INSERT INTO derivaciones (cod_derivacion,fecha,cod_estudiante,cod_docente,cod_materia,motivo,observaciones,prioridad,estado,solicitar_cita,cod_psicologa_solicitada,fecha_registro) VALUES (1,CURDATE(),1,303,1,'PROPIA_PRIVADA','Observacion propia','Media','Pendiente',0,NULL,NOW()),(2,CURDATE(),2,305,1,'AJENA_PRIVADA','Observacion ajena','Media','Pendiente',0,NULL,NOW())");
     $db->query("CREATE TEMPORARY TABLE citas (cod_cita INT PRIMARY KEY, cod_estudiante INT, fecha DATE, hora TIME, estado VARCHAR(20), observaciones TEXT, cod_derivacion INT NULL)");
     $db->query("INSERT INTO citas VALUES (1,1,CURDATE(),'09:00','Pendiente','Cita de prueba',NULL)");

@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('usuarios/cambiar_estado.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 
 if($_SERVER['REQUEST_METHOD']!=='POST'){
     header('Location: listar.php');

@@ -7,13 +7,15 @@ require_once __DIR__ . '/datos.php';
 
 $datosInforme = $_SESSION['datos_informe'] ?? [];
 $datosInforme += ['cod_estudiante' => (int)filter_var($_GET['cod_estudiante'] ?? 0,FILTER_VALIDATE_INT)];
+$datosInforme += ['cod_historia' => (int)filter_var($_GET['cod_historia'] ?? 0,FILTER_VALIDATE_INT)];
 $seguimientoSolicitado = (int)($datosInforme['cod_seguimiento'] ?? filter_var($_GET['cod_seguimiento'] ?? 0,FILTER_VALIDATE_INT));
 if (isset($_GET['cod_seguimiento']) && !isset($_SESSION['datos_informe'])) {
-    $origen = flujo_fila($conexion,'SELECT s.cod_seguimiento,h.cod_estudiante FROM seguimientos s JOIN historias_clinicas h ON h.cod_historia=s.cod_historia WHERE s.cod_seguimiento=?',[$seguimientoSolicitado]);
+    $origen = flujo_fila($conexion,'SELECT s.cod_seguimiento,h.cod_estudiante,h.cod_historia FROM seguimientos s JOIN historias_clinicas h ON h.cod_historia=s.cod_historia WHERE s.cod_seguimiento=?',[$seguimientoSolicitado]);
     if (!$origen || ($datosInforme['cod_estudiante'] && (int)$datosInforme['cod_estudiante'] !== (int)$origen['cod_estudiante'])) {
         http_response_code(404); exit('El seguimiento no corresponde al estudiante.');
     }
     $datosInforme['cod_estudiante']=(int)$origen['cod_estudiante'];
+    $datosInforme['cod_historia']=(int)$origen['cod_historia'];
 }
 unset($_SESSION['datos_informe']);
 
@@ -52,19 +54,25 @@ if($idUsuario>0){
 $numeroFicha = 'Se asignará al guardar';
 
 // Consulta
+$fechaCorte=flujo_fecha($datosInforme['fecha']??date('Y-m-d'));
+$historiaSolicitada = (int)$datosInforme['cod_historia'];
+$opcionesHistorias = $datosInforme['cod_estudiante'] ? informe_historias($conexion, (int)$datosInforme['cod_estudiante'], $fechaCorte) : [];
 $sqlEstudiantes="SELECT e.cod_estudiante,e.nombres,e.apellidos,e.curso,e.paralelo,
-    h.cod_historia,h.motivo_consulta,h.impresion_diagnostica diagnostico,
-    s.cod_seguimiento,s.recomendaciones,d.cod_derivacion,d.motivo motivo_derivacion,
-    CONCAT(doc_persona.nombres,' ',doc_persona.apellidos) docente_referente,
-    (SELECT COUNT(*) FROM citas c WHERE c.cod_estudiante=e.cod_estudiante AND c.estado='Atendida') numero_atenciones
-    FROM vista_estudiantes e LEFT JOIN historias_clinicas h ON h.cod_estudiante=e.cod_estudiante
+    h.cod_historia,CASE WHEN DATE(h.fecha_actualizacion)<='$fechaCorte' THEN h.motivo_consulta ELSE '' END motivo_consulta,CASE WHEN DATE(h.fecha_actualizacion)<='$fechaCorte' THEN h.impresion_diagnostica ELSE '' END diagnostico,
+    s.cod_seguimiento,s.recomendaciones,d.cod_derivacion,CASE WHEN DATE(d.fecha_actualizacion)<='$fechaCorte' THEN d.motivo ELSE '' END motivo_derivacion,
+    CONCAT(COALESCE(d.autor_nombres,doc_persona.nombres),' ',COALESCE(d.autor_apellidos,doc_persona.apellidos)) docente_referente,
+    (SELECT COUNT(*) FROM seguimientos sx JOIN historias_clinicas hx ON hx.cod_historia=sx.cod_historia WHERE hx.cod_estudiante=e.cod_estudiante AND sx.fecha<='$fechaCorte') numero_atenciones
+    FROM vista_estudiantes e LEFT JOIN historias_clinicas h ON h.cod_historia=(
+        SELECT MIN(hx.cod_historia) FROM historias_clinicas hx WHERE hx.cod_estudiante=e.cod_estudiante
+        AND hx.fecha_apertura<='$fechaCorte' AND ($historiaSolicitada=0 OR hx.cod_historia=$historiaSolicitada)
+        HAVING COUNT(*)=1)
     LEFT JOIN seguimientos s ON s.cod_seguimiento=(SELECT s2.cod_seguimiento FROM seguimientos s2 WHERE s2.cod_historia=h.cod_historia
-        ORDER BY (s2.cod_seguimiento=$seguimientoSolicitado) DESC,s2.fecha DESC,s2.cod_seguimiento DESC LIMIT 1)
+        AND s2.fecha<='$fechaCorte' ORDER BY (s2.cod_seguimiento=$seguimientoSolicitado) DESC,s2.fecha DESC,s2.cod_seguimiento DESC LIMIT 1)
     LEFT JOIN citas cs ON cs.cod_cita=s.cod_cita
-    LEFT JOIN derivaciones d ON d.cod_derivacion=COALESCE(cs.cod_derivacion,h.cod_derivacion_origen,
-        CASE WHEN h.cod_historia IS NULL THEN (SELECT d2.cod_derivacion FROM derivaciones d2 WHERE d2.cod_estudiante=e.cod_estudiante ORDER BY d2.fecha DESC,d2.cod_derivacion DESC LIMIT 1) ELSE NULL END)
+    LEFT JOIN derivaciones d ON d.cod_derivacion=COALESCE(s.cod_derivacion,cs.cod_derivacion,h.cod_derivacion_origen,
+        CASE WHEN h.cod_historia IS NULL THEN (SELECT d2.cod_derivacion FROM derivaciones d2 WHERE d2.cod_estudiante=e.cod_estudiante AND d2.fecha<='$fechaCorte' ORDER BY d2.fecha DESC,d2.cod_derivacion DESC LIMIT 1) ELSE NULL END) AND d.fecha<='$fechaCorte'
     LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
-    LEFT JOIN usuarios doc_persona ON doc_persona.cod_usuario=doc.cod_usuario
+    LEFT JOIN usuarios doc_persona ON doc_persona.cod_usuario=COALESCE(d.cod_usuario_autor,doc.cod_usuario)
     WHERE e.estado='Activo' ORDER BY e.apellidos,e.nombres";
 $resultadoEstudiantes=$conexion->query($sqlEstudiantes);
 
@@ -102,13 +110,13 @@ include __DIR__ . '/../includes/navbar.php';
                     Departamento de Psicología
                 </span>
                 <h2 class="mt-2">Nueva ficha psicológica</h2>
-                <p class="mb-0">Registro de informe psicológico según la ficha del Anexo 4.</p>
+                <p class="mb-0">Registro de informe psicológico basado en la ficha del Anexo E.</p>
             </div>
         </div>
 
         <form action="guardar.php" method="POST" id="formInforme" autocomplete="off">
             <?= login_campo_csrf() ?>
-            <input type="hidden" name="cod_historia" id="cod_historia"><input type="hidden" name="cod_seguimiento" id="cod_seguimiento"><p id="seguimiento_origen" class="text-muted"></p>
+            <input type="hidden" name="cod_seguimiento" id="cod_seguimiento" value="<?= $seguimientoSolicitado ?>"><p id="seguimiento_origen" class="text-muted" role="status"></p>
             <input type="hidden" name="cod_derivacion" id="cod_derivacion">
             <input type="hidden" name="estado" value="<?= login_html($datosInforme['estado'] ?? 'Borrador') ?>">
 
@@ -159,6 +167,16 @@ include __DIR__ . '/../includes/navbar.php';
                         </select>
                     </div>
 
+                    <div class="col-12">
+                        <label for="cod_historia" class="form-label">Historia clínica del informe</label>
+                        <select name="cod_historia" id="cod_historia" class="form-select" <?= count($opcionesHistorias)>1 ? 'required' : '' ?>>
+                            <option value="<?= $opcionesHistorias ? '' : '0' ?>"><?= $opcionesHistorias ? 'Seleccione una historia clínica' : 'Sin historia disponible en esta fecha' ?></option>
+                            <?php foreach ($opcionesHistorias as $opcionHistoria): ?>
+                            <option value="<?= (int)$opcionHistoria['cod_historia'] ?>" <?= $historiaSolicitada===(int)$opcionHistoria['cod_historia'] || (!$historiaSolicitada && count($opcionesHistorias)===1) ? 'selected' : '' ?>>Historia #<?= (int)$opcionHistoria['cod_historia'] ?> · <?= login_html($opcionHistoria['fecha_apertura'].' · '.$opcionHistoria['estado']) ?> · <?= $opcionHistoria['cod_derivacion_origen'] ? 'Derivación #'.(int)$opcionHistoria['cod_derivacion_origen'] : 'Sin derivación' ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted">El motivo, diagnóstico y seguimiento se cargarán desde la historia seleccionada.</small>
+                    </div>
                     <div class="col-md-4">
                         <label class="form-label">Curso</label>
                         <input type="text" id="curso" class="form-control bg-light" readonly>
@@ -182,7 +200,7 @@ include __DIR__ . '/../includes/navbar.php';
                 <hr>
                 <div class="row g-4">
                     <div class="col-md-4">
-                        <label class="form-label">N.º de atenciones</label>
+                        <label class="form-label">N.º total de atenciones del estudiante</label>
                         <input type="number" name="numero_atenciones" id="numero_atenciones" class="form-control bg-light" value="0" readonly>
                     </div>
 
@@ -373,16 +391,60 @@ document.addEventListener('DOMContentLoaded',function(){
         recomendaciones.value=opcion.dataset.recomendaciones||'';
     }
 
-    estudiante.addEventListener('change',cargarDatos);
+    let solicitudAntecedentes=0;
+    let seguimientoElegido=<?= $seguimientoSolicitado ?>;
+    let cargandoAntecedentes=false;
+    let errorAntecedentes=false;
+    async function actualizarAntecedentes(){
+        const solicitud=++solicitudAntecedentes;
+        if(!estudiante.value){btnGuardar.disabled=false;cargandoAntecedentes=false;return;}
+        cargandoAntecedentes=true;
+        errorAntecedentes=false;
+        btnGuardar.disabled=true;
+        try{
+            const consulta=new URLSearchParams({cod_estudiante:estudiante.value,fecha:document.getElementById('fecha').value,cod_seguimiento:seguimientoElegido,cod_historia:historia.value||0});
+            const respuesta=await fetch('antecedentes.php?'+consulta);
+            const datos=await respuesta.json();
+            if(solicitud!==solicitudAntecedentes)return;
+            if(!respuesta.ok)throw new Error(datos.error||'No se pudieron consultar los antecedentes.');
+            historia.replaceChildren(new Option(datos.historias.length?'Seleccione una historia clínica':'Sin historia disponible en esta fecha',datos.historias.length?'':'0'));
+            for(const h of datos.historias){
+                historia.add(new Option('Historia #'+h.cod_historia+' · '+h.fecha_apertura+' · '+h.estado+' · '+(h.cod_derivacion?'Derivación #'+h.cod_derivacion:'Sin derivación'),String(h.cod_historia)));
+            }
+            historia.required=datos.historias.length>0;
+            atenciones.value=datos.numero_atenciones;historia.value=datos.cod_historia?String(datos.cod_historia):(datos.historias.length?'':'0');
+            document.getElementById('cod_seguimiento').value=datos.cod_seguimiento||'0';
+            derivacion.value=datos.cod_derivacion||'';
+            docente.value=datos.docente_referente||'';
+            referido.value=datos.referido_por||'';
+            motivo.value=datos.motivo||'';diagnostico.value=datos.diagnostico||'';recomendaciones.value=datos.recomendaciones||'';
+            document.getElementById('seguimiento_origen').textContent=(datos.cod_seguimiento?'Seguimiento #'+datos.cod_seguimiento+'. ':'Sin seguimiento al corte. ')+datos.limitacion;
+            historiaEstado.value=datos.requiere_historia?'Seleccione una de las historias del estudiante':(datos.cod_historia?'Historia disponible al corte #'+datos.cod_historia:'Sin historia al corte');
+            btnGuardar.disabled=datos.requiere_historia;
+        }catch(error){if(solicitud===solicitudAntecedentes){errorAntecedentes=true;document.getElementById('seguimiento_origen').textContent=error.message;}}
+        finally{if(solicitud===solicitudAntecedentes)cargandoAntecedentes=false;}
+    }
+    estudiante.addEventListener('change',()=>{seguimientoElegido=0;historia.replaceChildren(new Option('Seleccione una historia clínica',''));cargarDatos();actualizarAntecedentes();});
+    historia.addEventListener('change',()=>{seguimientoElegido=0;actualizarAntecedentes();});
+    document.getElementById('fecha').addEventListener('change',()=>{historia.value='';actualizarAntecedentes();});
     cargarDatos();
     const datosRecuperados = <?= json_encode($datosInforme, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) ?>;
+    function restaurarDatos(){
     for (const campo of ['motivo','diagnostico','aspecto_cognitivo','aspectos_afectivos','diagnostico_acuerdos','recomendaciones','recibido_por','numero_atenciones','referido_por']) {
         if (Object.prototype.hasOwnProperty.call(datosRecuperados, campo)) {
             document.getElementById(campo).value = datosRecuperados[campo];
         }
     }
+    }
+    const solicitudInicial=solicitudAntecedentes+1;
+    actualizarAntecedentes().then(()=>{if(solicitudInicial===solicitudAntecedentes)restaurarDatos();});
 
     form.addEventListener('submit',function(event){
+        if(cargandoAntecedentes || errorAntecedentes || (historia.required && !historia.value)){
+            event.preventDefault();
+            document.getElementById('seguimiento_origen').textContent='Seleccione la historia y espere a que se carguen sus antecedentes.';
+            return;
+        }
         const tipos=form.querySelectorAll('input[name="tipo_atencion[]"]:checked');
 
         if(!estudiante.value){

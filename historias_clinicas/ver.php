@@ -7,14 +7,14 @@ requerir_acceso('historias_clinicas/ver.php');
  * Visualiza una historia clínica completa.
  */
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/datos.php';
 
 /* =========================================================
    HELPERS GENERALES
    ========================================================= */
 
-function mostrarDato($valor, string $vacio = 'No registrado'): string
+function mostrarDato(mixed $valor, string $vacio = 'No registrado'): string
 {
     $valor = trim((string)$valor);
     return $valor !== ''
@@ -39,7 +39,7 @@ function calcularEdad(?string $fechaNacimiento): string
     try {
         $nac = new DateTime($fechaNacimiento);
         return $nac->diff(new DateTime())->y . ' años';
-    } catch (Throwable $e) {
+    } catch (Throwable) {
         return 'No registrada';
     }
 }
@@ -95,7 +95,7 @@ try {
             h.peso_kg AS peso,
             h.valoracion_fisica AS valoracion,
             d.fecha AS fecha_derivacion,
-            TRIM(CONCAT(COALESCE(du.nombres,''),' ',COALESCE(du.apellidos,''))) AS derivado_por,
+            TRIM(CONCAT(COALESCE(d.autor_nombres,du.nombres,''),' ',COALESCE(d.autor_apellidos,du.apellidos,''))) AS derivado_por,
             e.codigo,
             e.ci,
             e.nombres,
@@ -115,7 +115,7 @@ try {
         FROM historias_clinicas h
         LEFT JOIN derivaciones d ON d.cod_derivacion = h.cod_derivacion_origen
         LEFT JOIN docentes doc ON doc.cod_docente = d.cod_docente
-        LEFT JOIN usuarios du ON du.cod_usuario = doc.cod_usuario
+        LEFT JOIN usuarios du ON du.cod_usuario = COALESCE(d.cod_usuario_autor,doc.cod_usuario)
         INNER JOIN vista_estudiantes e
             ON e.cod_estudiante = h.cod_estudiante
         LEFT JOIN usuarios u
@@ -230,11 +230,17 @@ include '../includes/navbar.php';
 <div class="container-fluid">
 <?php require_once __DIR__ . '/../includes/trazabilidad_vista.php'; flujo_panel($conexion,'historia',$h); ?>
 <div class="d-flex gap-2 my-3 d-print-none">
-    <?php if (login_puede('seguimientos/registrar.php')): ?>
-    <a class="btn btn-primary" href="../seguimientos/registrar.php?cod_historia=<?= (int)$h['cod_historia'] ?>">Registrar seguimiento</a>
+    <?php if (login_puede('historias_clinicas/registrar.php')): ?>
+    <a class="btn btn-primary" href="../historias_clinicas/registrar.php?cod_estudiante=<?= (int)$h['cod_estudiante'] ?>">Abrir nueva historia clínica</a>
+    <?php endif; ?>
+    <?php if ($h['estado'] !== 'Cerrada' && login_puede('seguimientos/registrar.php')): ?>
+    <a class="btn btn-outline-primary" href="../seguimientos/registrar.php?cod_historia=<?= (int)$h['cod_historia'] ?>">Registrar evolución</a>
+    <?php endif; ?>
+    <?php if (login_puede('estadisticas/index.php')): ?>
+    <a class="btn btn-outline-primary" href="../estadisticas/index.php?estudiante=<?= (int)$h['cod_estudiante'] ?>">Comparar historias del estudiante</a>
     <?php endif; ?>
     <?php if (login_puede('informes/registrar.php')): ?>
-    <a class="btn btn-outline-primary" href="../informes/registrar.php?cod_estudiante=<?= (int)$h['cod_estudiante'] ?>">Crear informe</a>
+    <a class="btn btn-outline-primary" href="../informes/registrar.php?cod_estudiante=<?= (int)$h['cod_estudiante'] ?>&amp;cod_historia=<?= (int)$h['cod_historia'] ?>">Crear informe de esta historia</a>
     <?php endif; ?>
 </div>
 
@@ -307,6 +313,7 @@ include '../includes/navbar.php';
         <div>
             <span>Estado</span>
             <strong><?= login_html($h['estado'] ?? 'Sin estado') ?></strong>
+            <?php if(!empty($h['motivo_cierre'])): ?><p>Motivo del último cierre: <?= nl2br(login_html($h['motivo_cierre'])) ?></p><?php endif; ?>
         </div>
 
         <div>

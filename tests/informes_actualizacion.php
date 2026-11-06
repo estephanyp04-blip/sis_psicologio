@@ -35,8 +35,10 @@ try {
         cod_derivacion INT UNSIGNED, cod_seguimiento INT UNSIGNED, numero_atenciones INT UNSIGNED,
         referido_por VARCHAR(150), tipo_atencion TEXT, motivo TEXT, diagnostico TEXT,
         aspecto_cognitivo TEXT, aspectos_afectivos TEXT, diagnostico_acuerdos TEXT, recibido_por VARCHAR(150),
-        CONSTRAINT fallo_detalle_prueba CHECK (numero_atenciones < 100)) ENGINE=InnoDB");
-    $bd->query('CREATE TEMPORARY TABLE seguimientos (cod_seguimiento INT PRIMARY KEY, fecha DATE) ENGINE=InnoDB');
+        CONSTRAINT fallo_detalle_prueba CHECK (motivo <> 'FALLO_DETALLE')) ENGINE=InnoDB");
+    $bd->query('CREATE TEMPORARY TABLE historias_clinicas(cod_historia INT PRIMARY KEY,cod_estudiante INT) ENGINE=InnoDB');
+    $bd->query('INSERT INTO historias_clinicas VALUES(301,201)');
+    $bd->query('CREATE TEMPORARY TABLE seguimientos (cod_seguimiento INT PRIMARY KEY, fecha DATE, cod_historia INT) ENGINE=InnoDB');
     $bd->query("CREATE TEMPORARY TABLE auditoria (
         cod_auditoria INT PRIMARY KEY AUTO_INCREMENT, cod_usuario INT, modulo VARCHAR(50),
         accion VARCHAR(50), registro_id INT, detalle TEXT,
@@ -45,7 +47,7 @@ try {
         VALUES (1,'PRUEBA-1',101,'Original','2026-01-01','Borrador'),(2,'PRUEBA-2',101,'Otro','2026-01-01','Borrador')");
     $bd->query("INSERT INTO informe_individual (cod_informe,cod_estudiante,cod_historia,cod_derivacion,cod_seguimiento,numero_atenciones,motivo)
         VALUES (1,201,301,401,501,1,'Original'),(2,202,NULL,NULL,NULL,2,'Otro')");
-    $bd->query("INSERT INTO seguimientos VALUES (501,'2026-01-01')");
+    $bd->query("INSERT INTO seguimientos VALUES (501,'2026-01-01',301)");
 
     $datos = informe_datos([
         'cod_estudiante' => 201, 'cod_historia' => 301, 'cod_seguimiento' => 501,
@@ -66,7 +68,7 @@ try {
     }
     comprobar($cabecera['fecha_inicio'] === $datos['fecha'] && $cabecera['fecha_fin'] === $datos['fecha'], 'No se guardó la fecha.');
     comprobar($cabecera['descripcion'] === $datos['motivo'] && $cabecera['conclusiones'] === $datos['diagnostico'], 'La cabecera no coincide con el detalle.');
-    comprobar((int)$detalle['numero_atenciones'] === 9, 'No se guardó el número de atenciones.');
+    comprobar((int)$detalle['numero_atenciones'] === 1, 'No se recalculó el número de atenciones.');
     comprobar($detalle['tipo_atencion'] === 'Evaluación, Orientación', 'No se guardaron los tipos de atención.');
     foreach (['referido_por', 'motivo', 'diagnostico', 'aspecto_cognitivo', 'aspectos_afectivos', 'diagnostico_acuerdos', 'recibido_por'] as $campo) {
         comprobar($detalle[$campo] === $datos[$campo], "No se guardó $campo en el detalle.");
@@ -79,7 +81,7 @@ try {
     comprobar(count($despues['auditoria']) === 1 && (int)$despues['auditoria'][0]['cod_usuario'] === 102
         && (int)$despues['auditoria'][0]['registro_id'] === 1, 'No se registró al editor en auditoría.');
 
-    foreach ([['numero_atenciones' => 100], ['cod_editor' => 999]] as $caso) {
+    foreach ([['motivo' => 'FALLO_DETALLE'], ['cod_editor' => 999]] as $caso) {
         $previo = foto($bd);
         $rechazado = false;
         try {

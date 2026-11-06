@@ -4,6 +4,7 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
     exit;
 }
 require_once __DIR__ . '/datos.php';
+require_once __DIR__ . '/../config/conexion.php';
 
 $historia = isset($historia) && is_array($historia)
     ? $historia
@@ -94,39 +95,7 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
         type="hidden"
         name="cod_derivacion"
         id="input_id_derivacion"
-        value="<?= (int)valorHistoria('cod_derivacion', 0) ?>"
-    >
-
-    <section class="historia-formulario-top">
-        <div>
-            <span class="historia-etiqueta">
-                <i class="bi bi-heart-pulse"></i>
-                Área Psicológica
-            </span>
-            <h2>Historia Clínica Psicológica</h2>
-        </div>
-
-        <div class="historia-estado-form">
-            <label for="estado">Estado del expediente</label>
-            <select name="estado" id="estado" class="form-select" required>
-                <option value="Activa" <?= seleccionado('estado', 'Activa') ?>>Activa</option>
-                <option value="En seguimiento" <?= seleccionado('estado', 'En seguimiento') ?>>En seguimiento</option>
-                <option value="Cerrada" <?= seleccionado('estado', 'Cerrada') ?>>Cerrada</option>
-            </select>
-        </div>
-    </section>
-
-    <nav class="historia-navegacion">
-        <a href="#seccion-datos">Datos</a>
-        <a href="#seccion-motivo">Motivo</a>
-        <a href="#seccion-escolar">Situación escolar</a>
-        <a href="#seccion-riesgo">Conductas de riesgo</a>
-        <a href="#seccion-conductas">Conductas problema</a>
-        <a href="#seccion-familia">Familia</a>
-        <a href="#seccion-diagnostico">Diagnóstico</a>
-        <a href="#seccion-acuerdos">Acuerdos</a>
-        <a href="#seccion-evolucion">Evolución</a>
-    </nav>
+        value="<?= (int)valorHistoria('cod_derivacion', 0) ?>">
 
     <!-- =====================================================
          1. DATOS GENERALES
@@ -784,6 +753,23 @@ $vieneDerivacion = (int)valorHistoria('cod_derivacion', 0) > 0;
     </section>
 
     <!-- BOTONES -->
+    <section class="card p-3 mb-3"><h2 class="h5">Estado de esta historia clínica</h2>
+        <label for="estado_historia" class="form-label">Estado</label>
+        <select id="estado_historia" name="estado" class="form-select mb-3" required>
+            <?php foreach (['Activa','En seguimiento','Cerrada'] as $estadoHistoria): ?>
+            <option value="<?= login_html($estadoHistoria) ?>" <?= valorHistoria('estado', 'Activa') === $estadoHistoria ? 'selected' : '' ?>><?= login_html($estadoHistoria) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <p>El cierre se aplica solo a esta historia. Las demás historias, derivaciones y citas del estudiante se conservan. Para registrar nuevos seguimientos en una historia cerrada, primero debe reabrirla.</p>
+        <?php if($esEdicion): $pendientesCierre=historia_pendientes($conexion,(int)$historia['cod_estudiante']); ?>
+        <?php foreach($pendientesCierre as $tipo=>$registros): ?>
+        <h3 class="h6"><?= $tipo==='citas'?'Citas pendientes':'Derivaciones abiertas' ?>: <?= count($registros) ?></h3>
+        <ul><?php foreach($registros as $registro): ?><li><a href="../<?= $tipo ?>/<?= $tipo==='citas'?'editar':'ver' ?>.php?id=<?= (int)$registro['id'] ?>">#<?= (int)$registro['id'] ?></a> · <?= login_html($registro['fecha'].' · '.$registro['estado']) ?></li><?php endforeach; ?></ul>
+        <?php endforeach; ?>
+        <label class="form-check mb-3"><input class="form-check-input" type="checkbox" name="confirmar_cierre" value="1"> He revisado los registros pendientes y confirmo que permanecerán abiertos al cerrar la historia.</label>
+        <?php endif; ?>
+        <label for="motivo_cierre" class="form-label">Motivo de cierre (obligatorio al cerrar)</label><textarea id="motivo_cierre" name="motivo_cierre" maxlength="2000" class="form-control" rows="2"><?= login_html(valorHistoria('motivo_cierre')) ?></textarea>
+    </section>
     <input type="hidden" name="formulario_completo" value="1">
     <div class="historia-form-acciones">
         <a href="listar.php" class="btn btn-light border">Cancelar</a>

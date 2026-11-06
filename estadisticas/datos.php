@@ -282,7 +282,7 @@ function estadisticas_panel(mysqli $bd, ?string $hoy = null): array
     $bd->begin_transaction(MYSQLI_TRANS_START_READ_ONLY | MYSQLI_TRANS_START_WITH_CONSISTENT_SNAPSHOT);
     try {
         $resumen = estadisticas_consultar($bd, "SELECT
-            (SELECT COUNT(*) FROM historias_clinicas h JOIN estudiantes e ON e.cod_estudiante=h.cod_estudiante
+            (SELECT COUNT(DISTINCT h.cod_estudiante) FROM historias_clinicas h JOIN estudiantes e ON e.cod_estudiante=h.cod_estudiante
                 WHERE e.estado='Activo' AND h.estado='En seguimiento' AND h.fecha_apertura<=?) AS en_seguimiento,
             (SELECT COUNT(*) FROM estudiantes e WHERE e.estado='Activo' AND EXISTS (
                 SELECT 1 FROM derivaciones d WHERE d.cod_estudiante=e.cod_estudiante AND d.prioridad='Alta'
@@ -303,7 +303,10 @@ function estadisticas_panel(mysqli $bd, ?string $hoy = null): array
                 SELECT d2.cod_derivacion FROM derivaciones d2 WHERE d2.cod_estudiante=e.cod_estudiante
                 AND d2.estado IN ('Pendiente','En seguimiento') AND d2.fecha<=?
                 ORDER BY FIELD(d2.prioridad,'Alta','Media','Baja'),d2.fecha,d2.cod_derivacion LIMIT 1)
-            LEFT JOIN historias_clinicas h ON h.cod_estudiante=e.cod_estudiante AND h.fecha_apertura<=?
+            LEFT JOIN historias_clinicas h ON h.cod_historia=(
+                SELECT h2.cod_historia FROM historias_clinicas h2 WHERE h2.cod_estudiante=e.cod_estudiante
+                AND h2.fecha_apertura<=?
+                ORDER BY (h2.cod_derivacion_origen=d.cod_derivacion) DESC,h2.fecha_apertura DESC,h2.cod_historia DESC LIMIT 1)
             LEFT JOIN historial_academico i ON i.cod_historial_academico=(
                 SELECT i2.cod_historial_academico FROM historial_academico i2 JOIN secciones se2 ON se2.cod_seccion=i2.cod_seccion
                 WHERE i2.cod_estudiante=e.cod_estudiante

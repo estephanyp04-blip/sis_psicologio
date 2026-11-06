@@ -27,7 +27,7 @@ $stmt->close();
 if ($duplicado) roles_registro_error('Ya existe un rol con ese nombre.');
 
 $modulos = $conexion->query("SELECT cod_modulo,nombre FROM modulos WHERE estado='Activo' ORDER BY cod_modulo")->fetch_all(MYSQLI_ASSOC);
-$modulosConCambioEstado = ['Usuarios', 'Estudiantes', 'Derivaciones', 'Citas'];
+$modulosConCambioEstado = ['Usuarios', 'Estudiantes', 'Derivaciones', 'Citas', 'Docentes'];
 try {
     $conexion->begin_transaction();
     $estado = 'Activo';

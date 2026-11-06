@@ -4,7 +4,7 @@ require_once __DIR__ . '/../includes/trazabilidad_datos.php';
 
 const DERIVACION_IMAGEN_MAX_BYTES = 5 * 1024 * 1024;
 
-function derivacion_imagen_descripcion($valor): string
+function derivacion_imagen_descripcion(mixed $valor): string
 {
     if (!is_string($valor) || !mb_check_encoding($valor, 'UTF-8') || mb_strlen($valor) > 1000) {
         throw new InvalidArgumentException('La descripción de la imagen admite hasta 1000 caracteres UTF-8.');

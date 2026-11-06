@@ -268,7 +268,7 @@ try {
         comprobar(app.contentDocument.querySelector('.estadisticas-tabla-scroll').getBoundingClientRect().right<=app.contentWindow.innerWidth+1,'La tabla desborda su contenedor.');
         await abrir('/index.php');
         comprobar(campo('panel-citas_pendientes').dataset.valor==='3' && campo('panel-sesiones').dataset.valor==='11','Tarjetas del panel incorrectas.');
-        comprobar(app.contentDocument.querySelectorAll('.panel-tabla tr[data-estudiante]').length===5 && app.contentDocument.querySelectorAll('.panel-agenda li').length===3,'Panel sin tabla o agenda.');
+        comprobar(app.contentDocument.querySelectorAll('.panel-tabla tr[data-estudiante]').length===5 && app.contentDocument.querySelectorAll('.panel-agenda li').length===4,'Panel sin tabla o agenda.');
         comprobar(app.contentDocument.documentElement.scrollWidth<=app.contentWindow.innerWidth+1,'El panel desborda el ancho disponible.');
         const tarjetas=Array.from(app.contentDocument.querySelectorAll('.panel-tarjeta'));
         comprobar(tarjetas.every(t=>t.getBoundingClientRect().width>0) && (ancho>1250 ? tarjetas[0].offsetTop===tarjetas[3].offsetTop : tarjetas[0].offsetTop<tarjetas[3].offsetTop),'Tarjetas no se adaptan a pantalla.');

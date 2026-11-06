@@ -11,7 +11,7 @@ $docente = (int)($_SESSION['cod_docente'] ?? 0);
 $stmt = $conexion->prepare('SELECT e.ruta,e.tipo_mime,e.nombre_original
     FROM derivacion_evidencias e
     INNER JOIN derivaciones d ON d.cod_derivacion=e.cod_derivacion
-    WHERE e.cod_evidencia=? AND (? <= 0 OR d.cod_docente=?) LIMIT 1');
+    WHERE e.cod_evidencia=? AND (? <= 0 OR (d.cod_docente=? AND (d.cod_usuario_autor IS NULL OR d.cod_usuario_autor=(SELECT cod_usuario FROM docentes WHERE cod_docente=d.cod_docente)))) LIMIT 1');
 $stmt->bind_param('iii', $id, $docente, $docente);
 $stmt->execute();
 $evidencia = $stmt->get_result()->fetch_assoc();

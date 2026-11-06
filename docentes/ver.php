@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('docentes/ver.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 
 
 $idDocente = filter_input(
@@ -23,6 +23,7 @@ $sql = "
     SELECT
         d.cod_docente,
         d.cod_usuario,
+        d.estado AS estado_perfil,
         u.nombres,
         u.apellidos,
         u.telefono,
@@ -303,7 +304,7 @@ include '../includes/navbar.php';
 
                     <div>
                         <small class="text-muted d-block">
-                            Estado de la cuenta
+                            Estado del perfil: <?= login_html($docente['estado_perfil']) ?>. Estado de la cuenta
                         </small>
 
                         <div class="fw-semibold">

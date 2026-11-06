@@ -20,7 +20,7 @@ const HISTORIA_OPCIONES = [
     'estrategias_previas' => ['Conversación con él/ella', 'Llamadas de atención', 'Conversación con el tutor/a a cargo', 'Premios y sanciones', 'Mayor supervisión', 'Ninguna'],
 ];
 
-function historia_texto($valor, string $campo, int $maximo): string
+function historia_texto(mixed $valor, string $campo, int $maximo): string
 {
     if (!is_string($valor)) throw new InvalidArgumentException("El campo $campo debe ser texto.");
     $valor = trim($valor);
@@ -154,6 +154,15 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
             if (!$existe) throw new InvalidArgumentException('El estudiante no existe o no está activo.');
         }
         $datos = historia_validar($entrada, $anterior);
+        if (!$anterior && $datos['fecha_apertura'] > date('Y-m-d')) {
+            throw new InvalidArgumentException('La fecha de atención de la historia no puede ser futura.');
+        }
+        $motivoCierre = flujo_texto($entrada['motivo_cierre'] ?? $anterior['motivo_cierre'] ?? '', 2000);
+        if ($datos['estado'] === 'Cerrada' && ($anterior['estado'] ?? '') !== 'Cerrada') {
+            $pendientes = historia_pendientes($bd,$idEstudiante);
+            if ($motivoCierre === '') throw new InvalidArgumentException('Indique el motivo del cierre de la historia.');
+            if (($pendientes['derivaciones'] || $pendientes['citas']) && ($entrada['confirmar_cierre'] ?? '') !== '1') throw new InvalidArgumentException('Hay derivaciones abiertas o citas pendientes. Revise la advertencia y confirme que se conservarán abiertas.');
+        }
         $idCitaAnterior = (int)($anterior['cod_cita_origen'] ?? 0);
         $idCita = flujo_id($entrada['cod_cita'] ?? $idCitaAnterior, true);
         if ($anterior && $idCita !== $idCitaAnterior) throw new InvalidArgumentException('La cita de origen no puede cambiarse.');
@@ -173,7 +182,7 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
             if ($idCita) {
                 $cita = flujo_fila($bd, 'SELECT * FROM citas WHERE cod_cita=? FOR UPDATE', [$idCita]);
                 if (!$cita || (int)$cita['cod_estudiante'] !== $idEstudiante || $cita['estado'] === 'Cancelada'
-                    || (int)($cita['cod_derivacion'] ?? 0) !== $idDerivacion || $cita['fecha'] > $datos['fecha_apertura']) {
+                    || (int)($cita['cod_derivacion'] ?? 0) !== $idDerivacion || $cita['fecha'] !== $datos['fecha_apertura']) {
                     throw new InvalidArgumentException('La cita no coincide con el estudiante, la derivación o la fecha de apertura.');
                 }
             }
@@ -190,6 +199,7 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
         if ($idHistoria === null) $idHistoria = (int)$stmt->insert_id;
         $stmt->close();
         foreach (HISTORIA_OPCIONES as $grupo => $_) {
+            // El motivo se guarda junto con el expediente, sin cancelar relaciones.
             // Solo reemplaza grupos enviados, conservando los omitidos y grupos históricos desconocidos.
             if ($anterior && !array_key_exists($grupo, $entrada) && !isset($entrada['opciones_presentes'][$grupo])) continue;
             $stmt = $bd->prepare('DELETE ho FROM historia_opciones ho
@@ -220,6 +230,10 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
             }
         }
         $accion = $anterior ? 'Actualizar' : 'Crear';
+        // Abrir el expediente no equivale a atender una cita ni a registrar una
+        // sesión. Esos estados se actualizan únicamente en seguimiento_guardar().
+        flujo_ejecutar($bd,'UPDATE historias_clinicas SET motivo_cierre=? WHERE cod_historia=?',[$motivoCierre ?: null,$idHistoria]);
+        if ($datos['estado'] === 'Cerrada' && ($anterior['estado'] ?? '') !== 'Cerrada') flujo_auditar($bd,$autor,'historias_clinicas','Cerrar',$idHistoria,$motivoCierre.'; derivaciones y citas conservadas');
         $stmt = $bd->prepare("INSERT INTO auditoria (cod_usuario,modulo,accion,registro_id,detalle) VALUES (?,'historias_clinicas',?,?,'Guardado del expediente clínico')");
         $stmt->bind_param('isi', $autor, $accion, $idHistoria); $stmt->execute(); $stmt->close();
         $bd->commit();
@@ -230,13 +244,22 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
     }
 }
 
+function historia_pendientes(mysqli $bd, int $estudiante): array
+{
+    $datos=[];
+    foreach (['derivaciones'=>"SELECT cod_derivacion id,estado,fecha FROM derivaciones WHERE cod_estudiante=? AND estado IN ('Pendiente','En seguimiento') ORDER BY fecha,cod_derivacion",'citas'=>"SELECT cod_cita id,estado,fecha,hora FROM citas WHERE cod_estudiante=? AND estado IN ('Pendiente','Reprogramada') ORDER BY fecha,hora"] as $tipo=>$sql) {
+        $stmt=$bd->prepare($sql);$stmt->bind_param('i',$estudiante);$stmt->execute();$datos[$tipo]=$stmt->get_result()->fetch_all(MYSQLI_ASSOC);$stmt->close();
+    }
+    return $datos;
+}
+
 /** Datos recuperables, sin token ni identificadores ajenos al formulario actual. */
 function historia_recuperar_entrada(array $entrada): array
 {
     $permitidos = array_merge(array_keys(HISTORIA_TEXTOS), array_keys(HISTORIA_OPCIONES),
-        ['talla', 'peso', 'valoracion', 'cod_historia', 'cod_estudiante', 'cod_derivacion', 'cod_cita', 'familiares', 'opciones_presentes', 'familiares_presentes']);
+        ['motivo_cierre', 'confirmar_cierre', 'talla', 'peso', 'valoracion', 'cod_historia', 'cod_estudiante', 'cod_derivacion', 'cod_cita', 'familiares', 'opciones_presentes', 'familiares_presentes']);
     $datos = array_intersect_key($entrada, array_flip($permitidos));
-    foreach (array_merge(array_keys(HISTORIA_TEXTOS), ['talla', 'peso', 'valoracion', 'cod_historia', 'cod_estudiante', 'cod_derivacion', 'cod_cita']) as $campo) {
+    foreach (array_merge(array_keys(HISTORIA_TEXTOS), ['motivo_cierre', 'confirmar_cierre', 'talla', 'peso', 'valoracion', 'cod_historia', 'cod_estudiante', 'cod_derivacion', 'cod_cita']) as $campo) {
         if (array_key_exists($campo, $datos) && !is_scalar($datos[$campo])) unset($datos[$campo]);
     }
     foreach (HISTORIA_OPCIONES as $grupo => $_) {

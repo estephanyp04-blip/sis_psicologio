@@ -9,9 +9,24 @@ function cita_horas(): array
     return $horas;
 }
 
-function cita_guardar(mysqli $bd, array $entrada, int $autor, ?int $id = null): int
+function cita_calendario_datos(mysqli $bd, array $entrada): array
 {
-    $bd->begin_transaction();
+    $mes=flujo_texto($entrada['mes']??date('Y-m'),7);
+    if(!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/D',$mes)) throw new InvalidArgumentException('Seleccione un mes válido.');
+    $inicio=new DateTimeImmutable(flujo_fecha($mes.'-01'));
+    $seleccion=flujo_fecha($entrada['fecha']??($mes===date('Y-m')?date('Y-m-d'):$mes.'-01'));
+    if(substr($seleccion,0,7)!==$mes) throw new InvalidArgumentException('La fecha debe pertenecer al mes mostrado.');
+    $stmt=$bd->prepare("SELECT c.cod_cita,c.fecha,c.hora,c.estado,e.nombres,e.apellidos,CONCAT(u.nombres,' ',u.apellidos) profesional FROM citas c JOIN estudiantes e ON e.cod_estudiante=c.cod_estudiante JOIN usuarios u ON u.cod_usuario=c.cod_psicologa WHERE c.fecha BETWEEN ? AND ? ORDER BY c.fecha,c.hora,c.cod_cita");
+    $desde=$inicio->format('Y-m-d');$hasta=$inicio->format('Y-m-t');$stmt->bind_param('ss',$desde,$hasta);$stmt->execute();
+    $porDia=[];foreach($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $cita) $porDia[$cita['fecha']][]=$cita;
+    $stmt->close();
+    $meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    return ['mes'=>$mes,'inicio'=>$inicio,'seleccion'=>$seleccion,'por_dia'=>$porDia,'anterior'=>$inicio->modify('-1 month')->format('Y-m'),'siguiente'=>$inicio->modify('+1 month')->format('Y-m'),'titulo'=>ucfirst($meses[(int)$inicio->format('n')-1]).' '.$inicio->format('Y')];
+}
+
+function cita_guardar(mysqli $bd, array $entrada, int $autor, ?int $id = null, bool $transaccion = true): int
+{
+    if ($transaccion) $bd->begin_transaction();
     try {
         $anterior = $id ? flujo_fila($bd, 'SELECT * FROM citas WHERE cod_cita=? FOR UPDATE', [$id]) : null;
         if ($id && !$anterior) throw new InvalidArgumentException('La cita no existe.');
@@ -42,9 +57,16 @@ function cita_guardar(mysqli $bd, array $entrada, int $autor, ?int $id = null): 
         if ($anterior && ($estudiante !== (int)$anterior['cod_estudiante'] || $derivacion !== (int)($anterior['cod_derivacion'] ?? 0))) throw new InvalidArgumentException('El estudiante y la derivación de origen no pueden cambiarse.');
         $fecha = flujo_fecha($entrada['fecha'] ?? $anterior['fecha'] ?? '');
         $hora = flujo_texto($entrada['hora'] ?? substr($anterior['hora'] ?? '',0,5), 5);
-        $estado = flujo_texto($entrada['estado'] ?? 'Pendiente', 20);
+        $estado = flujo_texto($entrada['estado'] ?? $anterior['estado'] ?? 'Pendiente', 20);
         $observaciones = flujo_texto($entrada['observaciones'] ?? $anterior['observaciones'] ?? '');
         if (!in_array($hora, cita_horas(), true) || !in_array($estado, ['Pendiente','Reprogramada','Atendida','Cancelada'], true)) throw new InvalidArgumentException('El horario o estado no es válido.');
+        if ($anterior) {
+            $cambioHorario = $fecha !== $anterior['fecha'] || $hora !== substr($anterior['hora'],0,5);
+            if ($cambioHorario && in_array($anterior['estado'], ['Pendiente','Reprogramada'], true) && $estado === 'Pendiente') $estado = 'Reprogramada';
+            $cambioEstado = $estado !== $anterior['estado'];
+            if ($cambioEstado || $cambioHorario) flujo_exigir_permiso($bd, $autor, 'Citas', 'puede_cambiar_estado');
+            if ($cambioEstado && !in_array($estado, ['Pendiente'=>['Reprogramada','Atendida','Cancelada'], 'Reprogramada'=>['Atendida','Cancelada']][$anterior['estado']] ?? [], true)) throw new InvalidArgumentException('La transición de estado de la cita no está permitida.');
+        }
         if (!$anterior && ($fecha < date('Y-m-d') || $estado !== 'Pendiente')) throw new InvalidArgumentException('La nueva cita debe estar pendiente y no tener fecha pasada.');
         if ($anterior && $fecha !== $anterior['fecha'] && $fecha < date('Y-m-d')) throw new InvalidArgumentException('No se puede reprogramar una cita hacia una fecha pasada.');
         if ($estado === 'Atendida' && $fecha > date('Y-m-d')) throw new InvalidArgumentException('No se puede atender una cita futura.');
@@ -57,14 +79,14 @@ function cita_guardar(mysqli $bd, array $entrada, int $autor, ?int $id = null): 
             && ($estado !== $anterior['estado'] || $fecha !== $anterior['fecha'] || $hora !== substr($anterior['hora'],0,5))) {
             throw new InvalidArgumentException('Una cita atendida o cancelada conserva su fecha, hora y estado. Registre una nueva cita cuando corresponda.');
         }
-        if (!$anterior && !flujo_fila($bd, "SELECT cod_estudiante FROM estudiantes WHERE cod_estudiante=? AND estado='Activo'", [$estudiante])) throw new InvalidArgumentException('El estudiante no existe o no está activo.');
+        if (!$anterior && !flujo_fila($bd, "SELECT cod_estudiante FROM estudiantes WHERE cod_estudiante=? AND estado='Activo' FOR UPDATE", [$estudiante])) throw new InvalidArgumentException('El estudiante no existe o no está activo.');
         if ($derivacion) {
             $d = flujo_fila($bd, 'SELECT * FROM derivaciones WHERE cod_derivacion=? FOR UPDATE', [$derivacion]);
             if ($d && !$anterior && $rolAutor === 2 && (int)($d['cod_psicologa_solicitada'] ?? 0) > 0
                 && (int)$d['cod_psicologa_solicitada'] !== $psicologa) {
                 throw new InvalidArgumentException('Esta solicitud fue dirigida a otra psicologa.');
             }
-            if ($d && !$anterior && flujo_fila($bd, "SELECT cod_cita FROM citas WHERE cod_derivacion=? AND estado<>'Cancelada' LIMIT 1", [$derivacion])) {
+            if ($d && !$anterior && flujo_fila($bd, "SELECT cod_cita FROM citas WHERE cod_derivacion=? AND estado IN ('Pendiente','Reprogramada') LIMIT 1", [$derivacion])) {
                 throw new InvalidArgumentException('Esta derivacion ya tiene una cita vigente.');
             }
             if (!$d || (int)$d['cod_estudiante'] !== $estudiante) throw new InvalidArgumentException('La derivación no corresponde al estudiante.');
@@ -77,9 +99,9 @@ function cita_guardar(mysqli $bd, array $entrada, int $autor, ?int $id = null): 
             $id = (int)$bd->insert_id;
         }
         flujo_auditar($bd, $autor, 'citas', $anterior ? 'Actualizar' : 'Crear', $id, ($anterior['estado'] ?? 'Nueva') . ' → ' . $estado);
-        $bd->commit(); return $id;
+        if ($transaccion) $bd->commit(); return $id;
     } catch (Throwable $error) {
-        $bd->rollback();
+        if ($transaccion) $bd->rollback();
         if ($error instanceof mysqli_sql_exception && $error->getCode() === 1062) throw new InvalidArgumentException('Ya existe una cita en ese horario.');
         throw $error;
     }

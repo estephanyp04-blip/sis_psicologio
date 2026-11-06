@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('docentes/listar.php');
 
-require_once '../config/conexion.php';
+require_once __DIR__ . '/../config/conexion.php';
 
 
 $busqueda = trim($_GET['buscar'] ?? '');
@@ -10,6 +10,8 @@ $busqueda = trim($_GET['buscar'] ?? '');
 $sql = "
     SELECT
         d.cod_docente,
+        d.estado AS estado_perfil,
+        u.estado AS estado_cuenta,
         u.nombres,
         u.apellidos,
         u.telefono,
@@ -53,7 +55,7 @@ if ($busqueda !== '') {
     $tipos = 'ssssss';
 }
 
-$sql .= " GROUP BY d.cod_docente,u.nombres,u.apellidos,u.telefono,u.correo,u.usuario ORDER BY u.apellidos ASC,u.nombres ASC";
+$sql .= " GROUP BY d.cod_docente,d.estado,u.estado,u.nombres,u.apellidos,u.telefono,u.correo,u.usuario ORDER BY u.apellidos ASC,u.nombres ASC";
 
 $stmt = $conexion->prepare($sql);
 
@@ -186,6 +188,7 @@ include '../includes/navbar.php';
                                             ); ?>
                                         </div>
 
+                                        <p class="mb-1">Perfil: <?= login_html($docente['estado_perfil']) ?> · Cuenta: <?= login_html($docente['estado_cuenta']) ?></p>
                                         <small class="text-muted">
                                             Código: DOC-<?= str_pad(
                                                 (string) $docente['cod_docente'],
@@ -235,7 +238,13 @@ include '../includes/navbar.php';
                                     </td>
 
                                     <td>
-                                        <div class="d-flex justify-content-center gap-2">
+                                        <div class="d-flex flex-wrap justify-content-center gap-2">
+                                            <?php if (login_puede('docentes/cambiar_estado.php')): ?>
+                                            <form action="cambiar_estado.php" method="post">
+                                                <?= login_campo_csrf() ?><input type="hidden" name="cod_docente" value="<?= (int)$docente['cod_docente'] ?>">
+                                                <input type="hidden" name="estado" value="<?= $docente['estado_perfil']==='Activo' ? 'Inactivo' : 'Activo' ?>">
+                                                <button class="btn btn-sm btn-outline-secondary"><?= $docente['estado_perfil']==='Activo' ? 'Dar de baja' : 'Reactivar' ?></button>
+                                            </form><?php endif; ?>
                                             <a href="ver.php?id=<?= (int)
                                                 $docente['cod_docente']; ?>"
                                                class="btn btn-sm btn-outline-info"

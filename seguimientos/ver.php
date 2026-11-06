@@ -4,7 +4,7 @@ requerir_acceso('seguimientos/ver.php');
 require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/../includes/trazabilidad_vista.php';
 $id = (int)filter_var($_GET['id'] ?? null,FILTER_VALIDATE_INT);
-$s = flujo_fila($conexion, 'SELECT s.*,h.cod_estudiante,COALESCE(c.cod_derivacion,h.cod_derivacion_origen) cod_derivacion,
+$s = flujo_fila($conexion, 'SELECT s.*,h.cod_estudiante,COALESCE(s.cod_derivacion,c.cod_derivacion,h.cod_derivacion_origen) cod_derivacion,
     CONCAT(u.nombres,\' \',u.apellidos) profesional,c.fecha AS fecha_cita,c.hora AS hora_cita
     FROM seguimientos s JOIN historias_clinicas h ON h.cod_historia=s.cod_historia
     JOIN usuarios u ON u.cod_usuario=s.cod_psicologa
@@ -21,6 +21,7 @@ include '../includes/header.php'; include '../includes/sidebar.php'; include '..
 <?php foreach (['descripcion'=>'Descripción','tecnicas_aplicadas'=>'Técnicas aplicadas','acuerdos'=>'Acuerdos','recomendaciones'=>'Recomendaciones','proxima_sesion'=>'Próxima sesión'] as $campo=>$titulo): ?>
 <h2 class="h5"><?= $titulo ?></h2><p><?= nl2br(login_html($s[$campo] ?: 'No registrado')) ?></p>
 <?php endforeach; ?></div>
+<?php if($s['cod_proxima_cita']): ?><p class="alert alert-success mt-3">Próxima cita confirmada: <a href="../citas/editar.php?id=<?= (int)$s['cod_proxima_cita'] ?>">Cita #<?= (int)$s['cod_proxima_cita'] ?></a>. Consulte su estado actual antes de la atención.</p><?php elseif($s['proxima_sesion']): ?><p class="alert alert-info mt-3">La próxima fecha es orientativa; no tiene una cita reservada desde este seguimiento.</p><?php endif; ?>
 <?php flujo_panel($conexion,'seguimiento',$s); ?>
 <a class="btn btn-primary mt-3" href="../informes/registrar.php?cod_estudiante=<?= (int)$s['cod_estudiante'] ?>&amp;cod_seguimiento=<?= $id ?>">Crear informe desde este seguimiento</a>
 </div></main>

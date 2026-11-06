@@ -19,7 +19,7 @@ function login_ir(string $ruta): void
     header('Location: ' . login_url($ruta), true, 303);
     exit;
 }
-function login_html($valor): string
+function login_html(mixed $valor): string
 {
     return htmlspecialchars((string) $valor, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
@@ -40,7 +40,7 @@ function login_token(): string
 {
     return $_SESSION['login_csrf'] ??= bin2hex(random_bytes(32));
 }
-function login_validar_token($token): bool
+function login_validar_token(mixed $token): bool
 {
     return is_string($token) && isset($_SESSION['login_csrf']) && hash_equals($_SESSION['login_csrf'], $token);
 }
@@ -69,7 +69,7 @@ function login_docente(int $idUsuario): ?int
     $s = $bd->prepare('SELECT d.cod_docente
         FROM docentes d
         INNER JOIN usuarios u ON d.cod_usuario = u.cod_usuario
-        WHERE u.cod_usuario = ? LIMIT 2');
+        WHERE u.cod_usuario = ? AND d.estado = \'Activo\' LIMIT 2');
     $s->bind_param('i', $idUsuario);
     $s->execute();
     $r = $s->get_result();
@@ -150,6 +150,7 @@ function login_usuario_actual(): ?array
         || (int) $u['cod_usuario'] !== ($_SESSION['cod_usuario'] ?? 0)
         || (int) $u['cod_rol'] !== ($_SESSION['cod_rol'] ?? 0)
         || !hash_equals($_SESSION['login_firma'] ?? '', hash('sha256', $u['password']))) return null;
+    if ((int)$u['cod_rol'] === 3 && (int)($_SESSION['cod_docente'] ?? 0) <= 0) return null;
     if (((int) $u['cod_rol'] === 3 || isset($_SESSION['cod_docente']))
         && login_docente((int) $u['cod_usuario']) !== ($_SESSION['cod_docente'] ?? null)) return null;
     $_SESSION['login_actividad'] = time();
