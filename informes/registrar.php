@@ -73,7 +73,9 @@ $sqlEstudiantes="SELECT e.cod_estudiante,e.nombres,e.apellidos,e.curso,e.paralel
         CASE WHEN h.cod_historia IS NULL THEN (SELECT d2.cod_derivacion FROM derivaciones d2 WHERE d2.cod_estudiante=e.cod_estudiante AND d2.fecha<='$fechaCorte' ORDER BY d2.fecha DESC,d2.cod_derivacion DESC LIMIT 1) ELSE NULL END) AND d.fecha<='$fechaCorte'
     LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
     LEFT JOIN usuarios doc_persona ON doc_persona.cod_usuario=COALESCE(d.cod_usuario_autor,doc.cod_usuario)
-    WHERE e.estado='Activo' ORDER BY e.apellidos,e.nombres";
+    WHERE e.estado='Activo'
+        AND EXISTS (SELECT 1 FROM historias_clinicas registrada WHERE registrada.cod_estudiante=e.cod_estudiante)
+    ORDER BY e.apellidos,e.nombres";
 $resultadoEstudiantes=$conexion->query($sqlEstudiantes);
 
 if(!$resultadoEstudiantes){
@@ -165,6 +167,7 @@ include __DIR__ . '/../includes/navbar.php';
                                 </option>
                             <?php endwhile; ?>
                         </select>
+                        <small class="text-muted">Solo se muestran estudiantes con una historia clínica registrada.</small>
                     </div>
 
                     <div class="col-12">

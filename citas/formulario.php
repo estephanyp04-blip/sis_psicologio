@@ -106,10 +106,12 @@ include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/sid
     if ($cita['estado'] !== 'Cancelada'):
 ?>
 <div class="d-flex flex-wrap gap-2 mt-3">
-<?php foreach ($historiasCita as $historiaCita): if ($historiaCita['estado'] === 'Cerrada') continue; ?>
-<a class="btn btn-primary" href="../seguimientos/registrar.php?cod_historia=<?= (int)$historiaCita['cod_historia'] ?>&amp;cod_cita=<?= $id ?>">Registrar seguimiento · Historia #<?= (int)$historiaCita['cod_historia'] ?> (<?= login_html($historiaCita['fecha_apertura']) ?>)</a>
-<?php endforeach; ?>
-<a class="btn btn-outline-primary" href="../historias_clinicas/registrar.php?cod_cita=<?= $id ?>">Abrir nueva historia desde esta cita</a>
+<?php if (login_puede('historias_clinicas/registrar.php')): ?>
+<a class="btn btn-primary" href="../historias_clinicas/registrar.php?cod_cita=<?= $id ?>">Registrar sesión: historia clínica de esta cita</a>
+<?php endif; ?>
+<?php if (login_puede('seguimientos/listar.php')): ?>
+<a class="btn btn-outline-primary" href="../seguimientos/listar.php?estudiante=<?= (int)$cita['cod_estudiante'] ?>">Ver avance del estudiante</a>
+<?php endif; ?>
 </div>
 <?php endif; endif; ?>
 </div></main>

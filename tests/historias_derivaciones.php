@@ -147,9 +147,9 @@ try {
     $antes = foto($bd);
     rechaza(fn() => historia_guardar($bd, array_replace($entrada, ['observaciones' => 'Cambio que debe revertirse']), 9999, $id), 'Acepta auditor inexistente.');
     verificar(foto($bd) === $antes, 'Fallo de auditoría no revierte historia e hijos.');
-    $segundaHistoria = historia_guardar($bd, array_replace($entrada, ['cod_derivacion' => 2, 'motivo_consulta' => 'Segunda historia independiente']), 102);
-    verificar($segundaHistoria !== $id, 'No asigna un código propio a la segunda historia.');
-    verificar((int)fila($bd, 'SELECT COUNT(*) n FROM historias_clinicas WHERE cod_estudiante=1')['n'] === 2, 'No permite dos historias para el mismo estudiante.');
+    $segundaHistoria = historia_guardar($bd, array_replace($entrada, ['cod_derivacion' => 2, 'motivo_consulta' => 'Historia de la segunda sesión', 'situacion_escolar' => 'Muy buena']), 102);
+    verificar($segundaHistoria !== $id, 'No conserva una historia propia para la nueva sesión.');
+    verificar((int)fila($bd, 'SELECT COUNT(*) n FROM historias_clinicas WHERE cod_estudiante=1')['n'] === 2, 'No agrega la sesión al expediente.');
     verificar(fila($bd, "SELECT motivo_consulta FROM historias_clinicas WHERE cod_historia=$id")['motivo_consulta'] === $guardada['motivo_consulta'], 'Crear otra historia modifica la anterior.');
     verificar((int)fila($bd, "SELECT cod_derivacion_origen FROM historias_clinicas WHERE cod_historia=$segundaHistoria")['cod_derivacion_origen'] === 2, 'La segunda historia pierde su derivación.');
     rechaza(fn() => historia_guardar($bd, array_replace($entrada, ['cod_estudiante' => 2, 'cod_derivacion' => 1]), 101), 'Alta vincula derivación ajena.');
@@ -200,15 +200,32 @@ try {
     for ($i = 0; $i < 40; ++$i) { $s = @fsockopen('127.0.0.1', $puerto, $errno, $error, 0.1); if ($s) { fclose($s); break; } usleep(100000); }
     foreach (['historias_clinicas/registrar.php?cod_estudiante=1', 'historias_clinicas/registrar.php?cod_derivacion=2'] as $rutaAlta) {
         $r = http($rutaAlta, null, 'prueba_psicologa');
-        verificar($r['codigo'] === 200 && str_contains($r['cuerpo'], 'formHistoriaClinica'), 'Bloquea el formulario de otra historia del mismo estudiante.');
-        $nueva = formulario($r['cuerpo'], 'formHistoriaClinica');
-        verificar((int)$nueva['cod_estudiante'] === 1, 'Pierde el estudiante al abrir otra historia.');
+        verificar($r['codigo'] === 200 && str_contains($r['cuerpo'], 'formHistoriaClinica'), 'Nueva sesión no abre una nueva historia clínica.');
     }
+    $bd->query("INSERT INTO seguimientos (cod_historia,cod_psicologa,fecha,descripcion) VALUES
+        ($id,101,'2026-01-06','Sesion original del expediente'),
+        ($segundaHistoria,102,'2026-01-07','Sesion de historia legada'),
+        ($sinDerivacion,101,'2026-01-08','Sesion privada de otro estudiante')");
+    $r = http('historias_clinicas/listar.php');
+    verificar($r['codigo'] === 200 && substr_count($r['cuerpo'], 'data-estudiante="1"') === 1, 'El listado duplica el expediente del estudiante.');
+    verificar(str_contains($r['cuerpo'], '2 sesiones'), 'No suma las sesiones de las historias anteriores.');
+    $r = http('historias_clinicas/ver.php?id=' . $id);
+    verificar($r['codigo'] === 200 && str_contains($r['cuerpo'], '2 sesiones registradas'), 'El expediente no muestra el total de sesiones.');
+    verificar(str_contains($r['cuerpo'], 'Sesion original del expediente') && str_contains($r['cuerpo'], 'Sesion de historia legada'), 'No reúne las sesiones anteriores en el expediente.');
+    verificar(!str_contains($r['cuerpo'], 'Sesion privada de otro estudiante'), 'Mezcla sesiones de otros estudiantes.');
+    verificar(str_contains($r['cuerpo'], 'ver.php?id=' . $segundaHistoria), 'Oculta la historia clínica anterior.');
+    $r = http('seguimientos/listar.php?estudiante=1');
+    verificar($r['codigo'] === 200 && str_contains($r['cuerpo'], 'Seguimiento del avance'), 'No abre la tabla de avance.');
+    verificar(str_contains($r['cuerpo'], 'Sesión 1') && str_contains($r['cuerpo'], 'Sesión 2') && !str_contains($r['cuerpo'], 'Sesión 3'), 'Confunde las notas de evolución con sesiones clínicas.');
+    verificar(str_contains($r['cuerpo'], 'Muy buena') && str_contains($r['cuerpo'], 'Buena'), 'No muestra las valoraciones de cada sesión.');
+    verificar(!str_contains($r['cuerpo'], 'data-historia="' . $sinDerivacion . '"'), 'Incluye historias de otro estudiante en el avance.');
     $r = http('informes/registrar.php?cod_estudiante=1');
     $docHistorias = new DOMDocument();
     @$docHistorias->loadHTML('<?xml encoding="UTF-8">' . $r['cuerpo']);
     $xpathHistorias = new DOMXPath($docHistorias);
     verificar($xpathHistorias->query('//select[@id="cod_estudiante"]/option[@value="1"]')->length === 1, 'Duplica al estudiante en el selector de informes.');
+    verificar($xpathHistorias->query('//select[@id="cod_estudiante"]/option[@value="2"]')->length === 1, 'Oculta un estudiante con historia clínica.');
+    verificar($xpathHistorias->query('//select[@id="cod_estudiante"]/option[@value="4"]')->length === 0, 'Muestra un estudiante sin historia clínica en informes.');
     verificar($xpathHistorias->query('//select[@id="cod_historia"]/option[@value!=""]')->length === 2, 'El informe no permite elegir las dos historias.');
     $r = http('informes/antecedentes.php?cod_estudiante=1&fecha=' . date('Y-m-d'));
     $antecedentes = json_decode($r['cuerpo'], true, 512, JSON_THROW_ON_ERROR);

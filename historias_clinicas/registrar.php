@@ -11,6 +11,11 @@ if ($idCita) {
     require_once __DIR__ . '/../includes/trazabilidad_datos.php';
     $citaOrigen=flujo_fila($conexion,'SELECT * FROM citas WHERE cod_cita=?',[$idCita]);
     if (!$citaOrigen || $citaOrigen['estado']==='Cancelada') { http_response_code(404); exit('Cita no disponible.'); }
+    $historiaCita = flujo_fila($conexion, 'SELECT cod_historia FROM historias_clinicas WHERE cod_cita_origen=? ORDER BY cod_historia LIMIT 1', [$idCita]);
+    if ($historiaCita) {
+        header('Location: ver.php?id=' . (int)$historiaCita['cod_historia']);
+        exit;
+    }
     $idEstudiante=(int)$citaOrigen['cod_estudiante'];
     $idDerivacion=(int)($citaOrigen['cod_derivacion'] ?? 0);
 }
@@ -143,7 +148,16 @@ elseif($idEstudiante){
         'motivo_consulta'=>$estudianteActual['motivo']??''
     ]);
 }
-/* Cada estudiante activo puede tener varias historias clínicas. */
+/* Cada sesión conserva su propia historia dentro del expediente del estudiante. */
+$citasSesion = [];
+if ($idEstudiante && !$idCita) {
+    $stmt = $conexion->prepare("SELECT c.cod_cita,c.fecha,c.hora FROM citas c WHERE c.cod_estudiante=? AND c.estado<>'Cancelada'
+        AND NOT EXISTS (SELECT 1 FROM historias_clinicas h WHERE h.cod_cita_origen=c.cod_cita) ORDER BY c.fecha DESC,c.hora DESC");
+    $stmt->bind_param('i', $idEstudiante);
+    $stmt->execute();
+    $citasSesion = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+}
 if ($citaOrigen) {
     $datosIniciales['fecha_apertura']=$citaOrigen['fecha'];
     $datosIniciales['cod_cita']=(int)$citaOrigen['cod_cita'];
@@ -212,8 +226,8 @@ include __DIR__ . '/../includes/navbar.php';
 <header class="historia-form-head">
     <div>
         <span>NUEVO EXPEDIENTE</span>
-        <h1>Crear historia clínica</h1>
-        <p>Registre una nueva historia para el estudiante. Sus historias anteriores se conservan por separado.</p>
+        <h1>Nueva sesión: historia clínica</h1>
+        <p>Registre la historia clínica de esta atención. Se conservará junto a las sesiones anteriores en el expediente del estudiante.</p>
     </div>
     <i class="bi bi-file-earmark-medical"></i>
 </header>
@@ -222,6 +236,20 @@ include __DIR__ . '/../includes/navbar.php';
     <?= nl2br(login_html($mensaje)) ?>
 </div>
 <?php endif;?>
+<?php if ($citasSesion): ?>
+<form method="get" class="card card-body mb-4">
+    <input type="hidden" name="cod_estudiante" value="<?= (int)$idEstudiante ?>">
+    <label for="cita_sesion" class="form-label">Cita de esta sesión</label>
+    <select id="cita_sesion" name="cod_cita" class="form-select mb-2" required>
+        <option value="">Seleccione la cita que está atendiendo...</option>
+        <?php foreach ($citasSesion as $cita): ?>
+        <option value="<?= (int)$cita['cod_cita'] ?>">Cita #<?= (int)$cita['cod_cita'] ?> · <?= login_html($cita['fecha'] . ' ' . substr($cita['hora'], 0, 5)) ?></option>
+        <?php endforeach; ?>
+    </select>
+    <button class="btn btn-primary" type="submit">Usar esta cita</button>
+    <small class="text-muted mt-2">Seleccione la cita antes de completar el formulario.</small>
+</form>
+<?php endif; ?>
 <?php include __DIR__ . '/formulario.php';?>
 </div>
 </main>

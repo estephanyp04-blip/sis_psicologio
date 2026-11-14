@@ -235,6 +235,7 @@ try {
     rechaza(fn()=>seguimiento_guardar($bd,array_replace($seguimiento,['cod_cita'=>0]),99999),'Acepta profesional inexistente.');
     verificar($antes===$bd->query('SELECT * FROM seguimientos ORDER BY 1')->fetch_all(MYSQLI_ASSOC),'Fallo SQL deja seguimiento parcial.');
     $h2=historia_guardar($bd,['cod_estudiante'=>2,'cod_derivacion'=>3,'cod_cita'=>$otra,'fecha_apertura'=>$hoy,'motivo_consulta'=>'Motivo','estado'=>'Activa','formulario_completo'=>'1'],101);
+    rechaza(fn()=>historia_guardar($bd,['cod_estudiante'=>2,'cod_derivacion'=>3,'cod_cita'=>$otra,'fecha_apertura'=>$hoy,'motivo_consulta'=>'Sesión duplicada','estado'=>'Activa','formulario_completo'=>'1'],101),'Permite dos sesiones clínicas para la misma cita.');
     $fotoAntes=foto($bd); $citaAntes=fila($bd,'SELECT * FROM citas WHERE cod_cita='.$otra);
     $bd->query("CREATE TRIGGER fallo_auditoria BEFORE INSERT ON auditoria FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Fallo intencional de prueba'");
     try {

@@ -30,6 +30,8 @@ Para establecer la contraseña de una cuenta existente, desde la raíz del proye
 
 ## Configuración
 
+La base inicial del sistema de gestión de seguridad está en [seguridad/README.md](seguridad/README.md): alcance, política, activos, riesgos, tratamiento, procedimientos y registros. Está preparada para revisión y adopción institucional; no representa una certificación ISO. Para revisar configuración y conectividad sin modificar datos, ejecutar `C:\xampp\php\php.exe herramientas\diagnostico_sgsi.php`. Los documentos de esa carpeta se consultan localmente; Apache bloquea su acceso por HTTP.
+
 [config/login.php](config/login.php) concentra los valores locales y admite estas variables del entorno del proceso PHP:
 
 | Variable | Valor local predeterminado |

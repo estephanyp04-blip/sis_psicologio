@@ -160,7 +160,6 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
         $motivoCierre = flujo_texto($entrada['motivo_cierre'] ?? $anterior['motivo_cierre'] ?? '', 2000);
         if ($datos['estado'] === 'Cerrada' && ($anterior['estado'] ?? '') !== 'Cerrada') {
             $pendientes = historia_pendientes($bd,$idEstudiante);
-            if ($motivoCierre === '') throw new InvalidArgumentException('Indique el motivo del cierre de la historia.');
             if (($pendientes['derivaciones'] || $pendientes['citas']) && ($entrada['confirmar_cierre'] ?? '') !== '1') throw new InvalidArgumentException('Hay derivaciones abiertas o citas pendientes. Revise la advertencia y confirme que se conservarán abiertas.');
         }
         $idCitaAnterior = (int)($anterior['cod_cita_origen'] ?? 0);
@@ -181,6 +180,9 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
             }
             if ($idCita) {
                 $cita = flujo_fila($bd, 'SELECT * FROM citas WHERE cod_cita=? FOR UPDATE', [$idCita]);
+                if (flujo_fila($bd, 'SELECT cod_historia FROM historias_clinicas WHERE cod_cita_origen=? LIMIT 1', [$idCita])) {
+                    throw new InvalidArgumentException('Esta cita ya tiene una historia clínica. Abra la historia registrada o seleccione otra cita para una nueva sesión.');
+                }
                 if (!$cita || (int)$cita['cod_estudiante'] !== $idEstudiante || $cita['estado'] === 'Cancelada'
                     || (int)($cita['cod_derivacion'] ?? 0) !== $idDerivacion || $cita['fecha'] !== $datos['fecha_apertura']) {
                     throw new InvalidArgumentException('La cita no coincide con el estudiante, la derivación o la fecha de apertura.');

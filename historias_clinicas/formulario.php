@@ -781,7 +781,6 @@ function selectorEscolar(string $campo, string $etiqueta, array $opciones): void
             <option value="<?= login_html($estadoHistoria) ?>" <?= valorHistoria('estado', 'Activa') === $estadoHistoria ? 'selected' : '' ?>><?= login_html($estadoHistoria) ?></option>
             <?php endforeach; ?>
         </select>
-        <p>El cierre se aplica solo a esta historia. Las demás historias, derivaciones y citas del estudiante se conservan. Para registrar nuevos seguimientos en una historia cerrada, primero debe reabrirla.</p>
         <?php if($esEdicion): $pendientesCierre=historia_pendientes($conexion,(int)$historia['cod_estudiante']); ?>
         <?php foreach($pendientesCierre as $tipo=>$registros): ?>
         <h3 class="h6"><?= $tipo==='citas'?'Citas pendientes':'Derivaciones abiertas' ?>: <?= count($registros) ?></h3>
@@ -789,7 +788,6 @@ function selectorEscolar(string $campo, string $etiqueta, array $opciones): void
         <?php endforeach; ?>
         <label class="form-check mb-3"><input class="form-check-input" type="checkbox" name="confirmar_cierre" value="1"> He revisado los registros pendientes y confirmo que permanecerán abiertos al cerrar la historia.</label>
         <?php endif; ?>
-        <label for="motivo_cierre" class="form-label">Motivo de cierre (obligatorio al cerrar)</label><textarea id="motivo_cierre" name="motivo_cierre" maxlength="2000" class="form-control" rows="2"><?= login_html(valorHistoria('motivo_cierre')) ?></textarea>
     </section>
     <input type="hidden" name="formulario_completo" value="1">
     <div class="historia-form-acciones">

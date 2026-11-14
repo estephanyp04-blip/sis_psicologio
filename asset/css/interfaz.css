@@ -1,4 +1,10 @@
 /* Componentes compartidos. Sin fuentes ni recursos externos. */
+.ui-respuesta { position:relative; padding:16px 48px 16px 18px; border-left-width:5px; overflow-wrap:anywhere; }
+.ui-respuesta-titulo { display:block; margin-bottom:6px; font-size:1rem; }
+.ui-respuesta-cerrar { position:absolute; top:14px; right:12px; min-width:24px; min-height:24px; }
+.ui-envio-estado { margin:12px 0; color:#59428f; font-weight:600; }
+form[aria-busy="true"] [aria-disabled="true"] { opacity:.7; cursor:wait; }
+@media print { .ui-respuesta, .ui-envio-estado { display:none; } }
 :root {
     --color-primary: #6550a3;
     --color-primary-hover: #503d89;

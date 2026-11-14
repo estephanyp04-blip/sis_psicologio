@@ -45,18 +45,19 @@ function calcularEdad(?string $fechaNacimiento): string
 }
 
 /** Carga los seguimientos usando las columnas del esquema vigente. */
-function cargarSeguimientos(mysqli $conexion, int $idHistoria): array
+function cargarSeguimientos(mysqli $conexion, int $idEstudiante): array
 {
     $stmt = $conexion->prepare("SELECT s.cod_seguimiento,s.cod_historia,s.cod_psicologa,s.cod_cita,
             s.fecha,s.descripcion,s.tecnicas_aplicadas,s.acuerdos,s.recomendaciones,s.proxima_sesion,s.fecha_registro,
             CONCAT_WS(' ',u.nombres,u.apellidos) AS profesional,c.fecha AS fecha_cita,c.hora AS hora_cita
         FROM seguimientos s
+        INNER JOIN historias_clinicas historial ON historial.cod_historia=s.cod_historia
         LEFT JOIN usuarios u ON u.cod_usuario=s.cod_psicologa
 
         LEFT JOIN citas c ON c.cod_cita=s.cod_cita
-        WHERE s.cod_historia=?
+        WHERE historial.cod_estudiante=?
         ORDER BY s.fecha ASC,s.cod_seguimiento ASC");
-    $stmt->bind_param('i', $idHistoria);
+    $stmt->bind_param('i', $idEstudiante);
     $stmt->execute();
     $resultado = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
@@ -179,7 +180,12 @@ try {
     }
 
     /* ---------- 4. Seguimientos (función dinámica) ---------- */
-    $seguimientos = cargarSeguimientos($conexion, (int)$id);
+    $seguimientos = cargarSeguimientos($conexion, (int)$h['cod_estudiante']);
+    $stmt = $conexion->prepare("SELECT cod_historia,fecha_apertura,estado FROM historias_clinicas WHERE cod_estudiante=? ORDER BY fecha_apertura ASC,cod_historia ASC");
+    $stmt->bind_param('i', $h['cod_estudiante']);
+    $stmt->execute();
+    $registrosExpediente = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
 
 } catch (Throwable $e) {
     error_log('Error en ver.php: ' . $e->getMessage());
@@ -231,10 +237,10 @@ include '../includes/navbar.php';
 <?php require_once __DIR__ . '/../includes/trazabilidad_vista.php'; flujo_panel($conexion,'historia',$h); ?>
 <div class="d-flex gap-2 my-3 d-print-none">
     <?php if (login_puede('historias_clinicas/registrar.php')): ?>
-    <a class="btn btn-primary" href="../historias_clinicas/registrar.php?cod_estudiante=<?= (int)$h['cod_estudiante'] ?>">Abrir nueva historia clínica</a>
+    <a class="btn btn-primary" href="registrar.php?cod_estudiante=<?= (int)$h['cod_estudiante'] ?>">Nueva sesión: historia clínica</a>
     <?php endif; ?>
-    <?php if ($h['estado'] !== 'Cerrada' && login_puede('seguimientos/registrar.php')): ?>
-    <a class="btn btn-outline-primary" href="../seguimientos/registrar.php?cod_historia=<?= (int)$h['cod_historia'] ?>">Registrar evolución</a>
+    <?php if (login_puede('seguimientos/listar.php')): ?>
+    <a class="btn btn-outline-primary" href="../seguimientos/listar.php?estudiante=<?= (int)$h['cod_estudiante'] ?>">Seguimiento del avance</a>
     <?php endif; ?>
     <?php if (login_puede('estadisticas/index.php')): ?>
     <a class="btn btn-outline-primary" href="../estadisticas/index.php?estudiante=<?= (int)$h['cod_estudiante'] ?>">Comparar historias del estudiante</a>
@@ -243,6 +249,25 @@ include '../includes/navbar.php';
     <a class="btn btn-outline-primary" href="../informes/registrar.php?cod_estudiante=<?= (int)$h['cod_estudiante'] ?>&amp;cod_historia=<?= (int)$h['cod_historia'] ?>">Crear informe de esta historia</a>
     <?php endif; ?>
 </div>
+
+<section class="card p-3 mb-4" aria-label="Crecimiento del expediente">
+    <h2 class="h5">Expediente de <?= login_html($nombreCompleto) ?></h2>
+    <p class="mb-2">
+        <strong><?= count($registrosExpediente) ?> sesiones registradas</strong>
+        · <?= count($registrosExpediente) ?> registros de historia clínica
+        · Apertura: <?= login_html(fechaMostrar($registrosExpediente[0]['fecha_apertura'])) ?>
+        · Última sesión: <?= login_html(fechaMostrar($registrosExpediente[count($registrosExpediente) - 1]['fecha_apertura'])) ?>
+    </p>
+    <p class="text-muted">Cada sesión registra una nueva historia clínica. Consulte Seguimiento del avance para comparar sus valoraciones.</p>
+    <?php if (count($registrosExpediente) > 1): ?>
+        <p class="mb-1">Historias anteriores conservadas en el expediente:</p>
+        <ul class="mb-0">
+        <?php foreach ($registrosExpediente as $registro): ?>
+            <li><a href="ver.php?id=<?= (int)$registro['cod_historia'] ?>">Historia #<?= (int)$registro['cod_historia'] ?> · <?= login_html(fechaMostrar($registro['fecha_apertura'])) ?></a> · <?= login_html($registro['estado']) ?></li>
+        <?php endforeach; ?>
+        </ul>
+    <?php endif; ?>
+</section>
 
     <!-- BREADCRUMB -->
     <nav aria-label="breadcrumb" class="d-print-none">
@@ -591,14 +616,15 @@ include '../includes/navbar.php';
             </div>
         <?php endif; ?>
 
-        <?php foreach ($seguimientos as $s): ?>
+        <?php foreach ($seguimientos as $numeroSesion => $s): ?>
             <div class="evolucion-item">
                 <div class="evolucion-fecha">
                     <?= login_html(fechaMostrar($s['fecha'] ?? null, 'Sin fecha')) ?>
                 </div>
 
                 <div>
-                    <strong>Seguimiento #<?= (int)$s['cod_seguimiento'] ?></strong>
+                    <strong>Nota de evolución #<?= (int)$s['cod_seguimiento'] ?></strong>
+                    <small>Historia #<?= (int)$s['cod_historia'] ?></small>
                     <p>
                         Profesional: <?= login_html($s['profesional'] ?: 'No registrado') ?>
                         <?php if (!empty($s['cod_cita'])): ?>

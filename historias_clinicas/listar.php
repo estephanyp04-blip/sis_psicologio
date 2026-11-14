@@ -15,9 +15,14 @@ $puedeEditar = login_puede('historias_clinicas/editar.php');
 $sql = "
     SELECT
         h.cod_historia,
+        h.cod_estudiante,
         h.fecha_apertura,
         h.cod_derivacion_origen,
         h.estado,
+        resumen.total_registros,
+        resumen.fecha_inicio,
+        resumen.total_registros AS total_sesiones,
+        resumen.ultima_sesion,
         e.ci,
         e.nombres,
         e.apellidos,
@@ -29,6 +34,15 @@ $sql = "
         ON e.cod_estudiante = h.cod_estudiante
     LEFT JOIN usuarios u
         ON u.cod_usuario = h.cod_psicologa
+    INNER JOIN (
+        SELECT cod_estudiante, COUNT(*) AS total_registros, MIN(fecha_apertura) AS fecha_inicio, MAX(fecha_apertura) AS ultima_sesion
+        FROM historias_clinicas GROUP BY cod_estudiante
+    ) resumen ON resumen.cod_estudiante=h.cod_estudiante
+    WHERE h.cod_historia=(
+        SELECT principal.cod_historia FROM historias_clinicas principal
+        WHERE principal.cod_estudiante=h.cod_estudiante
+        ORDER BY principal.fecha_apertura DESC, principal.cod_historia DESC LIMIT 1
+    )
     ORDER BY
         h.fecha_apertura DESC,
         h.cod_historia DESC
@@ -116,7 +130,7 @@ include '../includes/navbar.php';
                     class="btn btn-light">
 
                     <i class="bi bi-file-earmark-plus me-2"></i>
-                    Nueva historia clínica
+                    Abrir expediente
                 </a>
             <?php endif; ?>
         </section>
@@ -207,6 +221,7 @@ include '../includes/navbar.php';
                             <th>Curso</th>
                             <th>Fecha de apertura</th>
                             <th>Registrado por</th>
+                            <th>Crecimiento del expediente</th>
                             <th>Estado</th>
                             <th class="text-end">Acciones</th>
                         </tr>
@@ -235,6 +250,7 @@ include '../includes/navbar.php';
 
                             <tr
                                 data-registro="1"
+                                data-estudiante="<?= (int)$historia['cod_estudiante'] ?>"
                                 data-estado="<?= login_html($historia['estado']) ?>">
 
                                 <td>
@@ -247,7 +263,7 @@ include '../includes/navbar.php';
                                             </strong>
 
                                             <small>
-                                                Historia #<?= (int)$historia['cod_historia'] ?>
+                                                Expediente · Historia #<?= (int)$historia['cod_historia'] ?>
                                                 · <?= $historia['cod_derivacion_origen'] ? 'Derivación #' . (int)$historia['cod_derivacion_origen'] : 'Sin derivación' ?>
                                             </small>
                                             <small>
@@ -272,7 +288,7 @@ include '../includes/navbar.php';
                                         date(
                                             'd/m/Y',
                                             strtotime(
-                                                $historia['fecha_apertura']
+                                                $historia['fecha_inicio']
                                             )
                                         )
                                     ) ?>
@@ -286,6 +302,11 @@ include '../includes/navbar.php';
                                 </td>
 
                                 <td>
+                                    <strong><?= (int)$historia['total_sesiones'] ?> sesiones</strong><br>
+                                    <small><?= (int)$historia['total_registros'] ?> registros de historia clínica</small><br>
+                                    <small>Última sesión: <?= $historia['ultima_sesion'] ? login_html(date('d/m/Y', strtotime($historia['ultima_sesion']))) : 'Sin sesiones' ?></small>
+                                </td>
+                                <td>
                                     <span
                                         class="historia-estado
                                         historia-<?= login_html($estadoClase) ?>">
@@ -296,6 +317,14 @@ include '../includes/navbar.php';
 
                                 <td class="text-end">
                                     <div class="acciones-tabla">
+                                        <?php if ($puedeCrear): ?>
+                                            <a class="btn-accion" href="registrar.php?cod_estudiante=<?= (int)$historia['cod_estudiante'] ?>">
+                                                <i class="bi bi-plus-circle"></i><span>Nueva sesión</span>
+                                            </a>
+                                        <?php endif; ?>
+                                        <?php if (login_puede('seguimientos/listar.php')): ?>
+                                            <a class="btn-accion" href="../seguimientos/listar.php?estudiante=<?= (int)$historia['cod_estudiante'] ?>"><i class="bi bi-bar-chart"></i><span>Ver avance</span></a>
+                                        <?php endif; ?>
                                         <a
                                             class="btn-accion"
                                             href="ver.php?id=<?= (int)
@@ -327,7 +356,7 @@ include '../includes/navbar.php';
                             style="display: none;">
 
                             <td
-                                colspan="6"
+                                colspan="7"
                                 class="estado-vacio">
 
                                 <i class="bi bi-search"></i>
