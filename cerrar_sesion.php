@@ -10,6 +10,10 @@ if (!login_validar_token($_POST['csrf'] ?? null)) {
     http_response_code(403);
     exit('El formulario venció. Recarga la página e inténtalo de nuevo.');
 }
+if (($_SESSION['autenticado'] ?? false) === true) {
+    try { seguridad_evento(login_bd(), (int)$_SESSION['cod_usuario'], 'autenticacion', 'Salir'); }
+    catch (Throwable $error) { error_log('No se pudo registrar el cierre; codigo=' . $error->getCode()); }
+}
 $_SESSION = [];
 $p = session_get_cookie_params();
 setcookie(session_name(), '', ['expires' => time() - 42000, 'path' => $p['path'], 'domain' => $p['domain'], 'secure' => $p['secure'], 'httponly' => true, 'samesite' => 'Lax']);

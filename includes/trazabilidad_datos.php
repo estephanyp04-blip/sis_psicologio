@@ -1,5 +1,6 @@
 <?php
 if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) { http_response_code(404); exit; }
+require_once __DIR__ . '/politica_acceso.php';
 
 function flujo_fila(mysqli $bd, string $sql, array $valores = []): ?array
 {
@@ -78,6 +79,7 @@ function flujo_exigir_permiso(mysqli $bd, int $autor, string $modulo, string $ac
     if (!in_array($accion, ['puede_ver','puede_crear','puede_editar','puede_cambiar_estado'], true)) throw new LogicException('Acción desconocida.');
     $cuenta = flujo_fila($bd, "SELECT u.cod_rol FROM usuarios u JOIN roles r ON r.cod_rol=u.cod_rol WHERE u.cod_usuario=? AND u.estado='Activo' AND r.estado='Activo'", [$autor]);
     if (!$cuenta) throw new InvalidArgumentException('La cuenta no está habilitada.');
+    if (!politica_modulo_permitido($modulo, (int)$cuenta['cod_rol'])) throw new InvalidArgumentException('Su función no autoriza el acceso a este módulo.');
     if ((int)$cuenta['cod_rol'] === 1) return;
     if (!flujo_fila($bd, "SELECT p.cod_permiso FROM permisos p JOIN modulos m ON m.cod_modulo=p.cod_modulo WHERE p.cod_rol=? AND m.nombre=? AND m.estado='Activo' AND p.$accion=1", [$cuenta['cod_rol'],$modulo])) throw new InvalidArgumentException('No tiene permiso para ' . ($accion === 'puede_cambiar_estado' ? 'cambiar el estado o reprogramar' : 'realizar esta operación') . '.');
 }
@@ -96,82 +98,16 @@ function derivacion_cambiar_estado(mysqli $bd, int $id, string $estado, int $aut
                 LEFT JOIN citas c ON c.cod_cita=s.cod_cita WHERE s.cod_historia=h.cod_historia
                 AND COALESCE(s.cod_derivacion,c.cod_derivacion)=?)) LIMIT 1', [$d['cod_estudiante'],$id,$id]);
         if (!$historia) throw new InvalidArgumentException('Registre primero una historia clínica vinculada a esta derivación.');
-        if ($estado === 'Atendido' && !flujo_fila($bd, 'SELECT s.cod_seguimiento FROM seguimientos s JOIN historias_clinicas h ON h.cod_historia=s.cod_historia LEFT JOIN citas c ON c.cod_cita=s.cod_cita WHERE COALESCE(s.cod_derivacion,c.cod_derivacion,h.cod_derivacion_origen)=? LIMIT 1', [$id])) {
-            throw new InvalidArgumentException('Registre un seguimiento de esta derivación antes de cerrar su atención.');
-        }
+        // La historia vinculada documenta la atención. El archivo de seguimientos
+        // solo resuelve relaciones históricas; no es requisito para cerrar casos nuevos.
         flujo_ejecutar($bd, 'UPDATE derivaciones SET estado=? WHERE cod_derivacion=?', [$estado,$id]);
         flujo_auditar($bd, $autor, 'derivaciones', 'Estado', $id, $d['estado'] . ' → ' . $estado);
         $bd->commit();
     } catch (Throwable $error) { $bd->rollback(); throw $error; }
 }
 
+/** Compatibilidad de llamadas antiguas: ninguna escritura ni cambio de estado. */
 function seguimiento_guardar(mysqli $bd, array $entrada, int $autor): int
 {
-    $idHistoria = flujo_id($entrada['cod_historia'] ?? null);
-    $idCita = flujo_id($entrada['cod_cita'] ?? 0, true);
-    $fecha = flujo_fecha($entrada['fecha'] ?? '');
-    if ($fecha > date('Y-m-d')) throw new InvalidArgumentException('El seguimiento no puede tener una fecha futura.');
-    $datos = [];
-    foreach (['descripcion','tecnicas_aplicadas','acuerdos','recomendaciones'] as $campo) $datos[$campo] = flujo_texto($entrada[$campo] ?? '');
-    if ($datos['descripcion'] === '') throw new InvalidArgumentException('La descripción del seguimiento es obligatoria.');
-    $proxima = flujo_texto($entrada['proxima_sesion'] ?? '', 10);
-    if ($proxima !== '' && flujo_fecha($proxima) <= $fecha) throw new InvalidArgumentException('La próxima sesión debe ser posterior al seguimiento.');
-    $bd->begin_transaction();
-    try {
-        $h = flujo_fila($bd, 'SELECT * FROM historias_clinicas WHERE cod_historia=? FOR UPDATE', [$idHistoria]);
-        if (!$h || $h['estado'] === 'Cerrada' || $fecha < $h['fecha_apertura']) throw new InvalidArgumentException('Revise la historia, su estado y la fecha de apertura.');
-        $idDerivacion = flujo_id($entrada['cod_derivacion'] ?? 0, true);
-        if ($idCita) {
-            $c = flujo_fila($bd, 'SELECT * FROM citas WHERE cod_cita=? FOR UPDATE', [$idCita]);
-            if (!$c || (int)$c['cod_estudiante'] !== (int)$h['cod_estudiante'] || $c['estado'] === 'Cancelada' || $c['fecha'] !== $fecha) {
-                throw new InvalidArgumentException('La cita debe pertenecer al estudiante, estar vigente y coincidir con la fecha del seguimiento.');
-            }
-            if (flujo_fila($bd, 'SELECT cod_seguimiento FROM seguimientos WHERE cod_cita=? LIMIT 1', [$idCita])) throw new InvalidArgumentException('La cita ya tiene un seguimiento registrado.');
-            $episodioCita = (int)($c['cod_derivacion'] ?? 0);
-            if ($idDerivacion && $episodioCita && $idDerivacion !== $episodioCita) throw new InvalidArgumentException('La derivación seleccionada no corresponde a la cita.');
-            $idDerivacion = $episodioCita ?: $idDerivacion;
-            flujo_exigir_permiso($bd, $autor, 'Citas', 'puede_cambiar_estado');
-        }
-        if (!$idDerivacion) {
-            $stmt = $bd->prepare("SELECT cod_derivacion FROM derivaciones WHERE cod_estudiante=? AND estado<>'Atendido' ORDER BY cod_derivacion");
-            $stmt->bind_param('i',$h['cod_estudiante']); $stmt->execute();
-            $episodios = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
-            if (count($episodios)>1) throw new InvalidArgumentException('Hay varias derivaciones abiertas. Seleccione la derivación de esta atención.');
-            $idDerivacion = (int)($episodios[0]['cod_derivacion'] ?? 0);
-        }
-        $d = null;
-        if ($idDerivacion) {
-            $d = flujo_fila($bd, 'SELECT * FROM derivaciones WHERE cod_derivacion=? FOR UPDATE', [$idDerivacion]);
-            if (!$d || (int)$d['cod_estudiante'] !== (int)$h['cod_estudiante'] || $d['estado'] === 'Atendido') throw new InvalidArgumentException('Reabra la derivación antes de registrar otra atención.');
-        }
-        flujo_ejecutar($bd, 'INSERT INTO seguimientos (cod_historia,cod_psicologa,cod_cita,cod_derivacion,fecha,descripcion,tecnicas_aplicadas,acuerdos,recomendaciones,proxima_sesion) VALUES (?,?,NULLIF(?,0),NULLIF(?,0),?,?,?,?,?,NULLIF(?,\'\'))',
-            [$idHistoria,$autor,$idCita,$idDerivacion,$fecha,$datos['descripcion'],$datos['tecnicas_aplicadas'],$datos['acuerdos'],$datos['recomendaciones'],$proxima]);
-        $id = (int)$bd->insert_id;
-        if ($idCita) {
-            flujo_ejecutar($bd, "UPDATE citas SET estado='Atendida' WHERE cod_cita=?", [$idCita]);
-            flujo_auditar($bd, $autor, 'citas', 'Atender', $idCita, 'Seguimiento #' . $id);
-        }
-        flujo_ejecutar($bd, "UPDATE historias_clinicas SET estado='En seguimiento' WHERE cod_historia=?", [$idHistoria]);
-        if ($d !== null && $d['estado'] !== 'En seguimiento') {
-            flujo_ejecutar($bd, "UPDATE derivaciones SET estado='En seguimiento' WHERE cod_derivacion=?", [$idDerivacion]);
-            flujo_auditar($bd, $autor, 'derivaciones', 'Estado', $idDerivacion, 'Pendiente → En seguimiento; seguimiento #' . $id);
-        }
-        if (!empty($entrada['reservar_proxima'])) {
-            flujo_exigir_permiso($bd,$autor,'Citas','puede_crear');
-            require_once __DIR__ . '/../citas/datos.php';
-            if ($proxima === '') throw new InvalidArgumentException('Indique la fecha de la próxima cita.');
-            $horaProxima = flujo_texto($entrada['proxima_hora'] ?? '',5);
-            if (!in_array($horaProxima,cita_horas(),true)) throw new InvalidArgumentException('Seleccione una hora para confirmar la próxima cita.');
-            $cuenta = flujo_fila($bd,'SELECT cod_rol FROM usuarios WHERE cod_usuario=?',[$autor]);
-            $profesional = (int)$cuenta['cod_rol']===2 ? $autor : flujo_id($entrada['proxima_psicologa'] ?? null);
-            $existente = flujo_fila($bd,"SELECT * FROM citas WHERE cod_psicologa=? AND fecha=? AND hora=? AND estado IN ('Pendiente','Reprogramada') FOR UPDATE",[$profesional,$proxima,$horaProxima]);
-            if ($existente && ((int)$existente['cod_estudiante']!==(int)$h['cod_estudiante'] || (int)$existente['cod_derivacion']!==$idDerivacion)) throw new InvalidArgumentException('Ese horario ya está reservado para otra atención.');
-            $proximaCita = $existente ? (int)$existente['cod_cita'] : cita_guardar($bd,['cod_estudiante'=>$h['cod_estudiante'],'cod_derivacion'=>$idDerivacion,'cod_psicologa'=>$profesional,'fecha'=>$proxima,'hora'=>$horaProxima,'observaciones'=>'Próxima atención desde seguimiento #'.$id],$autor,null,false);
-            flujo_ejecutar($bd,'UPDATE seguimientos SET cod_proxima_cita=? WHERE cod_seguimiento=?',[$proximaCita,$id]);
-        }
-        flujo_auditar($bd, $autor, 'historias_clinicas', 'Seguimiento', $idHistoria, 'Seguimiento #' . $id . '; estado En seguimiento');
-        flujo_auditar($bd, $autor, 'seguimientos', 'Crear', $id, 'Historia #' . $idHistoria . '; cita #' . $idCita);
-        $bd->commit();
-        return $id;
-    } catch (Throwable $error) { $bd->rollback(); throw $error; }
+    throw new InvalidArgumentException('El registro independiente fue retirado. Registre la atención en la historia clínica.');
 }

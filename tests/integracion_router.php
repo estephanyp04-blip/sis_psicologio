@@ -11,8 +11,14 @@ if (!empty($fixture['navegador'])) {
         exit;
     }
     if (hash_equals($fixture['secreto'], $_COOKIE['prueba_navegador'] ?? '')) {
+        // Solo el arnés sintético utiliza iframe para automatizar formularios.
+        // La aplicación real mantiene DENY; su cabecera se comprueba por HTTP.
+        header_register_callback(static function (): void { header('X-Frame-Options: SAMEORIGIN'); });
         $_SERVER['HTTP_X_PRUEBA_SECRETO'] = $fixture['secreto'];
-        $_SERVER['HTTP_X_PRUEBA_USUARIO'] = 'prueba_admin';
+        $_SERVER['HTTP_X_PRUEBA_USUARIO'] = preg_match('#^/(docentes|usuarios|roles)/#', parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ? 'prueba_admin' : 'prueba_psicologa';
+        if (!empty($fixture['cuatro_roles']) && preg_match('#^/derivaciones/(registrar|guardar|editar|actualizar)\.php$#', parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH))) {
+            $_SERVER['HTTP_X_PRUEBA_USUARIO'] = 'prueba_docente';
+        }
         header("Content-Security-Policy: default-src 'self' 'unsafe-inline' data:; connect-src 'self'");
     }
 }

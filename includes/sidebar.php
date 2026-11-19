@@ -22,9 +22,8 @@ $gruposMenu = [
         ['roles/listar.php', 'Roles y permisos', 'bi-shield-lock', null],
     ],
     'Informes y resultados' => [
-        ['seguimientos/listar.php', 'Seguimiento del avance', 'bi-graph-up-arrow', null],
         ['informes/listar.php', 'Informes', 'bi-file-earmark-bar-graph-fill', 'informes/registrar.php'],
-        ['estadisticas/index.php', 'Estadísticas', 'bi-bar-chart-line-fill', null],
+        ['estadisticas/index.php', 'Estadísticas y análisis', 'bi-bar-chart-line-fill', null],
     ],
 ];
 ?>

@@ -20,9 +20,17 @@ $dbPass = getenv('DB_PASS');
 
 $appBaseUrl = getenv('APP_BASE_URL');
 $cookieSegura = getenv('COOKIE_SEGURA');
+$entorno = getenv('APP_ENV') ?: 'desarrollo';
+if (in_array($entorno, ['production','produccion'], true)) $entorno = 'produccion';
+elseif (in_array($entorno, ['development','desarrollo'], true)) $entorno = 'desarrollo';
+else throw new RuntimeException('APP_ENV debe ser desarrollo/development o produccion/production.');
+if ($entorno === 'produccion' && ($dbUser === false || $dbUser === '' || strtolower($dbUser) === 'root' || $dbPass === false || $dbPass === '')) {
+    throw new RuntimeException('Configure una cuenta de ejecución restringida para producción.');
+}
 
 // Configuración general
 return [
+    'entorno' => $entorno,
 
     // Zona horaria
     'zona_horaria' => 'America/La_Paz',

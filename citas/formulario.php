@@ -54,8 +54,8 @@ include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/sid
 ?>
 <main class="main-content"><div class="container-fluid">
 <h1><?= login_html($tituloPagina) ?></h1>
-<?php if ($mensaje): ?><div class="alert alert-danger"><?= login_html($mensaje) ?></div><?php endif; ?>
-<?php if (isset($_GET['exito'])): ?><div class="alert alert-success">Cita guardada correctamente.</div><?php endif; ?>
+<?php if ($mensaje): ?><div data-ui-aviso class="alert alert-danger"><?= login_html($mensaje) ?></div><?php endif; ?>
+<?php if (isset($_GET['exito'])): ?><div data-ui-aviso class="alert alert-success">Cita guardada correctamente.</div><?php endif; ?>
 <?php if ($origen && (int) ($origen['solicitar_cita'] ?? 0) === 1): ?>
 <div class="alert alert-info"><strong>Solicitud recibida.</strong> La docente pidió una cita para <?= login_html($origen['estudiante']) ?>.
 <?php if (!empty($origen['psicologa_solicitada'])): ?> Psicóloga solicitada: <?= login_html($origen['psicologa_solicitada']) ?>.<?php endif; ?></div>

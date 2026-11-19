@@ -20,7 +20,7 @@ try {
         unset($clave);
     }
 } catch (Throwable $e) {
-    error_log('Login: ' . $e->getMessage());
+    error_log('Login: ' . get_class($e) . "; codigo=" . $e->getCode());
     http_response_code(503);
     $error = 'No fue posible iniciar sesión. Revisa la conexión y la configuración de usuarios con el administrador.';
 }
@@ -35,8 +35,10 @@ try {
     <link rel="apple-touch-icon" sizes="180x180" href="<?= login_html(login_url('asset/img/apple-touch-icon.png?v=2')) ?>">
     <meta name="theme-color" content="#0f172a">
     <link href="<?= login_html(login_url('asset/css/login.css?v=' . filemtime(__DIR__ . '/asset/css/login.css'))) ?>" rel="stylesheet">
+    <link href="<?= login_html(login_url('asset/css/avisos.css?v=1')) ?>" rel="stylesheet">
+    <script src="<?= login_html(login_url('asset/js/avisos.js?v=1')) ?>" defer></script>
 </head>
-<body class="login-page">
+<body class="login-page" data-ui-login="<?= login_html(login_url('login.php')) ?>">
 <main class="login-card" aria-labelledby="titulo-login">
     <header class="login-cabecera">
         <img class="login-simbolo" src="<?= login_html(login_url('asset/img/logo-psicologia.png')) ?>" alt="">
@@ -47,10 +49,13 @@ try {
     <section class="login-formulario" aria-label="Acceso al sistema">
         <p class="login-ayuda">Ingresa con tu usuario y contraseña.</p>
         <?php if ($error): ?>
-            <div class="alert alert-danger login-error" role="alert"><?= login_html($error) ?></div>
+            <div data-ui-aviso class="alert alert-danger login-error" role="alert"><?= login_html($error) ?></div>
         <?php endif; ?>
         <?php if (isset($_GET['salida'])): ?>
             <p class="login-aviso" role="status">Has cerrado la sesión.</p>
+        <?php endif; ?>
+        <?php if (($_GET['sesion'] ?? '') === 'expirada'): ?>
+            <p class="login-aviso" data-ui-sesion-expirada role="status">Tu sesión ha finalizado. Inicia sesión nuevamente.</p>
         <?php endif; ?>
         <form action="<?= login_html(login_url('login.php')) ?>" method="post">
             <input type="hidden" name="csrf" value="<?= login_html(login_token()) ?>">

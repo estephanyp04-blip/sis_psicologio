@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('usuarios/registrar.php');
+$uiEntrada = ui_entrada_recuperar('usuario_nuevo');
 
 require_once __DIR__ . '/../config/conexion.php';
 
@@ -32,7 +33,7 @@ if(!$resultadoRoles){
     </nav>
 
     <?php if(isset($_SESSION['mensaje'])): ?>
-        <div class="alert alert-<?= htmlspecialchars($_SESSION['tipo_mensaje']??'danger'); ?> alert-dismissible fade show">
+        <div data-ui-aviso class="alert alert-<?= htmlspecialchars($_SESSION['tipo_mensaje']??'danger'); ?> alert-dismissible fade show">
             <?= htmlspecialchars($_SESSION['mensaje']); ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>

@@ -25,6 +25,7 @@ $catalogo = [
     // Los permisos dinámicos no amplían el acceso de Docente o Director a estos datos.
     'index.php' => $ruta('Dashboard', 'puede_ver', $get, false, false, null, $rolesBloqueadosDatosEstudiantiles),
     'estadisticas/index.php' => $ruta('Estadísticas', 'puede_ver', $get, false, false, null, $rolesBloqueadosDatosEstudiantiles),
+    'estadisticas/individual.php' => $ruta('Estadísticas', 'puede_ver', $get, false, false, null, $rolesBloqueadosDatosEstudiantiles),
 
     'usuarios/listar.php' => $ruta('Usuarios', 'puede_ver', $get),
     'usuarios/ver.php' => $ruta('Usuarios', 'puede_ver', $get),
@@ -103,7 +104,7 @@ $catalogo = [
 // Derechos originales de los cuatro roles que ya existían antes de habilitar
 // permisos configurables. La autenticación los reemplaza con los valores de la BD.
 $rolesBase = [
-    'index.php' => [1, 2], 'estadisticas/index.php' => [1, 2],
+    'index.php' => [1, 2], 'estadisticas/index.php' => [1, 2], 'estadisticas/individual.php' => [2],
     'usuarios/listar.php' => [1], 'usuarios/ver.php' => [1], 'usuarios/registrar.php' => [1],
     'usuarios/editar.php' => [1], 'usuarios/guardar.php' => [1], 'usuarios/actualizar.php' => [1], 'usuarios/cambiar_estado.php' => [1],
     'docentes/listar.php' => [1], 'docentes/ver.php' => [1], 'docentes/registrar.php' => [1], 'docentes/editar.php' => [1],
@@ -124,6 +125,10 @@ $rolesBase = [
     'informes/antecedentes.php' => [1, 2], 'informes/mensual.php' => [1, 2, 4], 'informes/ver_mensual.php' => [1, 2, 4], 'informes/guardar_mensual.php' => [1, 2],
     'roles/listar.php' => [1], 'roles/registrar.php' => [1], 'roles/guardar.php' => [1], 'roles/editar.php' => [1], 'roles/actualizar.php' => [1],
 ];
-foreach ($catalogo as $nombre => &$definicion) $definicion['roles'] = $rolesBase[$nombre] ?? [1];
+require_once __DIR__ . '/../includes/politica_acceso.php';
+foreach ($catalogo as $nombre => &$definicion) {
+    $definicion['roles'] = array_values(array_filter($rolesBase[$nombre] ?? [1],
+        static fn(int $rol): bool => politica_modulo_permitido($definicion['modulo'], $rol)));
+}
 unset($definicion);
 return $catalogo;

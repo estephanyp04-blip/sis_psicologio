@@ -1001,7 +1001,7 @@ document.addEventListener('DOMContentLoaded', function () {
     formHistoria.addEventListener('submit', (evento) => {
         if (derivacionesCargando || errorDerivaciones) {
             evento.preventDefault();
-            alert('Espere a que se carguen las derivaciones. Si ocurrió un error, vuelva a seleccionar al estudiante.');
+            Avisos.advertencia('Espera a que se carguen las derivaciones. Si ocurrió un error, vuelve a seleccionar al estudiante.');
         }
     });
 
@@ -1044,7 +1044,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 { headers: { 'Accept': 'application/json' }, signal: controladorDerivaciones.signal }
             );
 
-            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            if (!Avisos.comprobarRespuesta(resp) || !resp.ok) throw new Error('HTTP ' + resp.status);
 
             const data = await resp.json();
             if (peticionActual !== peticionDerivaciones || idEst !== estudianteSelect.value) return;
@@ -1132,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!conservarEntrada && motivo && (!motivo.value || motivo.dataset.autofill === '1')) {
             motivo.value = d.motivo || '';
             motivo.dataset.autofill = '1';
-            motivo.dispatchEvent(new Event('input'));
+            motivo.dispatchEvent(new CustomEvent('input', { detail: { uiPrecarga: true } }));
         }
 
         if (bloqueObsDer) {

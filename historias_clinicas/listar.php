@@ -137,7 +137,7 @@ include '../includes/navbar.php';
 
         <?php if ($mensaje !== ''): ?>
             <div
-                class="alert alert-<?= login_html($tipoMensaje) ?>
+                data-ui-aviso class="alert alert-<?= login_html($tipoMensaje) ?>
                 alert-dismissible fade show"
                 role="alert">
 

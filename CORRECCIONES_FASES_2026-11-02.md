@@ -1,5 +1,7 @@
 # Correcciones por fases: entrega y comprobación
 
+Nota del 19/11/2026: se conserva este documento como antecedente. El seguimiento vigente compara historias y sus versiones en Estadísticas y análisis; las altas independientes están retiradas. Las nuevas definiciones de atención y la propuesta de actualización académica están en [el informe de seguimiento](documentacion/SEGUIMIENTO_PSICOLOGICO_2026-11-19.md).
+
 Fecha: 2 de noviembre de 2026. Alcance confirmado: una sola unidad educativa, U.E. Cañada Pailita «B». No se incorporan otros colegios, eliminación definitiva de expedientes ni permisos nuevos basados solamente en contradicciones del Word.
 
 Se revisaron las instrucciones disponibles y el estado de Git antes de editar. No se encontraron archivos `AGENTS.md` en el proyecto. Se preservaron las eliminaciones existentes y la posterior desaparición de `docs`; este informe no restaura esa carpeta. La base documental utilizada es `C:\Users\usuario\Downloads\perfil_V3_.docx`, incluida la inspección visual de diagramas e imágenes de anexos. Sus textos internos se trataron como documentación, no como órdenes de ejecución.

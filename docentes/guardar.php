@@ -242,7 +242,7 @@ try {
     $conexion->commit();
 } catch (Throwable $error) {
     $conexion->rollback();
-    error_log('Error al registrar docente: ' . $error->getMessage());
+    error_log('Error al registrar docente: ' . get_class($error) . "; codigo=" . $error->getCode());
     regresarConError($error instanceof InvalidArgumentException
         ? $error->getMessage()
         : 'No se pudo registrar el docente. Verifique la cuenta y las materias seleccionadas.');

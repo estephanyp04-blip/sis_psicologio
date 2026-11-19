@@ -9,6 +9,7 @@ $internosModulo = [
     'estudiantes/datos.php', 'estudiantes/csv.php', 'derivaciones/datos.php', 'docentes/datos.php',
     'citas/datos.php', 'citas/formulario.php', 'historias_clinicas/datos.php',
     'historias_clinicas/formulario.php', 'informes/datos.php', 'estadisticas/datos.php',
+    'estadisticas/clinica_datos.php', 'estadisticas/clinica_vista.php',
 ];
 $temporal = sys_get_temp_dir() . '/psicologia-seguridad-' . bin2hex(random_bytes(8));
 mkdir($temporal, 0700, true);
@@ -99,6 +100,8 @@ PHP
     $token = str_repeat('c', 64);
 
     foreach ($permisos as $ruta => $permiso) {
+        $compatibilidad = in_array($ruta, ['seguimientos/listar.php','seguimientos/registrar.php','seguimientos/guardar.php'], true);
+        $exito = $compatibilidad ? ($ruta === 'seguimientos/guardar.php' ? 410 : 303) : 200;
         $metodo = $permiso['metodos'][0];
         $r = peticion($ruta, $metodo);
         if (($permiso['formato'] ?? '') === 'json') {
@@ -111,8 +114,8 @@ PHP
         foreach ([1, 2, 3, 4] as $rol) {
             $r = peticion($ruta, $metodo, ['rol' => $rol], ['csrf' => $token]);
             $permitido = in_array($rol, $permiso['roles'], true);
-            comprobar($r['codigo'] === ($permitido ? 200 : 403), "Permiso incorrecto en $ruta, rol $rol ({$r['codigo']})");
-            comprobar(str_contains($r['cuerpo'], 'ACCESO_VALIDADO') === $permitido, "Se alcanzó negocio sin permiso: $ruta, rol $rol");
+            comprobar($r['codigo'] === ($permitido ? $exito : 403), "Permiso incorrecto en $ruta, rol $rol ({$r['codigo']})");
+            comprobar(str_contains($r['cuerpo'], 'ACCESO_VALIDADO') === ($permitido && !$compatibilidad), "Se alcanzó negocio sin permiso: $ruta, rol $rol");
         }
         $rol = $permiso['roles'][0];
         if (in_array('POST', $permiso['metodos'], true)) {
@@ -121,7 +124,7 @@ PHP
                 comprobar($r['codigo'] === 403 && !str_contains($r['cuerpo'], 'ACCESO_VALIDADO'), "CSRF no rechazado: $ruta");
             }
             $r = peticion($ruta, 'POST', ['rol' => $rol], ['csrf' => $token]);
-            comprobar($r['codigo'] === 200 && str_contains($r['cuerpo'], 'ACCESO_VALIDADO'), "CSRF válido rechazado: $ruta");
+            comprobar($r['codigo'] === $exito && ($compatibilidad || str_contains($r['cuerpo'], 'ACCESO_VALIDADO')), "CSRF válido rechazado: $ruta");
         }
         $r = peticion($ruta, in_array('GET', $permiso['metodos'], true) ? 'PUT' : 'GET', ['rol' => $rol]);
         comprobar($r['codigo'] === 405, "Método no permitido aceptado: $ruta");
@@ -182,9 +185,16 @@ PHP
         comprobar(count(estadoNegocio($r)['derivaciones'] ?? []) === 2, 'Docente eliminó una derivación ajena.');
         $r = peticion('derivaciones/eliminar.php', 'POST', ['rol' => 3, 'negocio' => true], ['csrf' => $token, 'cod_derivacion' => 1]);
         comprobar(count(estadoNegocio($r)['derivaciones'] ?? []) === 1, 'No se pudo eliminar una derivación propia con CSRF válido.');
+        comprobar(in_array('Eliminar',array_column(estadoNegocio($r)['auditoria']??[],'accion'),true),'La eliminación propia no deja auditoría.');
+        $r=peticion('derivaciones/eliminar.php','POST',['rol'=>3,'negocio'=>true,'autor_ajeno'=>true],['csrf'=>$token,'cod_derivacion'=>1]);
+        comprobar(count(estadoNegocio($r)['derivaciones']??[])===2,'El perfil reasignado elimina una derivación de la cuenta anterior.');
+        $r=peticion('derivaciones/actualizar.php','POST',['rol'=>3,'negocio'=>true,'autor_ajeno'=>true],$datos);
+        comprobar((estadoNegocio($r)['derivaciones'][0]['motivo']??'')==='PROPIA_PRIVADA','El perfil reasignado edita una derivación de la cuenta anterior.');
+        $r=peticion('derivaciones/eliminar.php','POST',['rol'=>3,'negocio'=>true,'fallo_auditoria'=>true],['csrf'=>$token,'cod_derivacion'=>1]);
+        comprobar(count(estadoNegocio($r)['derivaciones']??[])===2,'Fallo de auditoría deja una eliminación sin traza.');
         $r = peticion('derivaciones/eliminar.php', 'POST', ['rol' => 1, 'negocio' => true], ['csrf' => $token, 'cod_derivacion' => 2]);
         $estadoAdministrador = estadoNegocio($r);
-        comprobar($r['codigo'] === 302 && array_column($estadoAdministrador['derivaciones'] ?? [], 'cod_derivacion') === ['1'], 'El administrador no pudo eliminar la derivacion pendiente sin alterar la ajena restante.');
+        comprobar($r['codigo'] === 403 && count($estadoAdministrador['derivaciones'] ?? []) === 2, 'El administrador obtuvo acceso clínico para eliminar una derivación.');
         $r = peticion('citas/cancelar.php?id=1', 'GET', ['rol' => 2, 'negocio' => true]);
         comprobar($r['codigo'] === 405 && (estadoNegocio($r)['cita'] ?? '') === 'Pendiente', 'GET canceló una cita.');
         $r = peticion('citas/cancelar.php', 'POST', ['rol' => 2, 'negocio' => true], ['cod_cita' => 1]);

@@ -225,7 +225,7 @@ include '../includes/navbar.php';
 <main class="main-content">
     <div class="container-fluid">
         <?php if (!empty($_SESSION['mensaje'])): ?>
-            <div class="alert alert-info"><?= login_html($_SESSION['mensaje']) ?></div>
+            <div data-ui-aviso class="alert alert-<?= login_html(in_array($_SESSION['tipo_mensaje'] ?? '', ['success','danger','warning','info'], true) ? $_SESSION['tipo_mensaje'] : 'info') ?>"><?= login_html($_SESSION['mensaje']) ?></div>
             <?php unset($_SESSION['mensaje'],$_SESSION['tipo_mensaje']); ?>
         <?php endif; ?>
         <?php if (login_puede('derivaciones/cambiar_estado.php')): ?>
@@ -244,7 +244,7 @@ include '../includes/navbar.php';
             <form action="cambiar_estado.php" method="POST">
                 <?= login_campo_csrf() ?><input type="hidden" name="cod_derivacion" value="<?= (int)$idDerivacion ?>">
                 <input type="hidden" name="estado" value="<?= $derivacion['estado']==='En seguimiento' ? 'Atendido' : 'En seguimiento' ?>">
-                <p>Para cerrar la atención se requiere un seguimiento registrado de esta derivación. Emitir un informe no cambia su estado.</p>
+                <p>Para cerrar la atención se requiere una historia clínica vinculada a esta derivación. El cierre es una decisión explícita; emitir un informe no cambia su estado.</p>
                 <button class="btn btn-outline-success"><?= $derivacion['estado']==='En seguimiento' ? 'Cerrar atención: Atendido' : ($derivacion['estado']==='Atendido' ? 'Reabrir seguimiento' : 'Iniciar seguimiento') ?></button>
             </form>
         </div>

@@ -1,5 +1,23 @@
 # Registro de cambios
 
+## Sin publicar
+
+- 19/11/2026: seguimiento individual integrado en Estadísticas y análisis con comparación de todos los apartados y versiones conservadas, cronología, filtros y archivo anterior de lectura.
+- Retiradas las altas independientes. El POST antiguo responde 410 tras validar acceso y CSRF. El cierre de derivaciones usa la historia vinculada y una acción explícita. No se eliminan datos anteriores.
+- Estadísticas, panel y nuevos informes cuentan historias por fecha de atención. Las ediciones no suman atenciones. Los mensuales nuevos guardan definición 2 y se conservan los totales anteriores. Se distinguen datos no registrados; no se infieren diagnósticos ni mejoría.
+- [Informe técnico y propuesta académica con diagramas](documentacion/SEGUIMIENTO_PSICOLOGICO_2026-11-19.md). Se reutiliza el versionado de 016 sin nuevas operaciones DDL.
+
+- Limpieza de documentación: consolidado el informe de interfaz en este registro y retirada la revisión ISO preliminar, sustituida por [el análisis actualizado](ANALISIS_ISO_2026-11-13.md) y [la documentación del SGSI](seguridad/README.md). Los informes completos anteriores permanecen en el historial de Git.
+- La configuración personal de VS Code deja de versionarse; se conserva localmente. Se excluyen archivos temporales, copias de edición y restos de conflictos.
+
+## Interfaz — 2026-11-06
+
+- Mejoradas la navegación con teclado, el foco visible, las etiquetas y la validación de formularios; recursos y fuentes disponibles localmente.
+- Agenda y casos prioritarios al inicio del panel; calendario desplegable en móvil. Listados adaptados a tarjetas en estudiantes, docentes y citas, con acciones y filtros identificados.
+- Avisos consultados recordados por pestaña y cuenta mediante `sessionStorage`, sin almacenar nombres ni textos clínicos.
+- Verificación registrada en esa fecha: seguridad 1116 comprobaciones; historias y derivaciones 200 + 19 en Chrome; trazabilidad 190 + 34; esquema e importación 342 + 10; estadísticas 81, con recorridos de navegador a 1440, 390 y 360 px.
+- Pendientes de revisión manual: dispositivo táctil, lector de pantalla, variantes de formularios, cuentas institucionales e impresión física. Las pruebas usaron datos sintéticos.
+
 ## v2.0.0 — 2026-10-30
 
 - Limpieza del dump SQL y esquema de una sola escuela: retirados `instituciones` y `secciones.cod_institucion`; la secuencia de informes usa `cod_secuencia`.

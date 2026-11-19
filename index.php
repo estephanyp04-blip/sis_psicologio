@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/includes/autenticacion.php';
 requerir_acceso('index.php');
+$uiEntradaCita = (int)($_SESSION['ui_entrada']['cita_panel']['id'] ?? 0);
+$uiEntrada = ui_entrada_recuperar('cita_panel', $uiEntradaCita);
+$uiEntradaFormulario = 'form-cita-' . $uiEntradaCita;
 require_once __DIR__ . '/config/conexion.php';
 require_once __DIR__ . '/estadisticas/datos.php';
 require_once __DIR__ . '/citas/datos.php';
@@ -12,14 +15,14 @@ $errorCalendario = '';
 if(login_puede('citas/listar.php')) {
     try { $calendario=cita_calendario_datos($conexion,$_GET); }
     catch(InvalidArgumentException $error) { http_response_code(422);$errorCalendario=$error->getMessage(); }
-    catch(Throwable $error) { http_response_code(503);$errorCalendario='No se pudo consultar el calendario. Intente nuevamente.';error_log('Calendario del panel: '.$error->getMessage()); }
+    catch(Throwable $error) { http_response_code(503);$errorCalendario='No se pudo consultar el calendario. Intente nuevamente.';error_log('Calendario del panel: '.get_class($error) . "; codigo=" . $error->getCode()); }
 }
 $urlAgenda = static fn(array $filtros=[]): string => login_url('index.php'.($filtros?'?'.http_build_query($filtros):'')).'#agenda-calendario';
 try {
     $panel = estadisticas_panel($conexion);
 } catch (Throwable $error) {
     http_response_code(503);
-    error_log('Panel principal: ' . $error->getMessage());
+    error_log('Panel principal: ' . get_class($error) . "; codigo=" . $error->getCode());
 }
 $fechaVisible = static fn(string $fecha): string => date('d/m/Y', strtotime($fecha));
 $nombreUsuario = trim((string)($_SESSION['nombre'] ?? ''));
@@ -30,7 +33,7 @@ $accesos = [
     ['historias_clinicas/listar.php','Historias clínicas','Revisar historias y seguimientos.','purple','bi-file-earmark-medical'],
     ['docentes/listar.php','Docentes','Administrar docentes y materias.','cyan','bi-person-badge'],
     ['informes/listar.php','Informes','Preparar y consultar informes.','red','bi-file-earmark-bar-graph'],
-    ['estadisticas/index.php','Estadísticas','Explorar sesiones por estudiante.','indigo','bi-bar-chart-line'],
+    ['estadisticas/index.php','Estadísticas y análisis','Comparar historias y consultar estadísticas.','indigo','bi-bar-chart-line'],
 ];
 include __DIR__ . '/includes/header.php';
 include __DIR__ . '/includes/sidebar.php';
@@ -45,7 +48,7 @@ include __DIR__ . '/includes/navbar.php';
         </header>
 
         <?php if ($panel === null): ?>
-            <div class="alert alert-danger" role="alert">No se pudo cargar el resumen. Intente nuevamente.</div>
+            <div data-ui-aviso class="alert alert-danger" role="alert">No se pudo cargar el resumen. Intente nuevamente.</div>
         <?php else: ?>
             <?php $r = $panel['resumen'];
             $tarjetas = [
@@ -55,7 +58,7 @@ include __DIR__ . '/includes/navbar.php';
                     '<path d="m8 2 8 0 6 6v8l-6 6H8l-6-6V8Z M12 7v6M12 17h.01"/>'],
                 ['citas_pendientes','Citas pendientes',$r['citas_pendientes'],'Próximos 7 días · '.$fechaVisible($panel['hoy']).' al '.$fechaVisible($panel['fin_agenda']),'orange','citas/listar.php',
                     '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6M17 2v6M3 11h18M12 14v3l2 1"/>'],
-                ['sesiones','Sesiones realizadas',$r['sesiones'],$r['sesiones_recientes'].' en los últimos 30 días','green','estadisticas/index.php',
+                ['sesiones','Atenciones documentadas',$r['sesiones'],$r['sesiones_recientes'].' en los últimos 30 días','green','estadisticas/index.php',
                     '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>'],
             ]; ?>
             <section class="panel-resumen" aria-label="Resumen de atención">
@@ -73,13 +76,13 @@ include __DIR__ . '/includes/navbar.php';
                 <section class="panel-bloque" aria-labelledby="titulo-prioritarios">
                     <header class="panel-bloque-cabecera"><h2 id="titulo-prioritarios">Seguimiento prioritario</h2>
                         <a href="<?= login_html(login_url('derivaciones/listar.php')) ?>">Ver derivaciones <span aria-hidden="true">↗</span></a></header>
-                    <p class="panel-contexto">Estudiantes activos con derivaciones abiertas. Primero la prioridad más alta y quienes llevan más tiempo sin sesión. La prioridad corresponde a la derivación.</p>
+                    <p class="panel-contexto">Estudiantes activos con derivaciones abiertas. Primero la prioridad más alta y quienes llevan más tiempo sin atención documentada. La prioridad corresponde a la derivación.</p>
                     <?php if (!$panel['prioritarios']): ?>
                         <p class="panel-vacio" role="status">No hay estudiantes con derivaciones pendientes o en seguimiento.</p>
                     <?php else: ?>
                         <div class="panel-tabla-scroll" tabindex="0" role="region" aria-label="Estudiantes con atención prioritaria">
                             <table class="panel-tabla">
-                                <thead><tr><th scope="col">Estudiante</th><th scope="col">Curso actual</th><th scope="col">Prioridad</th><th scope="col">Última sesión</th><th scope="col">Consultar</th></tr></thead>
+                                <thead><tr><th scope="col">Estudiante</th><th scope="col">Curso actual</th><th scope="col">Prioridad</th><th scope="col">Última historia</th><th scope="col">Consultar</th></tr></thead>
                                 <tbody><?php foreach ($panel['prioritarios'] as $fila):
                                     $nombre = trim($fila['nombres'].' '.$fila['apellidos']); ?>
                                     <tr data-estudiante="<?= (int)$fila['cod_estudiante'] ?>">
@@ -87,7 +90,7 @@ include __DIR__ . '/includes/navbar.php';
                                             <span><?= login_html($nombre) ?><small>Código: <?= login_html($fila['codigo']) ?></small></span></div></th>
                                         <td><?= login_html(trim(($fila['curso'] ?? 'Sin curso registrado').' '.($fila['paralelo'] ?? ''))) ?></td>
                                         <td><span class="panel-prioridad panel-prioridad-<?= strtolower($fila['prioridad']) ?>"><?= login_html($fila['prioridad']) ?></span></td>
-                                        <td><?= $fila['ultima_sesion'] ? $fechaVisible($fila['ultima_sesion']) : 'Sin sesiones' ?></td>
+                                        <td><?= $fila['ultima_sesion'] ? $fechaVisible($fila['ultima_sesion']) : 'Sin historia registrada' ?></td>
                                         <td><a class="panel-abrir" aria-label="Ver derivación de <?= login_html($nombre) ?>" href="<?= login_html(login_url('derivaciones/ver.php?id='.(int)$fila['cod_derivacion'])) ?>">Ver <span aria-hidden="true">›</span></a>
                                             <?php if ($fila['cod_historia']): ?><a class="panel-historia" href="<?= login_html(login_url('historias_clinicas/ver.php?id='.(int)$fila['cod_historia'])) ?>">Historia</a><?php endif; ?></td>
                                     </tr>
@@ -101,9 +104,9 @@ include __DIR__ . '/includes/navbar.php';
                 <?php if(login_puede('citas/listar.php')): ?>
                 <section class="panel-bloque panel-calendario" id="agenda-calendario" aria-labelledby="titulo-agenda">
                     <header class="panel-bloque-cabecera"><h2 id="titulo-agenda">Agenda de atención</h2><a href="<?= login_html(login_url('citas/listar.php')) ?>">Todas las citas ↗</a></header>
-                    <?php if($errorCalendario): ?><p class="alert alert-danger m-3" role="alert"><?= login_html($errorCalendario) ?> <a href="<?= login_html($urlAgenda()) ?>">Volver a hoy</a></p>
+                    <?php if($errorCalendario): ?><p data-ui-aviso class="alert alert-danger m-3" role="alert"><?= login_html($errorCalendario) ?> <a href="<?= login_html($urlAgenda()) ?>">Volver a hoy</a></p>
                     <?php elseif($calendario): $diaSeleccionado=$calendario['seleccion'];$citasDia=$calendario['por_dia'][$diaSeleccionado]??[]; ?>
-                    <?php if(!empty($_SESSION['mensaje_cita_estado'])): ?><p class="alert alert-info m-3" role="status"><?= login_html($_SESSION['mensaje_cita_estado']) ?></p><?php unset($_SESSION['mensaje_cita_estado']);endif; ?>
+                    <?php if(!empty($_SESSION['mensaje_cita_estado'])): ?><p data-ui-aviso class="alert alert-<?= ($_SESSION['tipo_cita_estado'] ?? '') === 'danger' ? 'danger' : 'success' ?> m-3" role="status"><?= login_html($_SESSION['mensaje_cita_estado']) ?></p><?php unset($_SESSION['mensaje_cita_estado'], $_SESSION['tipo_cita_estado']);endif; ?>
                     <details class="panel-calendario-mes" <?= isset($_GET['mes']) ? 'open' : '' ?>>
                         <summary>Consultar calendario y otras fechas</summary>
                         <nav class="calendario-navegacion" aria-label="Cambiar mes de la agenda">
@@ -136,7 +139,7 @@ include __DIR__ . '/includes/navbar.php';
                                 <?php if(login_puede('citas/editar.php')): ?><a href="<?= login_html(login_url('citas/editar.php?id='.(int)$cita['cod_cita'])) ?>"><?= login_html($cita['nombres'].' '.$cita['apellidos']) ?></a><?php else: ?><strong><?= login_html($cita['nombres'].' '.$cita['apellidos']) ?></strong><?php endif; ?>
                                 <span>Estado: <?= login_html($cita['estado']) ?></span><small>Profesional: <?= login_html($cita['profesional']) ?></small>
                                 <?php if(login_puede('citas/cancelar.php') && in_array($cita['estado'],['Pendiente','Reprogramada'],true)): ?><details class="calendario-acciones"><summary>Cambiar estado o reprogramar</summary>
-                                    <form action="<?= login_html(login_url('citas/cancelar.php')) ?>" method="post" class="row g-2 mt-1">
+                                    <form id="form-cita-<?= (int)$cita['cod_cita'] ?>" action="<?= login_html(login_url('citas/cancelar.php')) ?>" method="post" class="row g-2 mt-1">
                                         <?= login_campo_csrf() ?><input type="hidden" name="cod_cita" value="<?= (int)$cita['cod_cita'] ?>"><input type="hidden" name="volver" value="panel"><input type="hidden" name="agenda_mes" value="<?= login_html($calendario['mes']) ?>"><input type="hidden" name="agenda_fecha" value="<?= $diaSeleccionado ?>">
                                         <div class="col-12"><label for="estado-<?= (int)$cita['cod_cita'] ?>" class="form-label">Estado</label><select id="estado-<?= (int)$cita['cod_cita'] ?>" name="estado" class="form-select"><?php foreach(array_unique([$cita['estado'],'Reprogramada','Atendida','Cancelada']) as $estadoCita): ?><option><?= $estadoCita ?></option><?php endforeach; ?></select></div>
                                         <div class="col-12 col-sm-6"><label for="fecha-<?= (int)$cita['cod_cita'] ?>" class="form-label">Fecha</label><input id="fecha-<?= (int)$cita['cod_cita'] ?>" name="fecha" type="date" class="form-control" value="<?= $cita['fecha'] ?>" required></div>
@@ -149,7 +152,7 @@ include __DIR__ . '/includes/navbar.php';
                     <?php endif; ?>
                 </section><?php endif; ?>
             </div>
-            <p class="panel-definiciones">Cada seguimiento guardado cuenta como una sesión. Las citas pendientes incluyen las reprogramadas. Los datos se actualizan al abrir o recargar el panel.</p>
+            <p class="panel-definiciones">Cada historia clínica cuenta como una atención documentada; las ediciones y los seguimientos históricos no suman atenciones. Las citas pendientes incluyen las reprogramadas. Los datos se actualizan al abrir o recargar el panel.</p>
         <?php endif; ?>
 
     </div>

@@ -7,6 +7,7 @@ require_once __DIR__ . '/../includes/claves.php';
 
 function regresarAEdicion(string $mensaje, int $idUsuario): void
 {
+    if ($idUsuario > 0) ui_recordar_entrada('usuario_editar', ['nombre', 'apellido', 'usuario', 'correo', 'cod_rol', 'estado'], $idUsuario);
     $_SESSION['mensaje'] = $mensaje;
     $_SESSION['tipo_mensaje'] = 'danger';
 
@@ -121,8 +122,10 @@ if ($cambiarPassword) {
 }
 
 try {
+    $conexion->begin_transaction();
+    $administradores = $conexion->query("SELECT cod_usuario FROM usuarios WHERE cod_rol=1 AND estado='Activo' ORDER BY cod_usuario FOR UPDATE")->fetch_all(MYSQLI_ASSOC);
     $stmtUsuario = $conexion->prepare(
-        'SELECT cod_usuario,cod_rol FROM usuarios WHERE cod_usuario = ? LIMIT 1'
+        'SELECT cod_usuario,cod_rol,estado FROM usuarios WHERE cod_usuario = ? LIMIT 1 FOR UPDATE'
     );
     $stmtUsuario->bind_param('i', $idUsuario);
     $stmtUsuario->execute();
@@ -130,6 +133,10 @@ try {
     $usuarioObjetivo = $stmtUsuario->get_result()->fetch_assoc();
     if (!$usuarioObjetivo) {
         regresarAEdicion('El usuario que desea actualizar no existe.', 0);
+    }
+    if ((int)$usuarioObjetivo['cod_rol'] === 1 && $usuarioObjetivo['estado'] === 'Activo'
+        && ($idRol !== 1 || $estado !== 'Activo') && count($administradores) <= 1) {
+        regresarAEdicion('Debe conservarse al menos un administrador activo.', $idUsuario);
     }
     if ((int)($_SESSION['cod_rol'] ?? 0) !== 1
         && ((int)$usuarioObjetivo['cod_rol'] === 1
@@ -167,7 +174,6 @@ try {
 
     $correoBaseDatos = $correo !== '' ? $correo : null;
 
-    $conexion->begin_transaction();
     if ($cambiarPassword) {
         $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
@@ -201,10 +207,11 @@ try {
 
     $stmtActualizar->execute();
     $stmtActualizar->close();
+    seguridad_evento($conexion, (int)$_SESSION['cod_usuario'], 'usuarios', 'Actualizar', $idUsuario);
     $conexion->commit();
 } catch (mysqli_sql_exception $error) {
     $conexion->rollback();
-    error_log('Error al actualizar usuario: ' . $error->getMessage());
+    error_log('Error al actualizar usuario: ' . get_class($error) . "; codigo=" . $error->getCode());
     regresarAEdicion(
         'No se pudo actualizar el usuario. Inténtelo nuevamente.',
         $idUsuario
@@ -220,6 +227,7 @@ if ((int) ($_SESSION['cod_usuario'] ?? 0) === $idUsuario) {
 
 $_SESSION['mensaje'] = 'Usuario actualizado correctamente.';
 $_SESSION['tipo_mensaje'] = 'success';
+unset($_SESSION['ui_entrada']['usuario_editar']);
 
 if (login_puede('usuarios/listar.php')) {
     header('Location: listar.php');

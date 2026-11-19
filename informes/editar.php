@@ -64,7 +64,7 @@ include '../includes/navbar.php';
         </nav>
 
         <?php if ($mensaje !== ''): ?>
-            <div class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show" role="alert">
+            <div data-ui-aviso class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show" role="alert">
                 <?= nl2br(login_html($mensaje)) ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>

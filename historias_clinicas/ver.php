@@ -180,6 +180,7 @@ try {
     }
 
     /* ---------- 4. Seguimientos (función dinámica) ---------- */
+    seguridad_consulta($conexion, 'historias_clinicas', $id);
     $seguimientos = cargarSeguimientos($conexion, (int)$h['cod_estudiante']);
     $stmt = $conexion->prepare("SELECT cod_historia,fecha_apertura,estado FROM historias_clinicas WHERE cod_estudiante=? ORDER BY fecha_apertura ASC,cod_historia ASC");
     $stmt->bind_param('i', $h['cod_estudiante']);
@@ -188,9 +189,9 @@ try {
     $stmt->close();
 
 } catch (Throwable $e) {
-    error_log('Error en ver.php: ' . $e->getMessage());
+    error_log('Error en ver.php: ' . get_class($e) . "; codigo=" . $e->getCode());
 
-    $_SESSION['mensaje']      = 'No se pudo cargar la historia clínica: ' . $e->getMessage();
+    $_SESSION['mensaje']      = 'No se pudo cargar la historia clínica. Intente nuevamente más tarde.';
     $_SESSION['tipo_mensaje'] = 'danger';
 
     header('Location: listar.php');
@@ -239,8 +240,8 @@ include '../includes/navbar.php';
     <?php if (login_puede('historias_clinicas/registrar.php')): ?>
     <a class="btn btn-primary" href="registrar.php?cod_estudiante=<?= (int)$h['cod_estudiante'] ?>">Nueva sesión: historia clínica</a>
     <?php endif; ?>
-    <?php if (login_puede('seguimientos/listar.php')): ?>
-    <a class="btn btn-outline-primary" href="../seguimientos/listar.php?estudiante=<?= (int)$h['cod_estudiante'] ?>">Seguimiento del avance</a>
+    <?php if (login_puede('estadisticas/individual.php')): ?>
+    <a class="btn btn-outline-primary" href="../estadisticas/individual.php?estudiante=<?= (int)$h['cod_estudiante'] ?>">Seguimiento psicológico individual</a>
     <?php endif; ?>
     <?php if (login_puede('estadisticas/index.php')): ?>
     <a class="btn btn-outline-primary" href="../estadisticas/index.php?estudiante=<?= (int)$h['cod_estudiante'] ?>">Comparar historias del estudiante</a>
@@ -286,7 +287,7 @@ include '../includes/navbar.php';
 
     <!-- MENSAJES -->
     <?php if ($mensaje !== ''): ?>
-        <div class="alert alert-<?= login_html($tipoMensaje) ?> d-print-none">
+        <div data-ui-aviso class="alert alert-<?= login_html($tipoMensaje) ?> d-print-none">
             <?= nl2br(login_html($mensaje)) ?>
         </div>
     <?php endif; ?>
@@ -600,7 +601,7 @@ include '../includes/navbar.php';
             <span>9</span>
             <div>
                 <h2>Evolución del caso</h2>
-                <p>Registro cronológico del seguimiento</p>
+                <p>Observaciones de esta historia y archivo histórico de seguimientos. La comparación actual se consulta en Estadísticas y análisis.</p>
             </div>
         </div>
 
@@ -623,7 +624,7 @@ include '../includes/navbar.php';
                 </div>
 
                 <div>
-                    <strong>Nota de evolución #<?= (int)$s['cod_seguimiento'] ?></strong>
+                    <strong>Registro histórico de solo lectura #<?= (int)$s['cod_seguimiento'] ?></strong>
                     <small>Historia #<?= (int)$s['cod_historia'] ?></small>
                     <p>
                         Profesional: <?= login_html($s['profesional'] ?: 'No registrado') ?>

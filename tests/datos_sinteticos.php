@@ -6,7 +6,7 @@ function prueba_autores(mysqli $bd): void
     $base = $bd->query('SELECT DATABASE()')->fetch_row()[0];
     if (!preg_match('/^psicologia_test_[a-z]+_[a-f0-9]{12}$/', $base)) throw new RuntimeException('Los datos sintéticos requieren una base de prueba.');
     $bd->query("INSERT INTO usuarios (cod_usuario,nombres,apellidos,usuario,password,cod_rol) VALUES
-        (101,'Autor','Prueba','prueba_admin','hash-prueba',1),(102,'Psicóloga','Prueba','prueba_psicologa','hash-prueba',2),
+        (112,'Segunda','Profesional','prueba_psicologa_dos','hash-prueba',2),(101,'Autor','Prueba','prueba_admin','hash-prueba',1),(102,'Psicóloga','Prueba','prueba_psicologa','hash-prueba',2),
         (103,'Docente','Uno','prueba_docente','hash-prueba',3),(104,'Director','Prueba','prueba_director','hash-prueba',4),
         (105,'Docente','Dos','docente_disponible_uno','hash-prueba',3),(106,'Docente','Tres','docente_disponible_dos','hash-prueba',3),
         (111,'Docente','Asignado','prueba_docente_dos','hash-prueba',3)");

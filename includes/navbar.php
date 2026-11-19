@@ -12,15 +12,15 @@ function navbar_notificaciones(mysqli $bd, int $rol, int $usuario): array
 {
     $avisos = [];
     if (in_array($rol, [1, 2], true) && login_puede('derivaciones/listar.php')) {
-        $derivaciones = $bd->query("SELECT d.cod_derivacion,d.fecha,d.prioridad,e.nombres,e.apellidos
+        $derivaciones = $bd->query("SELECT d.cod_derivacion,d.fecha,d.prioridad
             FROM derivaciones d INNER JOIN estudiantes e ON e.cod_estudiante=d.cod_estudiante
             WHERE d.estado='Pendiente' ORDER BY FIELD(d.prioridad,'Alta','Media','Baja'),d.fecha,d.cod_derivacion LIMIT 5")
             ->fetch_all(MYSQLI_ASSOC);
         foreach ($derivaciones as $derivacion) {
             $avisos[] = [
                 'tipo' => 'derivacion', 'fecha' => $derivacion['fecha'],
-                'titulo' => 'Derivación pendiente' . ($derivacion['prioridad'] === 'Alta' ? ' · prioridad alta' : ''),
-                'detalle' => trim($derivacion['apellidos'] . ' ' . $derivacion['nombres']),
+                'titulo' => 'Derivación pendiente',
+                'detalle' => 'Consulta los detalles en la ficha de derivación.',
                 'url' => login_url('derivaciones/ver.php?id=' . (int)$derivacion['cod_derivacion']),
             ];
         }
@@ -28,7 +28,7 @@ function navbar_notificaciones(mysqli $bd, int $rol, int $usuario): array
     if (login_puede('citas/listar.php')) {
         $desde = date('Y-m-d');
         $hasta = date('Y-m-d', strtotime('+7 days'));
-        $sql = "SELECT c.cod_cita,c.fecha,c.hora,e.nombres,e.apellidos
+        $sql = "SELECT c.cod_cita,c.fecha,c.hora
             FROM citas c INNER JOIN estudiantes e ON e.cod_estudiante=c.cod_estudiante
             WHERE c.estado IN ('Pendiente','Reprogramada') AND c.fecha BETWEEN ? AND ?";
         if ($rol === 2) $sql .= ' AND c.cod_psicologa=?';
@@ -41,7 +41,7 @@ function navbar_notificaciones(mysqli $bd, int $rol, int $usuario): array
             $avisos[] = [
                 'tipo' => 'cita', 'fecha' => $cita['fecha'] . ' ' . substr($cita['hora'], 0, 5),
                 'titulo' => $cita['fecha'] === $desde ? 'Cita de hoy' : 'Próxima cita',
-                'detalle' => trim($cita['apellidos'] . ' ' . $cita['nombres']) . ' · ' . substr($cita['hora'], 0, 5),
+                'detalle' => date('d/m/Y', strtotime($cita['fecha'])) . ' · ' . substr($cita['hora'], 0, 5) . ' · Consulta la agenda.',
                 'url' => login_url('citas/editar.php?id=' . (int)$cita['cod_cita']),
             ];
         }
@@ -53,9 +53,9 @@ function navbar_notificaciones(mysqli $bd, int $rol, int $usuario): array
 
 $notificaciones = [];
 try {
-    $notificaciones = navbar_notificaciones(login_bd(), (int)($_SESSION['cod_rol'] ?? 0), (int)($_SESSION['cod_usuario'] ?? 0));
+    if (empty($ocultarNotificacionesClinicas)) $notificaciones = navbar_notificaciones(login_bd(), (int)($_SESSION['cod_rol'] ?? 0), (int)($_SESSION['cod_usuario'] ?? 0));
 } catch (Throwable $error) {
-    error_log('Notificaciones: ' . $error->getMessage());
+    error_log('Notificaciones: ' . get_class($error) . "; codigo=" . $error->getCode());
 }
 ?>
 <!-- Barra superior -->
@@ -69,6 +69,7 @@ try {
             Sistema Psicológico Estudiantil
         </span>
         <div class="navbar-user-actions d-flex align-items-center gap-3">
+            <?php if (empty($ocultarNotificacionesClinicas)): ?>
             <div class="dropdown navbar-notificaciones">
                 <button class="btn btn-light navbar-boton-campana" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="<?= count($notificaciones) ? count($notificaciones) . ' notificaciones' : 'No hay notificaciones' ?>">
                     <i class="bi bi-bell-fill" aria-hidden="true"></i><?php if ($notificaciones): ?><span class="navbar-notificaciones-contador"><?= count($notificaciones) ?></span><?php endif; ?>
@@ -89,6 +90,7 @@ try {
                     <?php endif; ?>
                 </div>
             </div>
+            <?php endif; ?>
             <span class="text-muted navbar-user-name">
                 <i class="bi bi-person-circle"></i>
                 <?= htmlspecialchars($_SESSION['nombre'] ?? 'Usuario', ENT_QUOTES, 'UTF-8') ?>

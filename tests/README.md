@@ -1,5 +1,49 @@
 # Pruebas de integración, acceso y CSRF
 
+## Avisos centralizados (19/11/2026)
+
+```powershell
+& C:\xampp\php\php.exe tests\avisos.php
+```
+
+No necesita MySQL. Comprueba el puente PHP y 39 condiciones de interfaz dentro de Chrome a 1440, 768, 390 y 320 px, con formularios y datos sintéticos. Incluye foco, teclado, cola, privacidad, recuperación, validación, cambios sin guardar, envíos repetidos y sesión 401. Para guardar capturas, configurar `CAPTURAS_AVISOS` con una carpeta existente.
+
+La fixture del recorrido `historias_derivaciones.php --navegador` ahora copia también los recursos locales CSS y JavaScript para verificar la integración real. Inventario y resultados: [informe de avisos](../documentacion/AVISOS_CENTRALIZADOS_2026-11-19.md).
+
+## Modelo vigente: historias y versiones (19/11/2026)
+
+Los conteos anteriores basados en filas de `seguimientos` son antecedentes. La definición vigente cuenta historias clínicas por fecha de atención y distingue sus versiones documentales. `estadisticas.php` delega en `seguimiento_clinico.php` para evitar dos implementaciones de la misma comprobación.
+
+```powershell
+& C:\xampp\php\php.exe tests\seguimiento_clinico.php --navegador
+& C:\xampp\php\php.exe tests\seguridad.php
+& C:\xampp\php\php.exe tests\fases.php
+& C:\xampp\php\php.exe tests\informes_actualizacion.php
+& C:\xampp\php\php.exe tests\historias_derivaciones.php --navegador
+& C:\xampp\php\php.exe tests\trazabilidad.php --navegador
+& C:\xampp\php\php.exe -d extension=sodium tests\endurecimiento.php
+```
+
+Cobertura nueva: alta de historia → edición con estado anterior completo → consulta individual → diferencias por apartado → estadísticas e informe mensual coherentes; ausencia de duplicados al cambiar de curso; casillas no seleccionadas como datos no registrados; archivo anterior conservado; POST retirado sin escrituras; cierre de derivación con historia; comparación ajena o fuera del período denegada; error SQL distinto de población vacía; consultas auditadas; vista agregada sin identidades ni notas clínicas.
+
+Las pruebas de fases y trazabilidad usan inserciones directas de archivo únicamente en sus bases sintéticas para verificar compatibilidad; esas inserciones no restauran un endpoint de escritura en la aplicación. El navegador recorre ahora el formulario de historia y sus versiones.
+
+Resultados de esta entrega se consolidan en el [informe técnico](../documentacion/SEGUIMIENTO_PSICOLOGICO_2026-11-19.md). Chrome verificó la comparación a 1440, 390 y 360 px (16 comprobaciones por ancho), y el recorrido de trazabilidad (35). Para conservar capturas sintéticas, configurar `CAPTURAS_SEGUIMIENTO` con una carpeta privada existente.
+
+En una ejecución de historias con Chrome, las 213 comprobaciones funcionales y 19 del navegador pasaron, pero Windows mantuvo bloqueados dos archivos de su perfil temporal durante la limpieza. La revisión automática rechazó la retirada posterior de esa carpeta («blocked by policy», sin detalle). No contiene expedientes reales. Esta incidencia de limpieza no modifica los resultados funcionales ni la aplicación.
+
+Actualización del 14/11/2026: resultados vigentes, cambios de actores y límites de cobertura en [la revisión técnica](../seguridad/08_REVISION_TECNICA_2026-11-14.md). Los totales del 2 de noviembre más abajo son antecedentes. La matriz anterior con acceso clínico de Administrador/Director queda sustituida por [la matriz actual](../seguridad/10_PRIVACIDAD_ACCESOS.md).
+
+Nueva prueba de seguridad y recuperación:
+
+```powershell
+& C:\xampp\php\php.exe -d extension=sodium tests\endurecimiento.php
+```
+
+Usa exclusivamente bases `psicologia_test_seguridad_*` y `psicologia_restore_*`, clave/copia/código/adjunto sintéticos y carpetas privadas temporales. Prueba actualización aditiva desde estructura previa, reanudación, permisos excesivos, rehash, revocación tras reactivar, versiones y rollback, identidad histórica, manipulación de bitácora, cifrado, copia completa y restauración con 10000 sesiones ficticias. No copia datos reales a pruebas.
+
+Las suites de Chrome usan un iframe; su router temporal habilita SAMEORIGIN únicamente con el secreto de la fixture. La aplicación real mantiene X-Frame-Options DENY. El router cambia de cuenta de prueba al pasar entre tareas administrativas, docentes y clínicas, conservando roles reales distintos; las pruebas HTTP de denegación usan el actor explícito.
+
 ## Pruebas vigentes
 
 Las pruebas de historias y de fases cubren varias historias por estudiante: migración 014 sin pérdida de datos, altas desde una derivación existente, selección de historia en informes, separación de seguimientos y conteos del panel sin duplicar estudiantes. La opción `--navegador` de `historias_derivaciones.php` también comprueba el selector y el guardado de un informe asociado a una historia anterior.
@@ -97,15 +141,21 @@ La política ejecutable está en [config/permisos.php](../config/permisos.php).
 
 | Área o acción | Roles permitidos |
 |---|---|
-| Panel, estudiantes y citas | Administrador, psicóloga |
+| Panel y citas | Psicóloga |
+| Estudiantes | Administrador, psicóloga; sujeto a permisos por acción |
 | Usuarios y docentes | Administrador |
-| Historias clínicas y seguimientos | Administrador, psicóloga |
-| Estadísticas de seguimiento por estudiante | Administrador, psicóloga |
-| Iniciar/cerrar/reabrir derivaciones | Administrador, psicóloga |
-| Listar/ver derivaciones | Administrador, psicóloga, docente; docente solo propias |
-| Registrar/editar derivaciones | Administrador, docente; docente solo propias |
-| Eliminar derivación pendiente | Administrador; Docente solo propia y sin citas, historias o informes vinculados |
-| Listar/ver informes | Administrador, psicóloga, director |
-| Registrar/editar informes | Administrador, psicóloga |
+| Historias clínicas y seguimientos | Psicóloga |
+| Estadísticas de seguimiento por estudiante | Psicóloga |
+| Iniciar/cerrar/reabrir derivaciones | Psicóloga |
+| Listar/ver derivaciones | Psicóloga, docente; docente solo propias con autoría compatible |
+| Registrar/editar derivaciones | Docente solo propias con autoría compatible |
+| Eliminar derivación pendiente | Docente solo propia, con autoría compatible y sin registros vinculados |
+| Listar/ver/registrar/editar informes | Psicóloga |
 
 Para agregar una página, declarar sus roles y métodos y llamar a `requerir_acceso('modulo/archivo.php')` antes de conectar o producir HTML. Todo POST permitido valida CSRF automáticamente; su formulario debe incluir `<?= login_campo_csrf() ?>`. El menú consulta esa misma política.
+
+La política superior de `includes/politica_acceso.php` impide ampliar acceso clínico mediante concesiones de BD, incluso para administradores, dirección y roles personalizados. Asignación de casos entre profesionales y autorización independiente de impresiones siguen pendientes institucionales.
+
+## Endurecimiento y recuperación
+
+Ejecutar `C:\xampp\php\php.exe -d extension=sodium tests\endurecimiento.php`. Crea bases aleatorias ficticias, ensaya 016 desde un esquema anterior y su reanudación, revocación/rehash, permisos excesivos, versiones clínicas completas, auditoría protegida y recuperación cifrada con comparación de filas, adjuntos, código y SQL. No usa expedientes reales. Consulta resultados, fechas y límites en [la revisión técnica](../seguridad/08_REVISION_TECNICA_2026-11-14.md); las cifras anteriores de este README son antecedentes.

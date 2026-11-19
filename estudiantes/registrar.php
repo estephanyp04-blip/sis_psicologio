@@ -36,14 +36,14 @@ include '../includes/navbar.php';
     $errorRegistro = $_GET['error'] ?? '';
     if (isset($erroresRegistro[$errorRegistro])):
     ?>
-        <div class="alert alert-danger" role="alert">
+        <div data-ui-aviso class="alert alert-danger" role="alert">
             <?= htmlspecialchars($erroresRegistro[$errorRegistro], ENT_QUOTES, 'UTF-8') ?>
         </div>
     <?php endif; ?>
 
     <form action="guardar.php" method="POST">
         <?php if ($mensajeRegistro !== ''): ?>
-            <div class="alert alert-danger" role="alert"><?= htmlspecialchars($mensajeRegistro, ENT_QUOTES, 'UTF-8') ?></div>
+            <div data-ui-aviso class="alert alert-danger" role="alert"><?= htmlspecialchars($mensajeRegistro, ENT_QUOTES, 'UTF-8') ?></div>
         <?php endif; ?>
         <?= login_campo_csrf() ?>
 

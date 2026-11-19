@@ -22,10 +22,12 @@ if (str_starts_with($ruta, 'config/') || str_starts_with($ruta, 'includes/') || 
 ini_set('session.save_path', $fixture['sesiones']);
 require $fixture['app'] . '/includes/autenticacion.php';
 $db = login_bd();
+$db->query("CREATE TEMPORARY TABLE auditoria (cod_usuario INT,modulo VARCHAR(60),accion VARCHAR(40),registro_id INT,detalle TEXT) ENGINE=InnoDB");
 // Estas tablas SOLO existen en esta conexión; ocultan a las permanentes.
 // No ejecutar DROP/TRUNCATE ni DDL contra las tablas reales.
 $db->query("CREATE TEMPORARY TABLE roles (cod_rol INT PRIMARY KEY, nombre VARCHAR(40), descripcion VARCHAR(255), estado VARCHAR(20))");
 $db->query("INSERT INTO roles (cod_rol,nombre,estado) VALUES (1,'Administrador','Activo'),(2,'Psicologa','Activo'),(3,'Docente','Activo'),(4,'Director','Activo')");
+$db->query('ALTER TABLE roles ADD sesion_version INT NOT NULL DEFAULT 0');
 $politicas = require $fixture['app'] . '/config/permisos.php';
 $idsModulo = [];
 $db->query("CREATE TEMPORARY TABLE modulos (cod_modulo INT PRIMARY KEY,nombre VARCHAR(100),ruta VARCHAR(190),orden INT,estado VARCHAR(20))");
@@ -72,6 +74,7 @@ foreach ($permisosPrueba as $clave => $valores) {
 $insertPermiso->close();
 $db->query("CREATE TEMPORARY TABLE usuarios (cod_usuario INT PRIMARY KEY, nombres VARCHAR(60), apellidos VARCHAR(60), correo VARCHAR(120), usuario VARCHAR(40), password VARCHAR(255), estado VARCHAR(20), cod_rol INT)");
 $db->query("INSERT INTO usuarios VALUES (101,'Admin','Prueba','admin@example.test','prueba_admin','hash-prueba','Activo',1),(102,'Psicologa','Prueba','psicologa@example.test','prueba_psicologa','hash-prueba','Activo',2),(103,'Docente','Prueba','docente@example.test','prueba_docente','hash-prueba','Activo',3),(104,'Director','Prueba','director@example.test','prueba_director','hash-prueba','Activo',4),(105,'Otro','Docente','otro@example.test','otro_docente','hash-prueba','Activo',3)");
+$db->query('ALTER TABLE usuarios ADD sesion_version INT NOT NULL DEFAULT 0');
 $db->query("CREATE TEMPORARY TABLE docentes (cod_docente INT PRIMARY KEY, cod_usuario INT, estado VARCHAR(10) DEFAULT 'Activo')");
 $db->query("INSERT INTO docentes (cod_docente,cod_usuario) VALUES (303,103),(305,105)");
 
@@ -120,12 +123,13 @@ if ($GLOBALS['prueba_negocio']) {
     $db->query('CREATE TEMPORARY TABLE derivacion_categorias (cod_derivacion INT, cod_categoria INT)');
     $db->query("CREATE TEMPORARY TABLE derivaciones (cod_derivacion INT PRIMARY KEY, fecha DATE, cod_estudiante INT, cod_docente INT, cod_usuario_autor INT NULL, autor_nombres VARCHAR(80), autor_apellidos VARCHAR(80), cod_materia INT, motivo TEXT, observaciones TEXT, prioridad VARCHAR(20), estado VARCHAR(30), solicitar_cita TINYINT(1) NOT NULL DEFAULT 0, cod_psicologa_solicitada INT NULL, fecha_registro DATETIME)");
     $db->query("INSERT INTO derivaciones (cod_derivacion,fecha,cod_estudiante,cod_docente,cod_materia,motivo,observaciones,prioridad,estado,solicitar_cita,cod_psicologa_solicitada,fecha_registro) VALUES (1,CURDATE(),1,303,1,'PROPIA_PRIVADA','Observacion propia','Media','Pendiente',0,NULL,NOW()),(2,CURDATE(),2,305,1,'AJENA_PRIVADA','Observacion ajena','Media','Pendiente',0,NULL,NOW())");
+    if(!empty($caso['autor_ajeno'])) $db->query('UPDATE derivaciones SET cod_usuario_autor=105 WHERE cod_derivacion=1');
+    if(!empty($caso['fallo_auditoria'])) $db->query("ALTER TABLE auditoria ADD CONSTRAINT fallo_auditoria CHECK (accion<>'Eliminar')");
     $db->query("CREATE TEMPORARY TABLE citas (cod_cita INT PRIMARY KEY, cod_estudiante INT, fecha DATE, hora TIME, estado VARCHAR(20), observaciones TEXT, cod_derivacion INT NULL)");
     $db->query("INSERT INTO citas VALUES (1,1,CURDATE(),'09:00','Pendiente','Cita de prueba',NULL)");
     $db->query("CREATE TEMPORARY TABLE historias_clinicas (cod_historia INT PRIMARY KEY,cod_estudiante INT,cod_derivacion_origen INT,cod_cita_origen INT)");
-    $db->query("CREATE TEMPORARY TABLE seguimientos (cod_seguimiento INT PRIMARY KEY,cod_cita INT)");
+    $db->query("CREATE TEMPORARY TABLE seguimientos (cod_seguimiento INT PRIMARY KEY,cod_cita INT,cod_derivacion INT)");
     $db->query("CREATE TEMPORARY TABLE informe_individual (cod_informe INT PRIMARY KEY,cod_derivacion INT)");
-    $db->query("CREATE TEMPORARY TABLE auditoria (cod_usuario INT,modulo VARCHAR(50),accion VARCHAR(50),registro_id INT,detalle TEXT)");
     register_shutdown_function(static function () use ($db): void {
         $estado = [
             'derivaciones' => $db->query('SELECT cod_derivacion,motivo,observaciones FROM derivaciones ORDER BY cod_derivacion')->fetch_all(MYSQLI_ASSOC),
@@ -134,6 +138,7 @@ if ($GLOBALS['prueba_negocio']) {
             'historial_academico' => $db->query('SELECT cod_historial_academico,cod_estudiante,estado FROM historial_academico ORDER BY cod_historial_academico')->fetch_all(MYSQLI_ASSOC),
             'permisos_protegidos' => $db->query("SELECT p.cod_rol,m.nombre,p.puede_ver,p.puede_crear,p.puede_editar,p.puede_cambiar_estado,p.puede_eliminar FROM permisos p JOIN modulos m ON m.cod_modulo=p.cod_modulo WHERE p.cod_rol IN (3,4) AND m.nombre IN ('Dashboard','Estadísticas','Estudiantes') ORDER BY p.cod_rol,m.nombre")->fetch_all(MYSQLI_ASSOC),
             'autenticado' => $_SESSION['autenticado'] ?? false,
+            'auditoria' => $db->query('SELECT cod_usuario,modulo,accion,registro_id FROM auditoria')->fetch_all(MYSQLI_ASSOC),
         ];
         echo "\n__ESTADO_PRUEBA__", json_encode($estado);
     });

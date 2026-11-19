@@ -14,7 +14,7 @@ if (!defined('BASE_URL')) {
 try {
     $conexion = login_bd();
 } catch (mysqli_sql_exception $error) {
-    error_log('Error de conexión a la base de datos: ' . $error->getMessage());
+    error_log('Error de conexión a la base de datos: ' . get_class($error) . "; codigo=" . $error->getCode());
     http_response_code(500);
     exit('No fue posible conectar con la base de datos.');
 }

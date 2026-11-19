@@ -134,6 +134,7 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
     if (($entrada['formulario_completo'] ?? '') !== '1') throw new InvalidArgumentException('El formulario está incompleto. Recargue la página antes de guardar.');
     $bd->begin_transaction();
     try {
+        flujo_exigir_permiso($bd, $autor, 'Historias clinicas', $idHistoria === null ? 'puede_crear' : 'puede_editar');
         $anterior = [];
         if ($idHistoria !== null) {
             $stmt = $bd->prepare('SELECT * FROM historias_clinicas WHERE cod_historia = ? AND cod_estudiante = ? FOR UPDATE');
@@ -147,6 +148,16 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
                 throw new InvalidArgumentException('La derivación de origen de la historia no puede cambiarse en esta edición.');
             }
             $anterior = array_merge($anterior, historia_cargar_hijos($bd, $idHistoria));
+            // Conservar también identificadores y opciones que el formulario actual no representa.
+            $stmt = $bd->prepare('SELECT ho.*, o.descripcion, g.codigo AS grupo_codigo FROM historia_opciones ho JOIN opciones_historia o ON o.cod_opcion=ho.cod_opcion JOIN grupos_opciones_historia g ON g.cod_grupo=o.cod_grupo WHERE ho.cod_historia=? ORDER BY ho.cod_opcion');
+            $stmt->bind_param('i', $idHistoria); $stmt->execute();
+            $opcionesOriginales = $stmt->get_result()->fetch_all(MYSQLI_ASSOC); $stmt->close();
+            $stmt = $bd->prepare('SELECT * FROM historia_familiares WHERE cod_historia=? ORDER BY cod_familiar');
+            $stmt->bind_param('i', $idHistoria); $stmt->execute();
+            $anterior['_relaciones_originales'] = ['opciones' => $opcionesOriginales, 'familiares' => $stmt->get_result()->fetch_all(MYSQLI_ASSOC)]; $stmt->close();
+            // Copia clínica restringida en la misma transacción, nunca en logs.
+            flujo_ejecutar($bd, 'INSERT INTO historia_versiones (cod_historia,cod_editor,contenido_anterior) VALUES (?,?,?)',
+                [$idHistoria, $autor, json_encode($anterior, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)]);
         } else {
             $stmt = $bd->prepare("SELECT cod_estudiante FROM estudiantes WHERE cod_estudiante = ? AND estado = 'Activo' FOR UPDATE");
             $stmt->bind_param('i', $idEstudiante); $stmt->execute();
@@ -158,6 +169,7 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
             throw new InvalidArgumentException('La fecha de atención de la historia no puede ser futura.');
         }
         $motivoCierre = flujo_texto($entrada['motivo_cierre'] ?? $anterior['motivo_cierre'] ?? '', 2000);
+        if ($datos['estado'] === 'Cerrada' && ($anterior['estado'] ?? '') !== 'Cerrada' && $motivoCierre === '') throw new InvalidArgumentException('Registre el motivo de cierre de la historia.');
         if ($datos['estado'] === 'Cerrada' && ($anterior['estado'] ?? '') !== 'Cerrada') {
             $pendientes = historia_pendientes($bd,$idEstudiante);
             if (($pendientes['derivaciones'] || $pendientes['citas']) && ($entrada['confirmar_cierre'] ?? '') !== '1') throw new InvalidArgumentException('Hay derivaciones abiertas o citas pendientes. Revise la advertencia y confirme que se conservarán abiertas.');
@@ -232,10 +244,10 @@ function historia_guardar(mysqli $bd, array $entrada, int $autor, ?int $idHistor
             }
         }
         $accion = $anterior ? 'Actualizar' : 'Crear';
-        // Abrir el expediente no equivale a atender una cita ni a registrar una
-        // sesión. Esos estados se actualizan únicamente en seguimiento_guardar().
+        // La historia documenta la atención. Los estados administrativos de citas
+        // y derivaciones se cambian explícitamente desde sus propios módulos.
         flujo_ejecutar($bd,'UPDATE historias_clinicas SET motivo_cierre=? WHERE cod_historia=?',[$motivoCierre ?: null,$idHistoria]);
-        if ($datos['estado'] === 'Cerrada' && ($anterior['estado'] ?? '') !== 'Cerrada') flujo_auditar($bd,$autor,'historias_clinicas','Cerrar',$idHistoria,$motivoCierre.'; derivaciones y citas conservadas');
+        if ($datos['estado'] === 'Cerrada' && ($anterior['estado'] ?? '') !== 'Cerrada') flujo_auditar($bd,$autor,'historias_clinicas','Cerrar',$idHistoria,'Cierre registrado; relaciones conservadas');
         $stmt = $bd->prepare("INSERT INTO auditoria (cod_usuario,modulo,accion,registro_id,detalle) VALUES (?,'historias_clinicas',?,?,'Guardado del expediente clínico')");
         $stmt->bind_param('isi', $autor, $accion, $idHistoria); $stmt->execute(); $stmt->close();
         $bd->commit();

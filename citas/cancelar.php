@@ -14,11 +14,11 @@ try {
     $entrada=array_intersect_key($_POST,array_flip(['estado','fecha','hora']));
     $entrada['estado']=$entrada['estado']??'Cancelada';
     cita_guardar($conexion, $entrada, (int)$_SESSION['cod_usuario'], $id);
-    if($volverPanel){$_SESSION['mensaje_cita_estado']='Estado/horario actualizado.';header('Location: '.$destinoPanel,true,303);}
+    if($volverPanel){unset($_SESSION['ui_entrada']['cita_panel']);$_SESSION['mensaje_cita_estado']='Estado/horario actualizado.';$_SESSION['tipo_cita_estado']='success';header('Location: '.$destinoPanel,true,303);}
     else header('Location: listar.php?exito='.($entrada['estado']==='Cancelada'?'3':'2'));
 } catch (Throwable $error) {
     $_SESSION['mensaje_cita'] = $error instanceof InvalidArgumentException ? $error->getMessage() : 'No se pudo cancelar la cita.';
-    if($volverPanel){$_SESSION['mensaje_cita_estado']=$_SESSION['mensaje_cita'];unset($_SESSION['mensaje_cita']);header('Location: '.$destinoPanel,true,303);}
+    if($volverPanel){ui_recordar_entrada('cita_panel',['estado','fecha','hora'],(int)($id??0));$_SESSION['mensaje_cita_estado']=$_SESSION['mensaje_cita'];$_SESSION['tipo_cita_estado']='danger';unset($_SESSION['mensaje_cita']);header('Location: '.$destinoPanel,true,303);}
     else header('Location: listar.php?error=2');
 }
 exit;

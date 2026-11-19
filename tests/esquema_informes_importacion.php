@@ -69,9 +69,10 @@ function importar(mysqli $bd, string $csv): array
     $h = fopen('php://temp', 'w+'); fwrite($h, $csv); rewind($h);
     try { return estudiantes_importar_csv($bd, $h); } finally { fclose($h); }
 }
-function http_prueba(string $ruta, ?array $datos = null, ?string $csv = null, string $usuario = 'prueba_admin'): array
+function http_prueba(string $ruta, ?array $datos = null, ?string $csv = null, string $usuario = ''): array
 {
     global $puerto, $secreto, $cookie;
+    if ($usuario === '') $usuario = str_starts_with($ruta, 'informes/') ? 'prueba_psicologa' : 'prueba_admin';
     $cabeceras = ['X-Prueba-Secreto: ' . $secreto, 'X-Prueba-Usuario: ' . $usuario, 'Connection: close'];
     if ($cookie) $cabeceras[] = 'Cookie: ' . $cookie;
     $opciones = ['method' => $datos === null ? 'GET' : 'POST', 'ignore_errors' => true, 'follow_location' => 0, 'timeout' => 15];
@@ -296,7 +297,7 @@ try {
     verificar(str_contains($r['cuerpo'],'Recuperar &lt;contenido&gt;'),'No recupera/escapa el texto del informe.');
     $r=http_prueba('informes/guardar.php',$informe+$token+['cod_usuario'=>9999]);
     verificar($r['codigo']===302 && str_contains($r['cabeceras'],'listar.php'),'Falló el receptor de alta de informes.');
-    verificar((int)consultar($bd,'SELECT cod_elaborado_por FROM informes ORDER BY cod_informe DESC LIMIT 1')['cod_elaborado_por']===101,'Aceptó autor desde POST.');
+    verificar((int)consultar($bd,'SELECT cod_elaborado_por FROM informes ORDER BY cod_informe DESC LIMIT 1')['cod_elaborado_por']===102,'Aceptó autor desde POST.');
     $r=http_prueba('informes/actualizar.php',array_replace($informe,['cod_informe'=>$idInforme,'titulo'=>'Edición HTTP','estado'=>'Finalizado'])+$token,null,'prueba_psicologa');
     verificar($r['codigo']===302 && str_contains($r['cabeceras'],'ver.php'),'Falló receptor de edición.');
     verificar((int)consultar($bd,"SELECT cod_elaborado_por FROM informes WHERE cod_informe=$idInforme")['cod_elaborado_por']===101,'La edición cambia el autor.');
@@ -400,6 +401,12 @@ try {
     } finally { $bd->query('DROP TRIGGER fallo_materias'); }
     echo "Docentes: cuentas disponibles, materias múltiples, edición, búsqueda y rollback correctos.\n";
 
+    $otrosAdmins=$bd->query("SELECT cod_usuario FROM usuarios WHERE cod_rol=1 AND estado='Activo' AND cod_usuario<>101")->fetch_all(MYSQLI_ASSOC);
+    foreach($otrosAdmins as $cuenta) http_prueba('usuarios/cambiar_estado.php',['cod_usuario'=>$cuenta['cod_usuario']]+$token);
+    http_prueba('usuarios/cambiar_estado.php',['cod_usuario'=>101]+$token);
+    verificar(consultar($bd,'SELECT estado FROM usuarios WHERE cod_usuario=101')['estado']==='Activo','Baja permite desactivar al último administrador.');
+    verificar((int)consultar($bd,"SELECT COUNT(*) n FROM auditoria WHERE modulo='usuarios' AND accion='Desactivar'")['n']===count($otrosAdmins),'Baja de cuentas no deja auditoría transaccional.');
+    foreach($otrosAdmins as $cuenta) http_prueba('usuarios/cambiar_estado.php',['cod_usuario'=>$cuenta['cod_usuario']]+$token);
     if (in_array('--navegador',$argv,true)) {
         $chrome = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
         if (!is_file($chrome)) throw new RuntimeException('No se encontró Chrome.');

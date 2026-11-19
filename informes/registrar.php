@@ -98,7 +98,7 @@ include __DIR__ . '/../includes/navbar.php';
     </nav>
 
     <?php if($mensaje!==''): ?>
-        <div class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show">
+        <div data-ui-aviso class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show">
             <?= login_html($mensaje) ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
@@ -407,6 +407,7 @@ document.addEventListener('DOMContentLoaded',function(){
         try{
             const consulta=new URLSearchParams({cod_estudiante:estudiante.value,fecha:document.getElementById('fecha').value,cod_seguimiento:seguimientoElegido,cod_historia:historia.value||0});
             const respuesta=await fetch('antecedentes.php?'+consulta);
+            if (!Avisos.comprobarRespuesta(respuesta)) throw new Error('Sesión finalizada');
             const datos=await respuesta.json();
             if(solicitud!==solicitudAntecedentes)return;
             if(!respuesta.ok)throw new Error(datos.error||'No se pudieron consultar los antecedentes.');
@@ -452,26 +453,22 @@ document.addEventListener('DOMContentLoaded',function(){
 
         if(!estudiante.value){
             event.preventDefault();
-            alert('Seleccione un estudiante.');
-            estudiante.focus();
+            Avisos.advertencia('Selecciona un estudiante.').then(() => estudiante.focus());
             return;
         }
 
         if(tipos.length===0){
             event.preventDefault();
-            alert('Seleccione al menos un tipo de atención.');
+            Avisos.advertencia('Selecciona al menos un tipo de atención.').then(() => form.querySelector('input[name="tipo_atencion[]"]')?.focus());
             return;
         }
 
+        // La capa compartida confirma y bloquea el envío después de validar el módulo.
         if(!historia.value||historia.value==='0'){
-            if(!confirm('El estudiante no tiene una historia clínica registrada. ¿Desea continuar igualmente?')){
-                event.preventDefault();
-                return;
-            }
+            form.dataset.uiConfirmar='No hay una historia clínica seleccionada. ¿Deseas continuar con el informe?';
+        } else {
+            delete form.dataset.uiConfirmar;
         }
-
-        btnGuardar.disabled=true;
-        btnGuardar.innerHTML='<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
     });
 });
 </script>

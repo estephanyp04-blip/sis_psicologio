@@ -33,6 +33,6 @@ try {
     unset($derivacion);
     echo json_encode(['derivaciones' => $derivaciones], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
 } catch (Throwable $error) {
-    error_log('Consulta de derivaciones: ' . $error->getMessage());
+    error_log('Consulta de derivaciones: ' . get_class($error) . "; codigo=" . $error->getCode());
     login_error_json(500, 'No se pudieron consultar las derivaciones.');
 }

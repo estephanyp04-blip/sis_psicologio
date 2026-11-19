@@ -11,6 +11,7 @@ $stmt->execute();
 $rol = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 if (!$rol) { http_response_code(404); exit('Rol no encontrado.'); }
+$uiEntrada = ui_entrada_recuperar('rol_editar', (int)$idRol);
 
 $stmt = $conexion->prepare('SELECT cod_modulo,puede_ver,puede_crear,puede_editar,puede_cambiar_estado,puede_eliminar FROM permisos WHERE cod_rol=?');
 $stmt->bind_param('i', $idRol);
@@ -18,7 +19,7 @@ $stmt->execute();
 $permisos = [];
 foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $permiso) $permisos[(int)$permiso['cod_modulo']] = $permiso;
 $stmt->close();
-$modulos = $conexion->query("SELECT cod_modulo,nombre,orden FROM modulos WHERE estado='Activo' ORDER BY orden,cod_modulo")->fetch_all(MYSQLI_ASSOC);
+$modulos = $conexion->query("SELECT cod_modulo,nombre,orden FROM modulos WHERE estado='Activo' AND nombre<>'Seguimientos' ORDER BY orden,cod_modulo")->fetch_all(MYSQLI_ASSOC);
 $modulosConCambioEstado = ['Usuarios', 'Estudiantes', 'Derivaciones', 'Citas', 'Docentes'];
 $modulosBloqueadosRolesBase = ['Dashboard', 'Estadísticas', 'Estudiantes'];
 $acciones = ['puede_ver' => 'Ver', 'puede_crear' => 'Crear', 'puede_editar' => 'Editar', 'puede_cambiar_estado' => 'Cambiar estado', 'puede_eliminar' => 'Eliminar'];
@@ -40,7 +41,7 @@ include __DIR__ . '/../includes/navbar.php';
             <div class="table-responsive"><table class="table table-bordered align-middle">
                 <thead class="table-light"><tr><th>Módulo</th><?php foreach ($acciones as $etiqueta): ?><th class="text-center"><?= login_html($etiqueta) ?></th><?php endforeach; ?></tr></thead>
                 <tbody>
-                <?php foreach ($modulos as $modulo): $idModulo = (int)$modulo['cod_modulo']; $datos = $permisos[$idModulo] ?? []; $soloAdmin = $modulo['nombre'] === 'Roles y permisos'; $bloqueadoPorPolitica = in_array((int)$idRol, [3, 4], true) && in_array($modulo['nombre'], $modulosBloqueadosRolesBase, true); ?>
+                <?php foreach ($modulos as $modulo): $idModulo = (int)$modulo['cod_modulo']; $datos = $permisos[$idModulo] ?? []; $soloAdmin = $modulo['nombre'] === 'Roles y permisos'; $bloqueadoPorPolitica = !politica_modulo_permitido($modulo['nombre'], (int)$idRol); ?>
                     <tr><th scope="row"><?= login_html($modulo['nombre']) ?></th>
                     <?php foreach ($acciones as $campo => $etiqueta): $estadoNoDisponible = $campo === 'puede_cambiar_estado' && !in_array($modulo['nombre'], $modulosConCambioEstado, true); ?>
                         <td class="text-center"><?php if ($bloqueadoPorPolitica): ?><span class="text-muted" aria-label="Restringido por política del sistema">—</span><?php elseif ($soloAdmin || $estadoNoDisponible): ?><span class="text-muted" aria-label="No disponible">—</span><?php else: ?><input class="form-check-input" type="checkbox" name="permisos[<?= $idModulo ?>][<?= $campo ?>]" value="1" aria-label="<?= login_html($etiqueta . ' en ' . $modulo['nombre']) ?>" <?= !empty($datos[$campo]) ? 'checked' : '' ?>><?php endif; ?></td>

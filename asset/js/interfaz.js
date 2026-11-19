@@ -80,11 +80,6 @@
             if (error) error.textContent = '';
         }
     });
-    main.querySelectorAll('.calendario-acciones form').forEach(form => {
-        form.addEventListener('submit', event => {
-            if (form.elements.estado?.value === 'Cancelada' && !window.confirm('¿Cancelar esta cita? Se conservará el registro.')) event.preventDefault();
-        });
-    });
     // Solo se recuerda el identificador del aviso, en esta pestaña y por cuenta.
     const user = document.body.dataset.cuenta;
     document.querySelectorAll('.navbar-notificacion').forEach(link => {

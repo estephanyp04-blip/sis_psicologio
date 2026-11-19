@@ -5,6 +5,8 @@ require_once __DIR__ . '/../config/conexion.php';
 
 function roles_actualizar_error(string $mensaje, int $idRol): void
 {
+    ui_recordar_entrada('rol_editar', ['nombre', 'descripcion', 'estado', 'permisos'], $idRol);
+    $_SESSION['tipo_mensaje'] = 'danger';
     $_SESSION['mensaje'] = $mensaje;
     header('Location: editar.php?id=' . $idRol, true, 303);
     exit;
@@ -45,7 +47,7 @@ try {
         VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE puede_ver=VALUES(puede_ver),puede_crear=VALUES(puede_crear),puede_editar=VALUES(puede_editar),puede_eliminar=VALUES(puede_eliminar),puede_cambiar_estado=VALUES(puede_cambiar_estado)');
     foreach ($modulos as $modulo) {
         $idModulo = (int)$modulo['cod_modulo'];
-        $bloqueadoPorPolitica = in_array($idRol, [3, 4], true) && in_array($modulo['nombre'], $modulosBloqueadosRolesBase, true);
+        $bloqueadoPorPolitica = !politica_modulo_permitido($modulo['nombre'], $idRol);
         $marcados = $modulo['nombre'] === 'Roles y permisos' || $bloqueadoPorPolitica ? [] : (is_array($entrada[$idModulo] ?? null) ? $entrada[$idModulo] : []);
         $ver = isset($marcados['puede_ver']) ? 1 : 0;
         $crear = isset($marcados['puede_crear']) ? 1 : 0;
@@ -56,14 +58,16 @@ try {
         $stmtPermiso->execute();
     }
     $stmtPermiso->close();
+    seguridad_evento($conexion, (int)$_SESSION['cod_usuario'], 'roles', 'Permisos', $idRol);
     $conexion->commit();
 } catch (Throwable $e) {
     $conexion->rollback();
-    error_log('Actualizar rol: ' . $e->getMessage());
+    error_log('Actualizar rol: ' . get_class($e) . "; codigo=" . $e->getCode());
     roles_actualizar_error('No se pudieron guardar los cambios del rol.', $idRol);
 }
 
 $_SESSION['mensaje'] = 'Los permisos del rol se actualizaron.';
 $_SESSION['tipo_mensaje'] = 'success';
+unset($_SESSION['ui_entrada']['rol_editar']);
 header('Location: listar.php', true, 303);
 exit;

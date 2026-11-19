@@ -13,7 +13,7 @@ try {
         : 'El estudiante ya tiene el estado solicitado.';
     $_SESSION['tipo_mensaje'] = $cambio ? 'success' : 'info';
 } catch (Throwable $error) {
-    error_log('Error al cambiar estado del estudiante: ' . $error->getMessage());
+    error_log('Error al cambiar estado del estudiante: ' . get_class($error) . "; codigo=" . $error->getCode());
     $_SESSION['mensaje'] = $error instanceof InvalidArgumentException
         ? $error->getMessage() : 'No se pudo actualizar el estado del estudiante.';
     $_SESSION['tipo_mensaje'] = 'danger';

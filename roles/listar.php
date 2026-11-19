@@ -16,7 +16,7 @@ include __DIR__ . '/../includes/navbar.php';
 ?>
 <main class="main-content">
     <nav class="breadcrumb mb-4"><span class="breadcrumb-item"><a href="<?= login_html(login_inicio_url()) ?>">Inicio</a></span><span class="breadcrumb-item active">Roles y permisos</span></nav>
-    <?php if ($mensaje !== ''): ?><div class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show" role="status"><?= login_html($mensaje) ?><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button></div><?php endif; ?>
+    <?php if ($mensaje !== ''): ?><div data-ui-aviso class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show" role="status"><?= login_html($mensaje) ?><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button></div><?php endif; ?>
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div><h2 class="mb-1">Roles y permisos</h2><p class="text-muted mb-0">Crea perfiles y define qué módulos pueden consultar y qué acciones pueden realizar.</p></div>
         <a class="btn btn-primary" href="registrar.php"><i class="bi bi-shield-plus me-1"></i>Nuevo rol</a>

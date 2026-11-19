@@ -232,7 +232,7 @@ include __DIR__ . '/../includes/navbar.php';
     <i class="bi bi-file-earmark-medical"></i>
 </header>
 <?php if($mensaje):?>
-<div class="alert alert-<?= login_html($tipo) ?>">
+<div data-ui-aviso class="alert alert-<?= login_html($tipo) ?>">
     <?= nl2br(login_html($mensaje)) ?>
 </div>
 <?php endif;?>

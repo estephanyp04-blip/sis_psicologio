@@ -1,0 +1,21 @@
+.clinica-navegacion { display:flex; flex-wrap:wrap; gap:.65rem; margin:1rem 0 1.5rem; }
+.clinica-filtros { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1rem; padding:1.25rem; background:#fff; border:1px solid #dce3ee; border-radius:16px; margin:1rem 0 1.5rem; }
+.clinica-filtros label,.clinica-comparadores label { display:block; font-weight:600; margin-bottom:.35rem; }
+.clinica-selector { grid-column:1/-1; }
+.clinica-filtros>div,.clinica-comparadores>div { min-width:0; }
+.clinica-acciones { display:flex; flex-wrap:wrap; gap:.8rem; align-items:center; }
+.clinica-comparadores { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto; align-items:end; gap:1rem; margin:1rem 0; }
+.clinica-comparacion { min-width:800px; table-layout:fixed; }
+.clinica-comparacion th,.clinica-comparacion td { vertical-align:top; overflow-wrap:anywhere; white-space:normal; }
+.clinica-comparacion th:first-child { width:18%; }
+.clinica-comparacion td p { margin:.5rem 0; }
+.clinica-cronologia { padding-left:1.5rem; border-left:2px solid #c7d2fe; margin-left:.5rem; }
+.clinica-cronologia li { padding:.65rem .35rem; }
+.clinica-cronologia summary { cursor:pointer; color:#27385a; font-weight:600; overflow-wrap:anywhere; }
+.clinica-cronologia details[open] { background:#f4f7fc; padding:1rem; border-radius:10px; }
+.clinica-cronologia dd { white-space:normal; overflow-wrap:anywhere; }
+.clinica-ayuda { font-size:.9rem; color:#526079; margin-top:1rem; }
+.estadisticas-distribucion-pista { display:block; height:10px; border-radius:6px; background:#edf0f8; margin:.5rem 0; }
+.estadisticas-distribucion-pista>span { display:block; height:100%; background:#6854a8; border-radius:6px; }
+@media(max-width:600px) { .clinica-comparadores { grid-template-columns:minmax(0,1fr); } .clinica-filtros { grid-template-columns:minmax(0,1fr); padding:1rem; } .clinica-navegacion .btn { width:100%; } }
+@media print { .clinica-comparacion { min-width:0; font-size:9px; } .clinica-cronologia details { break-inside:avoid; } }

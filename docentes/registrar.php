@@ -65,7 +65,7 @@ include '../includes/navbar.php';
     </div>
 
     <?php if (isset($_SESSION['mensaje'])): ?>
-        <div class="alert alert-<?= login_html(
+        <div data-ui-aviso class="alert alert-<?= login_html(
             $_SESSION['tipo_mensaje'] ?? 'danger'
         ); ?> alert-dismissible fade show"
              role="alert">

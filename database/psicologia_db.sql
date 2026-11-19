@@ -22,7 +22,7 @@ CREATE TABLE `auditoria` (
 DROP TABLE IF EXISTS `categorias_derivacion`;
 CREATE TABLE `categorias_derivacion` (
   `cod_categoria` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `nombre` varchar(120) NOT NULL,
+  `nombre` varchar(120) NOT NULL,    
   `estado` enum('Activo','Inactivo') NOT NULL DEFAULT 'Activo',
   PRIMARY KEY (`cod_categoria`),
   UNIQUE KEY `uk_categorias_derivacion_nombre` (`nombre`)

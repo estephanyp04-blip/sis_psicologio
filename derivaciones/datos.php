@@ -169,7 +169,7 @@ function derivacion_observaciones(array $entrada, ?string $original, array $perm
     return implode("\n\n", array_merge($partes, $previo['metadatos']));
 }
 
-function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, int $docente, ?array $archivo = null, bool $puedeEditar = false): void
+function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, int $docente, ?array $archivo = null, bool $puedeEditar = false, ?int $autor = null): void
 {
     if (!in_array($rol, [1, 3], true) && !$puedeEditar) {
         throw new InvalidArgumentException('No tiene permiso para editar derivaciones.');
@@ -193,7 +193,7 @@ function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, in
     try {
         $stmt = $bd->prepare('SELECT d.observaciones,d.estado,d.cod_docente,d.cod_materia,m.nombre AS materia
             FROM derivaciones d LEFT JOIN materias m ON m.cod_materia=d.cod_materia
-            WHERE d.cod_derivacion = ? AND (? <= 0 OR d.cod_docente = ?) FOR UPDATE');
+            WHERE d.cod_derivacion = ? AND (? <= 0 OR (d.cod_docente = ? AND (d.cod_usuario_autor IS NULL OR d.cod_usuario_autor=(SELECT cod_usuario FROM docentes WHERE cod_docente=d.cod_docente)))) FOR UPDATE');
         $stmt->bind_param('iii', $id, $docente, $docente); $stmt->execute();
         $actual = $stmt->get_result()->fetch_assoc(); $stmt->close();
         if (!$actual) throw new InvalidArgumentException('La derivación no existe o no tiene permiso para editarla.');
@@ -248,6 +248,7 @@ function derivacion_actualizar(mysqli $bd, int $id, array $entrada, int $rol, in
             $stmt->bind_param('sii', $descripcionImagen, $idEvidencia, $id);
             $stmt->execute(); $stmt->close();
         }
+        if ($autor !== null) flujo_auditar($bd, $autor, 'derivaciones', 'Actualizar', $id, 'Edición de derivación');
         $bd->commit();
         if ($rutaAnterior !== null) derivacion_imagen_eliminar($rutaAnterior);
     } catch (Throwable $error) {

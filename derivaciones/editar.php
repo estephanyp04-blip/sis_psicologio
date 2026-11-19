@@ -163,7 +163,7 @@ include '../includes/navbar.php';
 <main class="main-content">
     <div class="container-fluid">
         <?php if ($mensaje !== ''): ?>
-            <div class="alert alert-danger" role="alert"><?= login_html($mensaje) ?></div>
+            <div data-ui-aviso class="alert alert-danger" role="alert"><?= login_html($mensaje) ?></div>
         <?php endif; ?>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">

@@ -5,6 +5,8 @@ require_once __DIR__ . '/../config/conexion.php';
 
 function roles_registro_error(string $mensaje): never
 {
+    ui_recordar_entrada('rol_nuevo', ['nombre', 'descripcion', 'permisos']);
+    $_SESSION['tipo_mensaje'] = 'danger';
     $_SESSION['mensaje'] = $mensaje;
     header('Location: registrar.php', true, 303);
     exit;
@@ -41,7 +43,7 @@ try {
     $stmtPermiso = $conexion->prepare('INSERT INTO permisos (cod_rol,cod_modulo,puede_ver,puede_crear,puede_editar,puede_eliminar,puede_cambiar_estado) VALUES (?,?,?,?,?,?,?)');
     foreach ($modulos as $modulo) {
         $idModulo = (int) $modulo['cod_modulo'];
-        $marcados = $modulo['nombre'] === 'Roles y permisos' ? [] : (is_array($entrada[$idModulo] ?? null) ? $entrada[$idModulo] : []);
+        $marcados = $modulo['nombre'] === 'Roles y permisos' || !politica_modulo_permitido($modulo['nombre'], $idRol) ? [] : (is_array($entrada[$idModulo] ?? null) ? $entrada[$idModulo] : []);
         $ver = isset($marcados['puede_ver']) ? 1 : 0;
         $crear = isset($marcados['puede_crear']) ? 1 : 0;
         $editar = isset($marcados['puede_editar']) ? 1 : 0;
@@ -51,14 +53,16 @@ try {
         $stmtPermiso->execute();
     }
     $stmtPermiso->close();
+    seguridad_evento($conexion, (int)$_SESSION['cod_usuario'], 'roles', 'Crear', $idRol);
     $conexion->commit();
 } catch (Throwable $e) {
     $conexion->rollback();
-    error_log('Crear rol: ' . $e->getMessage());
+    error_log('Crear rol: ' . get_class($e) . "; codigo=" . $e->getCode());
     roles_registro_error('No se pudo guardar el rol. Revisa los datos e inténtalo de nuevo.');
 }
 
 $_SESSION['mensaje'] = 'El rol se creó con sus permisos.';
 $_SESSION['tipo_mensaje'] = 'success';
+unset($_SESSION['ui_entrada']['rol_nuevo']);
 header('Location: listar.php', true, 303);
 exit;

@@ -1,17 +1,25 @@
 # Base de datos e instalación
 
+## Seguimiento vigente desde el 19/11/2026
+
+El seguimiento individual consulta `historias_clinicas` y `historia_versiones` en Estadísticas y análisis. `seguimientos` queda como archivo de lectura, conservando filas y relaciones con informes/citas. Estadísticas, panel y nuevos informes cuentan historias por `fecha_apertura`, sin sumar sus versiones. Los mensuales nuevos incluyen `version_semantica=2` en el JSON existente; no se reescriben resúmenes anteriores. [Definiciones y modelo lógico](../documentacion/SEGUIMIENTO_PSICOLOGICO_2026-11-19.md).
+
+Esta entrega no añade columnas ni tablas y requiere la ampliación 016. En la base local se aplicó el 19/11/2026 después de respaldo cifrado, con cero pendientes al verificar. En otra instalación, comprobar su estado. No se reconstruyen estados clínicos no conservados ni se copian notas antiguas a campos con significados distintos.
+
 ## Esquema actual
 
 El archivo [psicologia_db.sql](psicologia_db.sql) contiene el esquema final que usa la aplicación:
 
 - `usuarios` guarda los datos de identidad y acceso; `docentes` se vincula mediante `cod_usuario`.
 - `secciones` e `historial_academico` relacionan curso, paralelo, turno y gestión de los estudiantes.
-- `historias_clinicas` usa `cod_psicologa`, `cod_derivacion_origen` e `cod_cita_origen`. Un estudiante puede tener varias historias, cada una con su código, autor, estado y seguimientos. La migración `014_historias_por_estudiante.php` reemplaza el índice único del estudiante por uno no único, sin modificar registros existentes. Los informes individuales permiten elegir la historia y conservan ese vínculo. La migración `015_seguimiento_desde_historias.php` solo registra la adopción de la comparación entre historias: no desactiva ni borra los seguimientos, que continúan siendo el registro cronológico de cada sesión.
+- `historias_clinicas` usa `cod_psicologa`, `cod_derivacion_origen` e `cod_cita_origen`. Un estudiante puede tener varias historias, con código, autor, estado y archivo anterior vinculado. La migración `014_historias_por_estudiante.php` sustituye el índice único del estudiante por uno no único, sin modificar registros. Los informes permiten elegir y conservar su historia de origen. La migración 015 es una marca histórica y no borra registros. Desde el 19/11/2026 las atenciones se documentan en historias y el seguimiento compara sus registros y versiones.
 - Las columnas identificadoras que antes comenzaban con `id_` ahora comienzan con `cod_`.
 - `informes` guarda la cabecera y `informe_individual` el detalle y las relaciones del informe.
 - Las opciones clínicas, materias y categorías de derivación se guardan en catálogos relacionados.
 
-El SQL incluye catálogos, secciones para la gestión 2026 y un usuario administrador inicial. No es una plantilla sin datos. No contiene tablas ni vistas `personas` o `inscripciones`, ni columnas `cod_persona`. Sus vistas declaran `DEFINER=root@localhost`; al instalar con otra cuenta hay que adaptar ese definidor al servidor de destino.
+El SQL incluye catálogos, secciones para la gestión 2026 y un usuario administrador inicial. No es una plantilla sin datos. No contiene tablas ni vistas `personas` o `inscripciones`, ni columnas `cod_persona`. Las vistas de instalación usan `SQL SECURITY INVOKER` sin un definidor root fijo. Las vistas de bases anteriores conservan sus definidores hasta una revisión específica.
+
+La ampliación aditiva `016_auditoria_versiones.php` agrega versiones de revocación de sesiones en cuentas/roles, metadatos históricos de auditoría, versiones anteriores de historias y triggers protectores. No inventa identidades históricas para eventos antiguos. El SQL final ya la incluye. Para aplicar solo esta mejora a una base normalizada existente: `php herramientas/migrar_seguridad.php --comprobar` y, después de respaldo, `--aplicar`. El [procedimiento completo](../seguridad/09_OPERACION_RECUPERACION.md) evita ejecutar migraciones históricas destructivas e incluye recuperación.
 
 ## Instalación en una base nueva
 

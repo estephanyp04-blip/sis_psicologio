@@ -1,0 +1,9 @@
+Options -Indexes
+
+# Apache 2.4: impedir descarga de fuentes auxiliares, secretos y copias.
+<FilesMatch "(?i)(^\.|\.(sql|md|log|ini|env|bak|orig|tmp|zip|gz|7z|tar)$)">
+    Require all denied
+</FilesMatch>
+
+RewriteEngine On
+RewriteRule ^(?:\.git|\.vscode|database|tests|herramientas|seguridad|config|includes)(?:/|$) - [F,L,NC]

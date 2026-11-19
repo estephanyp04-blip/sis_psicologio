@@ -12,7 +12,7 @@ No corresponde exigir todas las ISO existentes. La selección depende de la acti
 
 ## Método y límites
 
-Se revisaron README.md, REVISION_ISO.md, tests/README.md, autenticación, configuración de conexión, permisos, trazabilidad, formulario y persistencia de historias clínicas y estructura SQL. Se consultaron catálogos oficiales para identificar normas y ediciones. No se realizó una auditoría cláusula por cláusula contra los textos normativos completos.
+Se revisaron README.md, la revisión preliminar del 10 de noviembre de 2026 (conservada en el historial de Git), tests/README.md, autenticación, configuración de conexión, permisos, trazabilidad, formulario y persistencia de historias clínicas y estructura SQL. Se consultaron catálogos oficiales para identificar normas y ediciones. No se realizó una auditoría cláusula por cláusula contra los textos normativos completos.
 
 La revisión cubre el estado de trabajo local, con modificaciones preexistentes. No se modificó código de aplicación. No se inspeccionaron el servidor de producción, datos reales, contratos, políticas externas, certificados ni prácticas del personal. La ausencia de evidencia en el repositorio no demuestra ausencia en la institución.
 

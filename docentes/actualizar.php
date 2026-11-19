@@ -248,7 +248,7 @@ try {
     header('Location: ver.php?id=' . $idDocente);
 } catch (Throwable $error) {
     $conexion->rollback();
-    error_log('Error al actualizar docente: ' . $error->getMessage());
+    error_log('Error al actualizar docente: ' . get_class($error) . "; codigo=" . $error->getCode());
     regresarConError(
         $error instanceof InvalidArgumentException ? $error->getMessage() : 'No se pudo actualizar el docente.',
         $idDocente

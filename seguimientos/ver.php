@@ -11,10 +11,13 @@ $s = flujo_fila($conexion, 'SELECT s.*,h.cod_estudiante,COALESCE(s.cod_derivacio
 
     LEFT JOIN citas c ON c.cod_cita=s.cod_cita WHERE s.cod_seguimiento=?', [$id]);
 if (!$s) { http_response_code(404); exit('Seguimiento no encontrado.'); }
+seguridad_consulta($conexion, 'seguimientos', $id);
 $tituloPagina='Seguimiento #' . $id;
 include '../includes/header.php'; include '../includes/sidebar.php'; include '../includes/navbar.php';
 ?>
 <main class="main-content"><div class="container-fluid"><h1><?= login_html($tituloPagina) ?></h1>
+<p class="alert alert-info">Archivo histórico de solo lectura. El seguimiento actual se consulta comparando historias clínicas.</p>
+<p><a href="<?= login_html(login_url('estadisticas/individual.php?estudiante=' . (int)$s['cod_estudiante'])) ?>">Consultar seguimiento psicológico individual</a></p>
 <p><?= login_html($s['fecha'] . ' · ' . $s['profesional']) ?></p><div class="card p-4">
 <p><a href="../historias_clinicas/ver.php?id=<?= (int)$s['cod_historia'] ?>">Historia #<?= (int)$s['cod_historia'] ?></a> · Registrado: <?= login_html($s['fecha_registro']) ?></p>
 <p><?php if ($s['cod_cita']): ?><a href="../citas/editar.php?id=<?= (int)$s['cod_cita'] ?>">Cita #<?= (int)$s['cod_cita'] ?></a><?= $s['fecha_cita'] ? ' · ' . login_html($s['fecha_cita'] . ' ' . substr($s['hora_cita'], 0, 5)) : '' ?><?php else: ?>Sin cita asociada<?php endif; ?></p>

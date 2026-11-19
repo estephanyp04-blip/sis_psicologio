@@ -131,7 +131,7 @@ if(!$resultado){
                                         </a><?php endif; ?>
                                         
                                         <?php if (login_puede('usuarios/cambiar_estado.php')): ?>
-                                        <form action="cambiar_estado.php" method="POST" class="d-inline" onsubmit="return confirm('¿Está seguro de cambiar el estado de este usuario?');">
+                                        <form action="cambiar_estado.php" method="POST" class="d-inline" data-ui-confirmar="¿Cambiar el estado de este usuario? Su acceso al sistema puede verse afectado.">
                                             <?= login_campo_csrf() ?>
                                             <input type="hidden" name="cod_usuario" value="<?= (int)$fila['cod_usuario']; ?>">
 

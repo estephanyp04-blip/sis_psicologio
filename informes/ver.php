@@ -69,6 +69,7 @@ if (!$informe) {
 }
 
 if($informe['tipo']==='Mensual'){header('Location: ver_mensual.php?id='.$idInforme,true,303);exit;}
+seguridad_consulta($conexion, 'informes', $idInforme);
 $nombreEstudiante = trim($informe['nombres'] . ' ' . $informe['apellidos']);
 $atencionesAlCorte=informe_total_atenciones($conexion,(int)($informe['cod_estudiante']??0),(string)$informe['fecha']);
 $nombrePsicologo = trim(($informe['psicologo_nombre'] ?? '') . ' ' . ($informe['psicologo_apellido'] ?? ''));
@@ -99,7 +100,7 @@ include '../includes/navbar.php';
         </nav>
 
         <?php if ($mensaje !== ''): ?>
-            <div class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show d-print-none" role="alert">
+            <div data-ui-aviso class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show d-print-none" role="alert">
                 <?= nl2br(login_html($mensaje)) ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>
@@ -142,7 +143,7 @@ include '../includes/navbar.php';
                 <div><span>C.I.</span><strong><?= dato($informe['ci']) ?></strong></div>
                 <div><span>Curso</span><strong><?= login_html($informe['estudiante_curso'] . ' ' . $informe['estudiante_paralelo']) ?></strong></div>
                 <div><span>Fecha del informe</span><strong><?= login_html(fechaInforme($informe['fecha'])) ?></strong></div>
-                <div><span>Atenciones registradas hasta la fecha del informe</span><strong><?= $atencionesAlCorte ?></strong><?php if($atencionesAlCorte!==(int)$informe['numero_atenciones']): ?><small>Valor guardado al emitir: <?= (int)$informe['numero_atenciones'] ?>. El total consultado cuenta seguimientos; el registro original se conserva.</small><?php endif; ?></div>
+                <div><span>Atenciones registradas hasta la fecha del informe</span><strong><?= $atencionesAlCorte ?></strong><small>Consulta actual de historias clínicas; las ediciones no suman atenciones.</small><?php if($atencionesAlCorte!==(int)$informe['numero_atenciones']): ?><small>Valor guardado al emitir: <?= (int)$informe['numero_atenciones'] ?>. Se conserva el total original y su definición histórica.</small><?php endif; ?></div>
                 <div><span>Referido por</span><strong><?= dato($informe['referido_por']) ?></strong></div>
                 <div><span>Recibido por</span><strong><?= dato($informe['recibido_por']) ?></strong></div>
             </div>

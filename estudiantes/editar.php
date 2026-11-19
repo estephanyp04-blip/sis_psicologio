@@ -42,7 +42,7 @@ include '../includes/navbar.php';
             <a href="listar.php" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
         </div>
         <?php if ($mensaje !== ''): ?>
-            <div class="alert alert-danger" role="alert"><?= login_html($mensaje) ?></div>
+            <div data-ui-aviso class="alert alert-danger" role="alert"><?= login_html($mensaje) ?></div>
         <?php endif; ?>
         <div class="card shadow-sm border-0"><div class="card-body p-4">
             <form id="formEditarEstudiante" action="actualizar.php" method="POST">

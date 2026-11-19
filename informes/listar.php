@@ -72,7 +72,7 @@ include '../includes/navbar.php';
 <div class="main-content">
 
     <?php if ($mensaje !== ''): ?>
-        <div class="alert alert-<?= htmlspecialchars($tipoMensaje, ENT_QUOTES, 'UTF-8') ?> alert-dismissible fade show" role="alert">
+        <div data-ui-aviso class="alert alert-<?= htmlspecialchars($tipoMensaje, ENT_QUOTES, 'UTF-8') ?> alert-dismissible fade show" role="alert">
             <?= nl2br(htmlspecialchars($mensaje, ENT_QUOTES, 'UTF-8')) ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
         </div>

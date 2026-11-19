@@ -24,7 +24,7 @@ try {
         : ($error instanceof mysqli_sql_exception && $error->getCode() === 1062
             ? 'El CI ya está registrado.' : 'No se pudo actualizar el estudiante.');
     $_SESSION['tipo_mensaje'] = 'danger';
-    if (!$error instanceof InvalidArgumentException) error_log('Error al actualizar estudiante: ' . $error->getMessage());
+    if (!$error instanceof InvalidArgumentException) error_log('Error al actualizar estudiante: ' . get_class($error) . "; codigo=" . $error->getCode());
     header('Location: editar.php?id=' . $id);
 }
 exit;

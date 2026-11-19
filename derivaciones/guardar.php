@@ -185,9 +185,7 @@ try {
                     </div>
                 </div>
             </div>
-            </body>
-            </html>
-            <?php
+            <?php include '../includes/footer.php';
             exit;
         }
         $stmtDocente = $conexion->prepare("SELECT cod_docente FROM docentes WHERE cod_docente = ? AND estado='Activo' LIMIT 1");
@@ -265,6 +263,7 @@ try {
         if ($subidaImagen !== null) {
             $archivoGuardado = derivacion_imagen_guardar($conexion, $idDerivacion, $subidaImagen);
         }
+        seguridad_evento($conexion, (int)$_SESSION['cod_usuario'], 'derivaciones', 'Crear', $idDerivacion);
         $conexion->commit();
     } catch (Throwable $error) {
         $conexion->rollback();
@@ -279,6 +278,6 @@ try {
 } catch (InvalidArgumentException $error) {
     errorDerivacion($error->getMessage());
 } catch (Throwable $error) {
-    error_log('Error en derivaciones/guardar.php: ' . $error->getMessage());
+    error_log('Error en derivaciones/guardar.php: ' . get_class($error) . "; codigo=" . $error->getCode());
     errorDerivacion('No se pudo guardar la derivación. Los datos del formulario se conservaron. Inténtelo de nuevo o comuníquese con el administrador.');
 }

@@ -15,6 +15,9 @@ Esta carpeta inicia la gestión de seguridad del sistema de seguimiento psicoló
 | [Evaluación y mejora](05_EVALUACION.md) | Indicadores, auditoría interna y revisión directiva | Responsable SGSI y revisor independiente |
 | [Registros reutilizables](06_REGISTROS.md) | Documentar autorizaciones, ejecución y decisiones | Responsable de cada actividad |
 | [Evidencia inicial](07_EVIDENCIA_INICIAL.md) | Distinguir verificaciones reales de trabajo pendiente | Administración técnica |
+| [Revisión técnica y matriz actualizada](08_REVISION_TECNICA_2026-11-14.md) | Correcciones, pruebas ejecutadas y límites al 14/11/2026 | Administración técnica y revisor |
+| [Configuración y recuperación](09_OPERACION_RECUPERACION.md) | Migración 016, hosting, claves y copia/recuperación cifradas | Administración técnica y custodio |
+| [Privacidad y matriz de acceso](10_PRIVACIDAD_ACCESOS.md) | Inventario, entregas, solicitudes, conservación y decisiones pendientes | Dirección y propietario clínico |
 
 ## Primer ciclo de implantación
 

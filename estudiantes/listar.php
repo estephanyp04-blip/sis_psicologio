@@ -152,7 +152,7 @@ include '../includes/navbar.php';
     <!-- MENSAJE -->
     <?php if($mensaje!==''):?>
 
-        <div class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show" role="alert">
+        <div data-ui-aviso class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show" role="alert">
 
             <?php if($tipoMensaje==='success'):?>
                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -829,40 +829,17 @@ document.addEventListener('DOMContentLoaded',()=>{
     filtroCurso.addEventListener('change',filtrar);
     filtroEstado.addEventListener('change',filtrar);
 
-    document.querySelectorAll('.formulario-retirar').forEach(form=>{
-
-        form.addEventListener('submit',evento=>{
-
-            if(!confirm(
-                '¿Está segura de retirar este estudiante?\n\n'+
-                'El estudiante dejará de estar activo, pero se conservarán sus datos, derivaciones, citas e historia clínica.'
-            )){
-                evento.preventDefault();
-            }
-        });
-    });
-
-    document.querySelectorAll('.formulario-reactivar').forEach(form=>{
-
-        form.addEventListener('submit',evento=>{
-
-            if(!confirm('¿Desea reactivar este estudiante?')){
-                evento.preventDefault();
-            }
-        });
-    });
-
     const btnImportar=document.getElementById('btnImportar');
     const archivo=document.getElementById('archivoImportacion');
     const formImportar=document.getElementById('formImportar');
 
-    btnImportar.addEventListener('click',()=>{
+    btnImportar?.addEventListener('click',()=>{
         archivo.click();
     });
 
-    archivo.addEventListener('change',()=>{
+    archivo?.addEventListener('change',()=>{
         if(archivo.files.length){
-            formImportar.submit();
+            formImportar.requestSubmit();
         }
     });
 

@@ -283,7 +283,7 @@ include '../includes/navbar.php';
         <?php if ($mensaje !== ''): ?>
 
             <div
-                class="alert alert-<?= login_html($tipoMensaje) ?>
+                data-ui-aviso class="alert alert-<?= login_html($tipoMensaje) ?>
                        alert-dismissible fade show"
             >
 
@@ -704,7 +704,7 @@ include '../includes/navbar.php';
 
                                         <?php if ($fila['estado'] === 'Pendiente' && login_puede('derivaciones/eliminar.php')): ?>
                                             <form action="eliminar.php" method="POST" class="d-inline"
-                                                onsubmit="return confirm('¿Eliminar esta derivación pendiente?');">
+                                                data-ui-confirmar="¿Eliminar esta derivación pendiente? Esta acción no se puede deshacer." data-ui-aceptar="Eliminar derivación" data-ui-destructivo="true">
                                                 <?= login_campo_csrf() ?>
                                                 <input type="hidden" name="cod_derivacion" value="<?= (int)$fila['cod_derivacion'] ?>">
                                                 <button type="submit" class="btn-accion text-danger" title="Eliminar derivación">

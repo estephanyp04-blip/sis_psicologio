@@ -68,7 +68,7 @@ try {
     }
     comprobar($cabecera['fecha_inicio'] === $datos['fecha'] && $cabecera['fecha_fin'] === $datos['fecha'], 'No se guardó la fecha.');
     comprobar($cabecera['descripcion'] === $datos['motivo'] && $cabecera['conclusiones'] === $datos['diagnostico'], 'La cabecera no coincide con el detalle.');
-    comprobar((int)$detalle['numero_atenciones'] === 1, 'No se recalculó el número de atenciones.');
+    comprobar((int)$detalle['numero_atenciones'] === 1, 'La edición alteró el total publicado del informe.');
     comprobar($detalle['tipo_atencion'] === 'Evaluación, Orientación', 'No se guardaron los tipos de atención.');
     foreach (['referido_por', 'motivo', 'diagnostico', 'aspecto_cognitivo', 'aspectos_afectivos', 'diagnostico_acuerdos', 'recibido_por'] as $campo) {
         comprobar($detalle[$campo] === $datos[$campo], "No se guardó $campo en el detalle.");

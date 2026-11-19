@@ -151,7 +151,7 @@ if ($idDocenteSesion > 0) {
     </div>
 
     <?php if ($mensaje !== ''): ?>
-        <div class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show" role="alert">
+        <div data-ui-aviso class="alert alert-<?= login_html($tipoMensaje) ?> alert-dismissible fade show" role="alert">
             <i class="bi bi-info-circle-fill me-1"></i>
             <?= nl2br(login_html($mensaje)) ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>

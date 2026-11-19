@@ -43,6 +43,7 @@ if(!$resultadoRoles){
 }
 
 include '../includes/header.php';
+$uiEntrada = ui_entrada_recuperar('usuario_editar', (int)$id);
 include '../includes/sidebar.php';
 include '../includes/navbar.php';
 ?>
@@ -59,7 +60,7 @@ include '../includes/navbar.php';
     </nav>
 
     <?php if(isset($_SESSION['mensaje'])): ?>
-        <div class="alert alert-<?= htmlspecialchars($_SESSION['tipo_mensaje']??'danger'); ?> alert-dismissible fade show">
+        <div data-ui-aviso class="alert alert-<?= htmlspecialchars($_SESSION['tipo_mensaje']??'danger'); ?> alert-dismissible fade show">
             <?= htmlspecialchars($_SESSION['mensaje']); ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>

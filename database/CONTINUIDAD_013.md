@@ -1,5 +1,7 @@
 # Migración 013: continuidad de la atención
 
+Nota del 19/11/2026: este documento conserva el diseño histórico de 013. El funcionamiento vigente usa historias para documentar atenciones y compara sus versiones en estadísticas; los seguimientos anteriores quedan como archivo de lectura. Los resúmenes nuevos guardan la definición 2 en el JSON existente. Consultar [el informe de redefinición](../documentacion/SEGUIMIENTO_PSICOLOGICO_2026-11-19.md) antes de reutilizar las definiciones de sesión que siguen.
+
 La actualización se implementa en `migrations_normalizadas/013_continuidad_atencion.php`. El SQL de instalación ya incorpora las columnas y claves nuevas. El migrador completa la carga histórica y el marcador correspondiente. No se ejecutan migraciones al abrir páginas web.
 
 ## Cambios

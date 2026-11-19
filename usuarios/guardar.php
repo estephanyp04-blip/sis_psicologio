@@ -6,6 +6,7 @@ require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/../includes/claves.php';
 
 function regresarConError(string $mensaje):void{
+    ui_recordar_entrada('usuario_nuevo', ['nombre', 'apellido', 'usuario', 'correo', 'cod_rol', 'estado']);
     $_SESSION['mensaje']=$mensaje;
     $_SESSION['tipo_mensaje']='danger';
     header('Location: registrar.php');
@@ -105,15 +106,18 @@ try {
     );
     $stmt->bind_param('sssssis', $nombre, $apellido, $correoBaseDatos, $usuario, $passwordHash, $idRol, $estado);
     $stmt->execute();
+    $nuevoId = (int)$conexion->insert_id;
     $stmt->close();
+    seguridad_evento($conexion, (int)$_SESSION['cod_usuario'], 'usuarios', 'Crear', $nuevoId);
     $conexion->commit();
 } catch (mysqli_sql_exception $error) {
     $conexion->rollback();
-    error_log('Error al registrar usuario: ' . $error->getMessage());
+    error_log('Error al registrar usuario: ' . get_class($error) . "; codigo=" . $error->getCode());
     regresarConError('No se pudo registrar el usuario. Verifique que el nombre de usuario y correo no estén en uso.');
 }
 
 $_SESSION['mensaje']='Usuario registrado correctamente.';
+unset($_SESSION['ui_entrada']['usuario_nuevo']);
 $_SESSION['tipo_mensaje']='success';
 
 if (login_puede('usuarios/listar.php')) {

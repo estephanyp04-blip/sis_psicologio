@@ -1,15 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/autenticacion.php';
 requerir_acceso('seguimientos/guardar.php');
-require_once __DIR__ . '/../config/conexion.php';
-require_once __DIR__ . '/../includes/trazabilidad_datos.php';
-try {
-    $id = seguimiento_guardar($conexion, $_POST, (int)$_SESSION['cod_usuario']);
-    unset($_SESSION['datos_seguimiento']);
-    header('Location: ver.php?id=' . $id);
-} catch (Throwable $error) {
-    $_SESSION['datos_seguimiento'] = array_filter(array_intersect_key($_POST,array_flip(['cod_historia','cod_cita','fecha','descripcion','tecnicas_aplicadas','acuerdos','recomendaciones','proxima_sesion','cod_derivacion','reservar_proxima','proxima_hora','proxima_psicologa'])), 'is_scalar');
-    $_SESSION['mensaje_seguimiento'] = $error instanceof InvalidArgumentException ? $error->getMessage() : 'No se pudo guardar el seguimiento.';
-    header('Location: registrar.php?cod_historia=' . (int)filter_var($_POST['cod_historia'] ?? 0,FILTER_VALIDATE_INT));
-}
-exit;
+http_response_code(410);
+header('Content-Type: text/html; charset=UTF-8');
+echo 'El registro independiente de seguimiento fue retirado. Registre la atención en una historia clínica. ';
+echo '<a href="' . login_html(login_url('historias_clinicas/listar.php')) . '">Abrir historias clínicas</a>';

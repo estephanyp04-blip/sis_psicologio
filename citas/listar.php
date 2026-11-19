@@ -80,7 +80,7 @@ $stmtSolicitudes->close();
     <?php endif; ?>
 
     <?php if (!empty($_SESSION['mensaje_cita'])): ?>
-        <div class="alert alert-danger"><?= login_html($_SESSION['mensaje_cita']) ?></div>
+        <div data-ui-aviso class="alert alert-danger"><?= login_html($_SESSION['mensaje_cita']) ?></div>
         <?php unset($_SESSION['mensaje_cita']); ?>
     <?php endif; ?>
 
@@ -131,7 +131,7 @@ $stmtSolicitudes->close();
 
     <!-- Mensaje éxito -->
     <?php if(isset($_GET['exito'])): ?>
-    <div class="alert alert-success
+    <div data-ui-aviso class="alert alert-success
                 alert-dismissible fade show">
         <i class="bi bi-check-circle-fill"></i>
         <?php
@@ -151,7 +151,7 @@ $stmtSolicitudes->close();
 
     <!-- Mensaje error -->
     <?php if(isset($_GET['error'])): ?>
-    <div class="alert alert-danger
+    <div data-ui-aviso class="alert alert-danger
                 alert-dismissible fade show">
         <i class="bi bi-exclamation-triangle-fill"></i>
         <?php
@@ -240,7 +240,7 @@ $stmtSolicitudes->close();
                            title="Editar cita"><i class="bi bi-pencil" aria-hidden="true"></i> Editar</a><?php endif; ?>
                         <?php if (login_puede('citas/cancelar.php')): ?>
                         <form action="cancelar.php" method="POST" class="d-inline"
-                              onsubmit="return confirm('¿Está segura de cancelar esta cita?')">
+                              data-ui-confirmar="¿Cancelar esta cita? Se conservará el registro." data-ui-aceptar="Cancelar cita" data-ui-destructivo="true">
                             <?= login_campo_csrf() ?>
                             <input type="hidden" name="cod_cita" value="<?= (int) $fila['cod_cita'] ?>">
                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancelar cita"><i class="bi bi-x-circle" aria-hidden="true"></i> Cancelar</button>

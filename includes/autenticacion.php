@@ -5,6 +5,9 @@ if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
 }
 
 require_once __DIR__ . '/../config/conexion_login.php';
+require_once __DIR__ . '/politica_acceso.php';
+require_once __DIR__ . '/auditoria.php';
+require_once __DIR__ . '/avisos.php';
 function login_config(): array
 {
     static $c = null;
@@ -25,14 +28,29 @@ function login_html(mixed $valor): string
 }
 function login_iniciar_sesion(): void
 {
+    ini_set('display_errors', '0');
+    ini_set('display_startup_errors', '0');
+    header_remove('X-Powered-By');
+    if (is_file(dirname(__DIR__) . '/.mantenimiento')) {
+        header('Retry-After: 120');
+        header('Cache-Control: no-store');
+        http_response_code(503);
+        exit('Servicio en mantenimiento. Intente nuevamente más tarde.');
+    }
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: DENY');
     header('Referrer-Policy: no-referrer');
     header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
+    header('Cache-Control: no-store, private');
+    $https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    if ((login_config()['entorno'] ?? 'desarrollo') === 'produccion' && !$https) {
+        http_response_code(426);
+        exit('Este servicio requiere una conexión HTTPS.');
+    }
+    if ((login_config()['entorno'] ?? 'desarrollo') === 'produccion' && $https) header('Strict-Transport-Security: max-age=31536000');
     if (session_status() === PHP_SESSION_ACTIVE) return;
     ini_set('session.use_strict_mode', '1');
     ini_set('session.use_only_cookies', '1');
-    $https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
     session_set_cookie_params([
         'lifetime' => 0, 'path' => '/', 'httponly' => true,
         'secure' => login_config()['cookie_segura'] || $https, 'samesite' => 'Lax',
@@ -56,7 +74,7 @@ function login_buscar_usuario(string $usuario): ?array
 {
     $bd = login_bd();
     $s = $bd->prepare('SELECT u.cod_usuario, u.usuario, u.nombres AS nombre, u.apellidos AS apellido,
-            u.password, u.estado, u.cod_rol, r.nombre AS rol, r.estado AS rol_estado
+            u.password, u.estado, u.cod_rol, u.sesion_version, r.sesion_version AS rol_version, r.nombre AS rol, r.estado AS rol_estado
         FROM usuarios u
         INNER JOIN roles r ON r.cod_rol = u.cod_rol
         WHERE u.usuario = ? LIMIT 2');
@@ -81,12 +99,13 @@ function login_docente(int $idUsuario): ?int
     $s->close();
     return $id;
 }
-// Límite por cuenta, compartido entre sesiones y protegido contra concurrencia.
-function login_comprobar(string $usuario, string $clave): array
+    // Límite por cuenta y origen: un tercero no bloquea globalmente una cuenta.
+function login_comprobar(string $usuario, #[SensitiveParameter] string $clave): array
 {
     $u = login_buscar_usuario($usuario);
-    $claveLimite = $u ? 'id:' . $u['cod_usuario'] : 'nombre:' . strtolower($usuario);
-    $directorio = sys_get_temp_dir() . '/sis_psicologia_login_' . substr(hash('sha256', __DIR__), 0, 16);
+    $origen = $_SERVER['REMOTE_ADDR'] ?? 'cli'; // No confiar en X-Forwarded-For.
+    $claveLimite = ($u ? 'id:' . $u['cod_usuario'] : 'desconocido') . '|origen:' . $origen;
+    $directorio = sys_get_temp_dir() . '/sis_psicologia_login_' . substr(hash('sha256', __DIR__ . '|' . login_config()['base_datos']), 0, 16);
     if (!is_dir($directorio) && !@mkdir($directorio, 0700, true) && !is_dir($directorio)) throw new RuntimeException('No se pudo crear el directorio de intentos.');
     $archivo = $directorio . '/' . hash('sha256', $claveLimite) . '.json';
     $f = fopen($archivo, 'c+');
@@ -97,7 +116,10 @@ function login_comprobar(string $usuario, string $clave): array
         $estado = json_decode(stream_get_contents($f), true);
         if (!is_array($estado) || ($estado['inicio'] ?? 0) + 900 <= $ahora) $estado = ['inicio' => $ahora, 'fallos' => 0, 'bloqueado' => 0];
         $error = 'Usuario o contraseña incorrectos, o cuenta no disponible.';
-        if (($estado['bloqueado'] ?? 0) > $ahora) return [null, 'Demasiados intentos. Espera cinco minutos e inténtalo de nuevo.'];
+        if (($estado['bloqueado'] ?? 0) > $ahora) {
+            seguridad_evento(login_bd(), $u ? (int)$u['cod_usuario'] : null, 'autenticacion', 'Denegado');
+            return [null, 'Demasiados intentos. Espera cinco minutos e inténtalo de nuevo.'];
+        }
         if (($estado['bloqueado'] ?? 0) > 0) $estado = ['inicio' => $ahora, 'fallos' => 0, 'bloqueado' => 0];
         $hash = $u['password'] ?? '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
         $correcta = password_verify($clave, $hash);
@@ -115,7 +137,10 @@ function login_comprobar(string $usuario, string $clave): array
                 $s = login_bd()->prepare('UPDATE usuarios SET password=? WHERE cod_usuario=? AND password=?');
                 $s->bind_param('sis', $nuevo, $u['cod_usuario'], $u['password']);
                 $s->execute();
-                if ($s->affected_rows === 1) $u['password'] = $nuevo;
+                if ($s->affected_rows === 1) {
+                    $u['password'] = $nuevo;
+                    $u['sesion_version'] = (int)$u['sesion_version'] + 1;
+                }
                 $s->close();
             }
             $estado = ['inicio' => $ahora, 'fallos' => 0, 'bloqueado' => 0];
@@ -125,6 +150,7 @@ function login_comprobar(string $usuario, string $clave): array
         }
         rewind($f);
         if (!ftruncate($f, 0) || fwrite($f, json_encode($estado)) === false || !fflush($f)) throw new RuntimeException('No se pudo guardar el registro de intentos.');
+        seguridad_evento(login_bd(), $u ? (int)$u['cod_usuario'] : null, 'autenticacion', $valido ? 'Ingresar' : 'Denegado');
         return $valido ? [$u, null] : [null, $error];
     } finally {
         flock($f, LOCK_UN);
@@ -141,6 +167,7 @@ function login_establecer(array $u): void
         'usuario' => $u['usuario'], 'nombre' => $u['nombre'], 'apellido' => $u['apellido'],
         'nombre_completo' => trim($u['nombre'] . ' ' . $u['apellido']), 'rol' => $u['rol'],
         'login_inicio' => time(), 'login_actividad' => time(),
+        'sesion_version' => (int)$u['sesion_version'], 'rol_version' => (int)$u['rol_version'],
         'login_firma' => hash('sha256', $u['password']), 'login_csrf' => bin2hex(random_bytes(32)),
     ];
 }
@@ -153,6 +180,8 @@ function login_usuario_actual(): ?array
     if (!$u || $u['estado'] !== 'Activo' || !login_rol_valido($u)
         || (int) $u['cod_usuario'] !== ($_SESSION['cod_usuario'] ?? 0)
         || (int) $u['cod_rol'] !== ($_SESSION['cod_rol'] ?? 0)
+        || (int)$u['sesion_version'] !== ($_SESSION['sesion_version'] ?? -1)
+        || (int)$u['rol_version'] !== ($_SESSION['rol_version'] ?? -1)
         || !hash_equals($_SESSION['login_firma'] ?? '', hash('sha256', $u['password']))) return null;
     if ((int)$u['cod_rol'] === 3 && (int)($_SESSION['cod_docente'] ?? 0) <= 0) return null;
     if (((int) $u['cod_rol'] === 3 || isset($_SESSION['cod_docente']))
@@ -174,14 +203,15 @@ function requerir_roles(array $permitidos = [], bool $json = false): void
     login_iniciar_sesion();
     try { $u = login_usuario_actual(); }
     catch (Throwable $e) {
-        error_log('Autenticación: ' . $e->getMessage());
+        error_log('Autenticación: ' . get_class($e) . "; codigo=" . $e->getCode());
         if ($json) login_error_json(503, 'No se pudo verificar la sesión.');
         http_response_code(503); exit('No se pudo verificar la sesión. Inténtalo más tarde.');
     }
     if (!$u) {
+        $sesionTerminada = ($_SESSION['autenticado'] ?? false) === true;
         $_SESSION = []; session_regenerate_id(true);
         if ($json) login_error_json(401, 'La sesión venció. Inicie sesión nuevamente.');
-        login_ir('login.php');
+        login_ir($sesionTerminada ? 'login.php?sesion=expirada' : 'login.php');
     }
     if ($permitidos && !in_array((int) $u['cod_rol'], $permitidos, true)) {
         if ($json) login_error_json(403, 'No tiene permiso para realizar esta consulta.');
@@ -208,7 +238,7 @@ function login_permisos(): array
             $concedidos[$fila['modulo']][(int) $fila['cod_rol']] = $fila;
         }
     } catch (Throwable $e) {
-        error_log('Permisos: ' . $e->getMessage());
+        error_log('Permisos: ' . get_class($e) . "; codigo=" . $e->getCode());
     }
 
     foreach ($rutas as $nombre => $ruta) {
@@ -230,6 +260,8 @@ function login_permisos(): array
             }
         }
         $ruta['roles'] = array_values(array_unique($roles));
+        $ruta['roles'] = array_values(array_filter($ruta['roles'],
+            static fn(int $rol): bool => politica_modulo_permitido($ruta['modulo'], $rol)));
         $permisos[$nombre] = $ruta;
     }
     return $permisos;
@@ -270,9 +302,11 @@ function login_campo_csrf(): string
     return '<input type="hidden" name="csrf" value="' . login_html(login_token()) . '">';
 }
 
-function requerir_csrf(): void
+function requerir_csrf(string $modulo = 'formularios'): void
 {
     if (!login_validar_token($_POST['csrf'] ?? null)) {
+        try { seguridad_evento(login_bd(), (int)$_SESSION['cod_usuario'], $modulo, 'Denegado'); }
+        catch (Throwable $error) { error_log('No se pudo registrar rechazo CSRF; codigo=' . $error->getCode()); }
         http_response_code(403);
         exit('El formulario venció o no es válido. Recarga la página e inténtalo de nuevo.');
     }
@@ -292,6 +326,8 @@ function requerir_acceso(string $nombreRuta): void
     requerir_roles([], $json);
     $permiso = login_permisos()[$nombreRuta] ?? null;
     if ($permiso === null || !in_array((int) ($_SESSION['cod_rol'] ?? 0), $permiso['roles'], true)) {
+        try { seguridad_evento(login_bd(), (int)$_SESSION['cod_usuario'], $definicion['modulo'], 'Denegado'); }
+        catch (Throwable $error) { error_log('No se pudo registrar una denegación; codigo=' . $error->getCode()); }
         if ($json) login_error_json(403, 'No tiene permiso para realizar esta consulta.');
         http_response_code(403);
         exit('No tienes permiso para realizar esta acción.');
@@ -305,6 +341,15 @@ function requerir_acceso(string $nombreRuta): void
         exit('Método no permitido para esta operación.');
     }
     if ($metodo === 'POST') {
-        requerir_csrf();
+        requerir_csrf($definicion['modulo']);
+    }
+    if ($metodo === 'GET' && in_array($definicion['modulo'], ['Historias clinicas','Informes','Estadísticas','Dashboard','Derivaciones','Citas'], true)) {
+        // Se registra la autorización de la solicitud, sin afirmar que se entregó
+        // un registro concreto. Las vistas de detalle registran además Consultar.
+        try { seguridad_evento(login_bd(), (int)$_SESSION['cod_usuario'], $definicion['modulo'], 'Autorizar consulta'); }
+        catch (Throwable $error) {
+            if ($json) login_error_json(503, 'No se pudo registrar el acceso.');
+            http_response_code(503); exit('No se pudo registrar el acceso. Intente nuevamente más tarde.');
+        }
     }
 }

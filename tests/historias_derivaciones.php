@@ -54,7 +54,7 @@ function foto(mysqli $bd): array
     }
     return $datos;
 }
-function http(string $ruta, ?array $datos = null, string $usuario = 'prueba_admin'): array
+function http(string $ruta, ?array $datos = null, string $usuario = 'prueba_psicologa'): array
 {
     global $puerto, $secreto, $cookie;
     $headers = ['X-Prueba-Secreto: ' . $secreto, 'X-Prueba-Usuario: ' . $usuario, 'Connection: close'];
@@ -120,10 +120,10 @@ try {
         $entrada[$grupo] = [$opciones[0]];
         $entrada['opciones_presentes'][$grupo] = '1';
     }
-    $id = historia_guardar($bd, $entrada, 101);
+    $id = historia_guardar($bd, $entrada,112);
     $guardada = fila($bd, "SELECT * FROM historias_clinicas WHERE cod_historia=$id");
     foreach (HISTORIA_TEXTOS as $campo => $_) verificar($guardada[$campo] === $entrada[$campo], "El alta pierde $campo");
-    verificar((int)$guardada['cod_psicologa'] === 101 && (int)$guardada['cod_derivacion_origen'] === 1, 'Alta sin autor o vínculo.');
+    verificar((int)$guardada['cod_psicologa'] === 112 && (int)$guardada['cod_derivacion_origen'] === 1, 'Alta sin autor o vínculo.');
     $hijos = historia_cargar_hijos($bd, $id);
     foreach (HISTORIA_OPCIONES as $grupo => $_) verificar($hijos[$grupo] === $entrada[$grupo], "Alta pierde $grupo");
     verificar($hijos['familiares'][0]['edad'] === 0 && $hijos['familiares'][0]['nombre'] === 'Familiar <uno>', 'Alta pierde familiar o edad cero.');
@@ -132,7 +132,7 @@ try {
     historia_guardar($bd, ['cod_estudiante' => 1, 'formulario_completo' => '1', 'cod_usuario' => 999], 102, $id);
     $editada = fila($bd, "SELECT * FROM historias_clinicas WHERE cod_historia=$id");
     foreach (HISTORIA_TEXTOS as $campo => $_) verificar($editada[$campo] === $guardada[$campo], "Edición parcial pierde $campo");
-    verificar((int)$editada['cod_psicologa'] === 101, 'Edición cambia autor.');
+    verificar((int)$editada['cod_psicologa'] === 112, 'Edición cambia autor.');
     verificar(historia_cargar_hijos($bd, $id) === $hijos, 'Edición parcial borra hijos omitidos.');
     $auditoria = fila($bd, 'SELECT * FROM auditoria ORDER BY cod_auditoria DESC LIMIT 1');
     verificar((int)$auditoria['cod_usuario'] === 102 && $auditoria['accion'] === 'Actualizar' && $auditoria['fecha'] !== null, 'No registra editora y fecha.');
@@ -152,8 +152,8 @@ try {
     verificar((int)fila($bd, 'SELECT COUNT(*) n FROM historias_clinicas WHERE cod_estudiante=1')['n'] === 2, 'No agrega la sesión al expediente.');
     verificar(fila($bd, "SELECT motivo_consulta FROM historias_clinicas WHERE cod_historia=$id")['motivo_consulta'] === $guardada['motivo_consulta'], 'Crear otra historia modifica la anterior.');
     verificar((int)fila($bd, "SELECT cod_derivacion_origen FROM historias_clinicas WHERE cod_historia=$segundaHistoria")['cod_derivacion_origen'] === 2, 'La segunda historia pierde su derivación.');
-    rechaza(fn() => historia_guardar($bd, array_replace($entrada, ['cod_estudiante' => 2, 'cod_derivacion' => 1]), 101), 'Alta vincula derivación ajena.');
-    $sinDerivacion = historia_guardar($bd, array_replace($entrada, ['cod_estudiante' => 2, 'cod_derivacion' => '']), 101);
+    rechaza(fn() => historia_guardar($bd, array_replace($entrada, ['cod_estudiante' => 2, 'cod_derivacion' => 1]),112), 'Alta vincula derivación ajena.');
+    $sinDerivacion = historia_guardar($bd, array_replace($entrada, ['cod_estudiante' => 2, 'cod_derivacion' => '']),112);
     $sin = fila($bd, "SELECT * FROM historias_clinicas WHERE cod_historia=$sinDerivacion");
     verificar($sin['cod_derivacion_origen'] === null, 'No admite historia sin derivación.');
     $bd->query("INSERT INTO grupos_opciones_historia (cod_grupo,codigo,nombre) VALUES (99,'grupo_legado','Grupo previo')");
@@ -161,7 +161,7 @@ try {
         (98,1,'Opción histórica','Inactivo'),(99,99,'Conservar legado','Inactivo')");
     $bd->query("INSERT INTO historia_opciones (cod_historia,cod_opcion) VALUES ($id,98),($id,99)");
     $bd->query("UPDATE estudiantes SET estado='Retirado' WHERE cod_estudiante=8");
-    rechaza(fn() => historia_guardar($bd, array_replace($entrada, ['cod_estudiante' => 8, 'cod_derivacion' => 0]), 101), 'Alta acepta estudiante retirado.');
+    rechaza(fn() => historia_guardar($bd, array_replace($entrada, ['cod_estudiante' => 8, 'cod_derivacion' => 0]),112), 'Alta acepta estudiante retirado.');
     echo "Persistencia de campos, autoría, auditoría, validaciones y rollback: correctos.\n";
 
     $observaciones = "Categorías observadas: Conducta en Aula, Categoría histórica\n\nObservaciones adicionales: Texto previo <seguro>\n\nSolicitud de cita psicológica: Sí\n\nProfesional solicitado: Psicóloga de prueba";
@@ -180,7 +180,7 @@ try {
 
     mkdir($temporal . '/app', 0700); mkdir($temporal . '/sesiones', 0700);
     foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($raiz, FilesystemIterator::SKIP_DOTS)) as $archivo) {
-        if ($archivo->getExtension() !== 'php') continue;
+        if (!in_array($archivo->getExtension(), ['php','css','js','woff','woff2','svg','png'], true)) continue;
         $relativa = substr($archivo->getPathname(), strlen($raiz) + 1);
         if (str_starts_with($relativa, 'tests' . DIRECTORY_SEPARATOR)) continue;
         $destino = $temporal . '/app/' . $relativa;
@@ -190,7 +190,7 @@ try {
     $configPrueba = $config; $configPrueba['base_datos'] = $base; $configPrueba['base_url'] = '';
     file_put_contents($temporal . '/app/config/login.php', '<?php return ' . var_export($configPrueba, true) . ';');
     $secreto = bin2hex(random_bytes(32));
-    file_put_contents($temporal . '/fixture.php', '<?php return ' . var_export(['app' => $temporal . '/app', 'sesiones' => $temporal . '/sesiones', 'secreto' => $secreto], true) . ';');
+    file_put_contents($temporal . '/fixture.php', '<?php return ' . var_export(['app' => $temporal . '/app', 'sesiones' => $temporal . '/sesiones', 'secreto' => $secreto, 'cuatro_roles' => true], true) . ';');
     copy(__DIR__ . '/integracion_router.php', $temporal . '/router.php');
     $socket = stream_socket_server('tcp://127.0.0.1:0', $errno, $error);
     $puerto = (int)substr(strrchr(stream_socket_get_name($socket, false), ':'), 1); fclose($socket);
@@ -215,10 +215,12 @@ try {
     verificar(!str_contains($r['cuerpo'], 'Sesion privada de otro estudiante'), 'Mezcla sesiones de otros estudiantes.');
     verificar(str_contains($r['cuerpo'], 'ver.php?id=' . $segundaHistoria), 'Oculta la historia clínica anterior.');
     $r = http('seguimientos/listar.php?estudiante=1');
-    verificar($r['codigo'] === 200 && str_contains($r['cuerpo'], 'Seguimiento del avance'), 'No abre la tabla de avance.');
-    verificar(str_contains($r['cuerpo'], 'Sesión 1') && str_contains($r['cuerpo'], 'Sesión 2') && !str_contains($r['cuerpo'], 'Sesión 3'), 'Confunde las notas de evolución con sesiones clínicas.');
+    verificar($r['codigo'] === 303, 'No redirige el seguimiento antiguo a estadísticas.');
+    $r = http('estadisticas/individual.php?estudiante=1');
+    verificar($r['codigo'] === 200 && str_contains($r['cuerpo'], 'Seguimiento psicológico individual'), 'No abre la comparación de historias.');
+    verificar(str_contains($r['cuerpo'], 'value="h'.$id.'actual"') && str_contains($r['cuerpo'], 'value="h'.$segundaHistoria.'actual"'), 'Oculta alguna historia del estudiante.');
     verificar(str_contains($r['cuerpo'], 'Muy buena') && str_contains($r['cuerpo'], 'Buena'), 'No muestra las valoraciones de cada sesión.');
-    verificar(!str_contains($r['cuerpo'], 'data-historia="' . $sinDerivacion . '"'), 'Incluye historias de otro estudiante en el avance.');
+    verificar(!str_contains($r['cuerpo'], 'value="h'.$sinDerivacion.'actual"'), 'Incluye historias de otro estudiante en el avance.');
     $r = http('informes/registrar.php?cod_estudiante=1');
     $docHistorias = new DOMDocument();
     @$docHistorias->loadHTML('<?xml encoding="UTF-8">' . $r['cuerpo']);
@@ -250,7 +252,7 @@ try {
     verificar(str_contains($r['cabeceras'], 'ver.php?id=' . $id), 'No guarda formulario renderizado.');
     $editada = fila($bd, "SELECT * FROM historias_clinicas WHERE cod_historia=$id");
     foreach (HISTORIA_TEXTOS as $campo => $_) verificar($editada[$campo] === $guardada[$campo], "Ida y vuelta del formulario pierde $campo");
-    verificar((int)$editada['cod_psicologa'] === 101, 'Receptor HTTP cambia autor.');
+    verificar((int)$editada['cod_psicologa'] === 112, 'Receptor HTTP cambia autor.');
     verificar((int)fila($bd, "SELECT COUNT(*) n FROM historia_opciones WHERE cod_opcion=99")['n'] === 1, 'Borra grupos históricos no representados.');
     $r = http('historias_clinicas/ver.php?id=' . $id);
     verificar($r['codigo'] === 200 && str_contains($r['cuerpo'], 'Tutor &lt;curso&gt;') && str_contains($r['cuerpo'], 'Docente Uno') && str_contains($r['cuerpo'], 'Dato clínico impresion_diagnostica') && str_contains($r['cuerpo'], 'Familiar &lt;uno&gt;'), 'Detalle no recupera campos clínicos escapados.');
@@ -277,27 +279,27 @@ try {
     $alta = formulario($r['cuerpo'], 'formHistoriaClinica'); $alta['peso'] = '45.50'; $alta['cod_usuario'] = 999;
     $r = http('historias_clinicas/guardar.php', $alta);
     verificar(str_contains($r['cabeceras'], 'ver.php'), 'No guarda alta HTTP sin derivación.');
-    verificar((int)fila($bd, 'SELECT cod_psicologa FROM historias_clinicas WHERE cod_estudiante=4')['cod_psicologa'] === 101, 'Alta acepta autor de POST.');
+    verificar((int)fila($bd, 'SELECT cod_psicologa FROM historias_clinicas WHERE cod_estudiante=4')['cod_psicologa'] === 102, 'Alta acepta autor de POST.');
     $bd->query("INSERT INTO categorias_derivacion (nombre,estado) VALUES ('Categoría nueva de catálogo','Activo'),('Categoría inactiva','Inactivo')");
-    $r = http('derivaciones/editar.php?id=1');
+    $r = http('derivaciones/editar.php?id=1', null, 'prueba_docente');
     verificar(str_contains($r['cuerpo'], 'Categoría nueva de catálogo')
         && !str_contains($r['cuerpo'], 'Categoría inactiva')
         && str_contains($r['cuerpo'], 'Social / Emocional'), 'Edición no refleja el estado de las categorías del catálogo.');
     $postDerivacion = formulario($r['cuerpo'], 'formEditarDerivacion');
-    $r = http('derivaciones/actualizar.php', $postDerivacion);
+    $r = http('derivaciones/actualizar.php', $postDerivacion, 'prueba_docente');
     verificar(str_contains($r['cabeceras'], 'listar.php') && fila($bd, 'SELECT observaciones FROM derivaciones WHERE cod_derivacion=1')['observaciones'] === $observaciones, 'Guardar derivación sin JS altera observaciones.');
     $postDerivacion['observaciones_adicionales'] = 'Texto cambiado <nuevo>';
     $postDerivacion['categorias'] = ['Categoría nueva de catálogo'];
-    $r = http('derivaciones/actualizar.php', $postDerivacion);
+    $r = http('derivaciones/actualizar.php', $postDerivacion, 'prueba_docente');
     $nuevas = fila($bd, 'SELECT observaciones FROM derivaciones WHERE cod_derivacion=1')['observaciones'];
     verificar(str_contains($nuevas, 'Texto cambiado <nuevo>') && str_contains($nuevas, 'Categoría nueva de catálogo') && str_contains($nuevas, 'Profesional solicitado: Psicóloga de prueba') && str_contains($nuevas, 'Solicitud de cita psicológica: Sí'), 'Edición no conserva solicitud/profesional.');
     verificar(fila($bd, 'SELECT c.nombre FROM derivacion_categorias dc JOIN categorias_derivacion c ON c.cod_categoria=dc.cod_categoria WHERE dc.cod_derivacion=1')['nombre'] === 'Categoría nueva de catálogo', 'Texto y categoría relacional no coinciden.');
     $bd->query("UPDATE categorias_derivacion SET estado='Inactivo' WHERE nombre='Categoría nueva de catálogo'");
     $bd->query("UPDATE materias SET estado='Inactivo' WHERE cod_materia=5");
-    $r = http('derivaciones/editar.php?id=1');
+    $r = http('derivaciones/editar.php?id=1', null, 'prueba_docente');
     $conservada = formulario($r['cuerpo'], 'formEditarDerivacion');
     verificar(in_array('Categoría nueva de catálogo', $conservada['categorias'], true) && $conservada['materia'] === 'Lenguaje', 'No permite conservar el catálogo histórico.');
-    $r = http('derivaciones/actualizar.php', $conservada);
+    $r = http('derivaciones/actualizar.php', $conservada, 'prueba_docente');
     verificar(str_contains($r['cabeceras'], 'listar.php'), 'No guarda categorías y materia históricas conservadas.');
     $antes = foto($bd);
     foreach (['Categoría inactiva', 'Inventada'] as $categoria) {
@@ -305,9 +307,9 @@ try {
         verificar(foto($bd) === $antes, 'Categoría rechazada modifica la derivación.');
     }
     $postDerivacion['prioridad'] = 'Invalida'; $postDerivacion['observaciones_adicionales'] = 'Recuperar <derivación>';
-    $r = http('derivaciones/actualizar.php', $postDerivacion);
+    $r = http('derivaciones/actualizar.php', $postDerivacion, 'prueba_docente');
     verificar(str_contains($r['cabeceras'], 'editar.php'), 'Derivación inválida no vuelve a edición.');
-    $r = http('derivaciones/editar.php?id=1');
+    $r = http('derivaciones/editar.php?id=1', null, 'prueba_docente');
     verificar(str_contains($r['cuerpo'], 'Recuperar &lt;derivación&gt;'), 'No recupera/escapa derivación rechazada.');
     echo "JSON, formularios, receptores HTTP, conservación y recuperación de errores: correctos.\n";
     if (in_array('--navegador', $argv, true)) {
@@ -324,7 +326,7 @@ try {
         echo 'Navegador Chrome: ' . $resultado['total'] . " comprobaciones correctas.\n";
         verificar(fila($bd, 'SELECT motivo_consulta FROM historias_clinicas WHERE cod_estudiante=5')['motivo_consulta'] === 'Alta sin derivación desde navegador', 'El alta de navegador no persistió.');
         verificar((int)fila($bd, 'SELECT cod_historia FROM informe_individual ORDER BY cod_informe DESC LIMIT 1')['cod_historia'] === $id, 'El informe del navegador guarda otra historia.');
-        verificar((int)fila($bd, 'SELECT cod_psicologa FROM historias_clinicas WHERE cod_estudiante=1')['cod_psicologa'] === 101, 'La edición de navegador cambia autor.');
+        verificar((int)fila($bd, 'SELECT cod_psicologa FROM historias_clinicas WHERE cod_estudiante=1')['cod_psicologa'] === 112, 'La edición de navegador cambia autor.');
     }
     echo "OK: $total comprobaciones. Ninguna escritura en la base real.\n";
 } catch (Throwable $error) {

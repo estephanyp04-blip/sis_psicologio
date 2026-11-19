@@ -11,7 +11,7 @@ try {
     $_SESSION['tipo_mensaje'] = 'success';
     header('Location: ver.php?id=' . $id);
 } catch (Throwable $error) {
-    error_log('Guardado de historia clínica: ' . $error->getMessage());
+    error_log('Guardado de historia clínica: ' . get_class($error) . "; codigo=" . $error->getCode());
     $_SESSION['datos_historia'] = ['id' => 0, 'datos' => historia_recuperar_entrada($_POST)];
     $_SESSION['mensaje'] = $error instanceof InvalidArgumentException ? $error->getMessage()
         : ($error instanceof mysqli_sql_exception && $error->getCode() === 1062
