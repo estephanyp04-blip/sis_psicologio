@@ -144,16 +144,26 @@
         return { cerrar };
     }
 
+    function avisoEnPagina(mensaje, tipo = 'info') {
+        const contenedor = document.querySelector('.main-content, .login-formulario') || document.body;
+        let aviso = contenedor.querySelector('[data-ui-mensaje]');
+        if (!aviso) {
+            aviso = elemento('div');
+            aviso.dataset.uiMensaje = 'true';
+            contenedor.prepend(aviso);
+        }
+        aviso.className = 'alert alert-' + (tipo === 'error' ? 'danger' : tipo) + ' ui-respuesta ui-mensaje';
+        aviso.setAttribute('role', tipo === 'error' || tipo === 'warning' ? 'alert' : 'status');
+        aviso.textContent = mensaje;
+        // Conserva la API asíncrona de los validadores sin exigir cerrar una ventana.
+        return Promise.resolve(true);
+    }
+
     function procesando(mensaje = 'Estamos procesando la solicitud. Espera un momento…') {
-        const opciones = { tipo: 'info', titulo: 'Procesando solicitud', mensaje, procesando: true };
-        modal(opciones);
-        return { cerrar() {
-            if (actual?.peticion.opciones === opciones) actual.cerrar(false);
-            else {
-                const indice = cola.findIndex(p => p.opciones === opciones);
-                if (indice >= 0) cola.splice(indice, 1)[0].resolver(false);
-            }
-        } };
+        const aviso = elemento('p', 'ui-envio-estado', mensaje);
+        aviso.setAttribute('role', 'status');
+        (document.querySelector('.main-content, .login-formulario') || document.body).prepend(aviso);
+        return { cerrar() { aviso.remove(); } };
     }
 
     function huella(form) {
@@ -176,7 +186,7 @@
         if (form.dataset.uiConfirmar) return { mensaje: form.dataset.uiConfirmar, aceptar: form.dataset.uiAceptar || 'Confirmar', destructivo: form.dataset.uiDestructivo === 'true' };
         const ruta = new URL(form.action).pathname;
         if (form.matches('.formulario-retirar')) return { mensaje: '¿Retirar este estudiante? Se conservarán sus registros y su historial.', aceptar: 'Retirar estudiante', destructivo: true };
-        if (form.matches('.formulario-reactivar')) return { mensaje: '¿Reactivar este estudiante?', aceptar: 'Reactivar' };
+        if (form.matches('.formulario-reactivar')) return null;
         if (ruta.endsWith('/eliminar.php')) return { mensaje: '¿Eliminar este registro? Esta acción no se puede deshacer.', aceptar: 'Eliminar', destructivo: true };
         if (ruta.endsWith('/cambiar_estado.php')) return { mensaje: '¿Cambiar el estado de este registro? Esta acción puede afectar su disponibilidad en el sistema.', aceptar: 'Cambiar estado' };
         if (ruta.endsWith('/citas/cancelar.php') && (!form.elements.estado || form.elements.estado.value === 'Cancelada')) return { mensaje: '¿Cancelar esta cita? Se conservará el registro.', aceptar: 'Cancelar cita', destructivo: true };
@@ -203,7 +213,6 @@
         if (!estado) return;
         estado.enviando = false;
         omitirSalida = false;
-        estado.carga?.cerrar();
         form.removeAttribute('aria-busy');
         form.querySelector('.ui-envio-estado')?.remove();
         if (estado.boton) estado.boton.removeAttribute('aria-disabled');
@@ -236,18 +245,9 @@
         root.querySelectorAll('[data-ui-aviso]:not([data-ui-integrado])').forEach(aviso => {
             aviso.dataset.uiIntegrado = 'true';
             const tipo = aviso.classList.contains('alert-success') ? 'success' : aviso.classList.contains('alert-danger') ? 'error' : aviso.classList.contains('alert-warning') ? 'warning' : 'info';
-            // Nunca copiamos identidades, entradas, notas, SQL ni el texto clínico de PHP a un popup.
-            const mensajes = {
-                success: 'La operación se completó correctamente.',
-                error: 'La operación no pudo completarse. Revisa el detalle del aviso en esta página antes de volver a intentarlo.',
-                warning: 'La solicitud requiere atención. Revisa el detalle del aviso en esta página.',
-                info: 'Hay información sobre tu solicitud. Puedes consultarla en esta página.'
-            };
-            if (tipo === 'success') {
-                toast(mensajes.success);
-                aviso.hidden = true;
-            } else if (tipo === 'info') toast(mensajes.info, { tipo: 'info' });
-            else modal({ tipo, mensaje: mensajes[tipo] });
+            // El mensaje del servidor ya está en la página; no se duplica en un popup.
+            aviso.hidden = false;
+            aviso.setAttribute('role', tipo === 'error' || tipo === 'warning' ? 'alert' : 'status');
         });
         root.querySelectorAll('.alert:not([data-ui-inline])').forEach(aviso => {
             aviso.dataset.uiInline = 'true';
@@ -258,7 +258,7 @@
 
     function iniciar() {
         if (window.jQuery?.fn?.dataTable) {
-            window.jQuery.fn.dataTable.ext.errMode = () => modal({ tipo: 'error', mensaje: 'No se pudo cargar la tabla. Revisa la conexión e inténtalo nuevamente.' });
+            window.jQuery.fn.dataTable.ext.errMode = () => avisoEnPagina('No se pudo cargar la tabla. Revisa la conexión e inténtalo nuevamente.', 'error');
         }
         document.querySelectorAll('[data-ui-entrada]').forEach(nodo => {
             try {
@@ -279,7 +279,6 @@
             nodo.remove();
         });
         integrar();
-        if (document.querySelector('[data-ui-sesion-expirada]')) modal({ tipo: 'warning', titulo: 'Tu sesión ha finalizado', mensaje: 'Inicia sesión nuevamente para continuar.', aceptar: 'Entendido' });
         new MutationObserver(registros => {
             if (registros.some(r => [...r.addedNodes].some(n => n.nodeType === 1 && (n.matches('form, [data-ui-aviso]') || n.querySelector('form, [data-ui-aviso]'))))) integrar();
         }).observe(document.body, { childList: true, subtree: true });
@@ -321,7 +320,7 @@
         form.append(aviso);
         queueMicrotask(() => {
             if (event.defaultPrevented) restaurar(form);
-            else { omitirSalida = true; estado.carga = procesando(); }
+            else omitirSalida = true;
         });
     });
 
@@ -354,10 +353,10 @@
 
     window.Avisos = Object.freeze({
         toast, modal, procesando, confirmarFormulario, sesionExpirada, comprobarRespuesta, integrar,
-        exito: mensaje => toast(mensaje),
-        error: mensaje => modal({ tipo: 'error', mensaje }),
-        advertencia: mensaje => modal({ tipo: 'warning', mensaje }),
-        informacion: mensaje => modal({ tipo: 'info', mensaje }),
+        exito: mensaje => avisoEnPagina(mensaje, 'success'),
+        error: mensaje => avisoEnPagina(mensaje, 'error'),
+        advertencia: mensaje => avisoEnPagina(mensaje, 'warning'),
+        informacion: mensaje => avisoEnPagina(mensaje),
         confirmar: opciones => modal({ tipo: 'warning', titulo: 'Confirmar acción', confirmacion: true, ...opciones }),
         cambiosSinGuardar: sinGuardar,
         restablecer: restaurar,

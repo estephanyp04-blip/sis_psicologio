@@ -1,8 +1,8 @@
 <?php
 /** Prueba local aislada: puente PHP y navegador real; no usa la base de datos. */
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
-require_once dirname(__DIR__) . '/includes/avisos.php';
-function login_html(mixed $valor): string { return htmlspecialchars((string)$valor, ENT_QUOTES, 'UTF-8'); }
+// Reutilizar el escape real sin conectar a la BD ni duplicar login_html().
+require_once dirname(__DIR__) . '/includes/autenticacion.php';
 $total = 0;
 function comprobar_aviso(bool $ok, string $mensaje): void {
     global $total; ++$total;

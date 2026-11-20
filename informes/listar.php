@@ -17,7 +17,7 @@ $sql = "SELECT
             i.cod_informe,
             i.numero_ficha,
             i.fecha_inicio AS fecha,
-            (SELECT COUNT(*) FROM seguimientos sx JOIN historias_clinicas hx ON hx.cod_historia=sx.cod_historia WHERE hx.cod_estudiante=d.cod_estudiante AND sx.fecha<=i.fecha_inicio) AS numero_atenciones,
+            d.numero_atenciones,
             d.tipo_atencion,
             d.referido_por,
             i.estado,
@@ -166,7 +166,7 @@ include '../includes/navbar.php';
         <div class="tabla-titulo">
             <div>
                 <h2>Fichas psicológicas</h2>
-                <p>Informes registrados. Las atenciones cuentan seguimientos acumulados hasta la fecha de cada informe.</p>
+                <p>Informes registrados. Las atenciones nuevas cuentan historias clínicas hasta la fecha de cada informe. Los informes anteriores conservan sus totales.</p>
             </div>
         </div>
 

@@ -23,7 +23,14 @@ function clinica_formulario(array $f, array $catalogos, ?array $estudiantes = nu
         echo '</select></div>';
     }
     foreach (['desde'=>'Atenciones desde', 'hasta'=>'Atenciones hasta'] as $campo=>$titulo) echo '<div><label for="' . $campo . '">' . $titulo . '</label><input class="form-control" type="date" id="' . $campo . '" name="' . $campo . '" min="1900-01-01" max="' . date('Y-m-d') . '" value="' . login_html($f[$campo]) . '"></div>';
-    foreach (['curso'=>['Curso actual','cursos','cod_curso'], 'paralelo'=>['Paralelo actual','paralelos','cod_paralelo']] as $campo=>[$titulo,$tabla,$id]) {
+    echo '<div><label for="gestion">Gestión de atención</label><select class="form-select" name="gestion" id="gestion"><option value="0">Todas</option>';
+    foreach ($catalogos['gestiones'] ?? [] as $fila) {
+        $anio = (int)$fila['gestion'];
+        if ($anio < 1900 || $anio > (int)date('Y')) continue;
+        echo '<option value="'.$anio.'"'.($f['gestion'] === $anio ? ' selected' : '').'>'.$anio.'</option>';
+    }
+    echo '</select></div>';
+    foreach (['curso'=>['Curso de referencia','cursos','cod_curso'], 'paralelo'=>['Paralelo de referencia','paralelos','cod_paralelo']] as $campo=>[$titulo,$tabla,$id]) {
         echo '<div><label for="' . $campo . '">' . $titulo . '</label><select class="form-select" name="' . $campo . '" id="' . $campo . '"><option value="0">Todos</option>';
         foreach ($catalogos[$tabla] as $fila) echo '<option value="' . (int)$fila[$id] . '"' . ($f[$campo] === (int)$fila[$id] ? ' selected' : '') . '>' . login_html($fila['nombre']) . '</option>';
         echo '</select></div>';

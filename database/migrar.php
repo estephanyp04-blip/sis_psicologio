@@ -2,7 +2,7 @@
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-$opciones = getopt('', ['base:', 'aplicar', 'instalar', 'comprobar']);
+$opciones = getopt('', ['base:', 'aplicar', 'instalar', 'comprobar', 'respaldo:', 'clave:']);
 $base = $opciones['base'] ?? '';
 if (!is_string($base) || !preg_match('/^[a-zA-Z0-9_]+$/', $base)) {
     fwrite(STDERR, "Uso: php database/migrar.php --base=NOMBRE [--comprobar | --aplicar [--instalar]]\n");
@@ -38,6 +38,22 @@ try {
         } while ($bd->more_results() && $bd->next_result());
     }
     $tablas = array_column($bd->query('SHOW TABLES')->fetch_all(MYSQLI_NUM), 0);
+    $huellasRetiro = null;
+    $retiroPendiente = in_array('seguimientos', $tablas, true);
+    if (!$instalar && in_array('historia_anexos', $tablas, true)) {
+        $retiroPendiente = !in_array('esquema_migraciones_normalizadas', $tablas, true)
+            || !$bd->query("SELECT 1 FROM esquema_migraciones_normalizadas WHERE version='017_retirar_seguimientos'")->num_rows;
+    }
+    if ($aplicar && $retiroPendiente) {
+        if (!is_file(dirname(__DIR__).'/.mantenimiento')) throw new RuntimeException('Active .mantenimiento antes del retiro y manténgalo hasta verificar la migración.');
+        require_once __DIR__.'/retiro_lib.php';
+        retiro_verificar_respaldo($opciones, $base);
+        retiro_verificar_integridad($bd);
+        $tablaArchivo = in_array('seguimientos', $tablas, true) ? 'seguimientos' : 'historia_anexos';
+        $camposArchivo = array_column($bd->query("SHOW COLUMNS FROM `$tablaArchivo`")->fetch_all(MYSQLI_ASSOC), 'Field');
+        $idArchivo = in_array('cod_seguimiento', $camposArchivo, true) ? 'cod_seguimiento' : 'cod_anexo';
+        $huellasRetiro = [retiro_huella($bd, $tablaArchivo, $idArchivo), retiro_huella($bd, 'informe_individual', 'cod_informe')];
+    }
     $normalizado = false;
     if (in_array('informe_individual', $tablas, true)) {
         $campos = [];
@@ -69,6 +85,12 @@ try {
         exit(0);
     }
     foreach ($plan as $sql) $bd->query($sql);
+    if ($huellasRetiro !== null) {
+        $despues = [retiro_huella($bd, 'historia_anexos', 'cod_anexo'), retiro_huella($bd, 'informe_individual', 'cod_informe')];
+        if ($huellasRetiro !== $despues) throw new RuntimeException('La comprobación de conservación no coincide. Mantenga mantenimiento y recupere desde la copia.');
+        retiro_verificar_integridad($bd);
+        echo 'Conservación verificada: '.$despues[0]['filas'].' anexos y '.$despues[1]['filas']." relaciones de informes, sin cambios de valores.\n";
+    }
     if ($planificar($bd)) throw new RuntimeException('La comprobación posterior detectó operaciones pendientes.');
     if ($normalizado) {
         echo "Esquema normalizado verificado.\n";

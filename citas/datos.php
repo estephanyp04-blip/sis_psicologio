@@ -72,7 +72,7 @@ function cita_guardar(mysqli $bd, array $entrada, int $autor, ?int $id = null, b
         if ($estado === 'Atendida' && $fecha > date('Y-m-d')) throw new InvalidArgumentException('No se puede atender una cita futura.');
         if ($anterior && ($fecha !== $anterior['fecha'] || $hora !== substr($anterior['hora'],0,5) || $estado === 'Cancelada')
             && (flujo_fila($bd,'SELECT cod_historia FROM historias_clinicas WHERE cod_cita_origen=? LIMIT 1',[$id])
-                || flujo_fila($bd,'SELECT cod_seguimiento FROM seguimientos WHERE cod_cita=? LIMIT 1',[$id]))) {
+                || flujo_fila($bd,'SELECT cod_anexo FROM historia_anexos WHERE cod_cita=? LIMIT 1',[$id]))) {
             throw new InvalidArgumentException('La cita ya tiene atención clínica vinculada y conserva su horario.');
         }
         if ($anterior && in_array($anterior['estado'], ['Atendida','Cancelada'], true)

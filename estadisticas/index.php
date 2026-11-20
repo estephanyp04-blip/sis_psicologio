@@ -26,7 +26,7 @@ include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/sid
     <?php clinica_formulario($f, $catalogos); ?>
     <?php if ($error): ?><p data-ui-aviso class="alert alert-danger" role="alert"><?= login_html($error) ?></p><?php endif; ?>
     <?php if ($datos !== null): ?>
-    <p class="estadisticas-contexto">Cada historia cuenta una vez según su fecha de atención, con sus datos actuales. Las ediciones y los seguimientos antiguos no suman atenciones. Curso y paralelo corresponden a la inscripción actual, incluidos estudiantes retirados o sin inscripción. Esta consulta no reconstruye cómo estaba la base en una fecha pasada.</p>
+    <p class="estadisticas-contexto">Cada historia cuenta una vez según su fecha de atención, con sus datos actuales. Las ediciones y los anexos históricos no suman atenciones. La gestión filtra el año de atención y utiliza la última inscripción de esa gestión como referencia de curso y paralelo; sin gestión se usa la última disponible. Se incluyen estudiantes retirados o sin inscripción si no se filtra por curso o paralelo. Esta consulta no reconstruye cómo estaba la base en una fecha pasada.</p>
     <section class="estadisticas-tarjetas" aria-label="Resumen de historias clínicas">
         <article class="estadisticas-tarjeta"><h3>Historias en el período</h3><strong id="total-historias" data-valor="<?= $datos['historias'] ?>"><?= $datos['historias'] ?></strong><p>Registros clínicos; las versiones no se suman.</p></article>
         <article class="estadisticas-tarjeta"><h3>Estudiantes con historia</h3><strong id="total-estudiantes" data-valor="<?= $datos['estudiantes'] ?>"><?= $datos['estudiantes'] ?></strong><p>Cada estudiante cuenta una sola vez.</p></article>

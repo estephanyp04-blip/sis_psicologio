@@ -33,7 +33,7 @@ En Nginx u otro servidor, bloquear `.git`, `.vscode`, `config`, `includes`, `dat
 
 **Estado local al 19/11/2026: aplicada y verificada.** Se creó una copia real cifrada fuera de la raíz web, con clave en una carpeta separada; se verificaron sus hashes y el descifrado de los archivos. Se aplicaron exclusivamente las 16 operaciones pendientes de 016. La comparación de los datos previos fue idéntica, el comprobador quedó en cero y las consultas de acceso y auditoría funcionaron. Se retiró `.mantenimiento`. No se ensayó restauración de esa copia real; la restauración funcional está validada con datos sintéticos. Este resultado sustituye el estado pendiente y el rechazo automático registrados el 17/11/2026.
 
-La redefinición del seguimiento del 19/11/2026 utiliza `historia_versiones` de 016 sin nuevas operaciones DDL. Los registros de `seguimientos` permanecen para lectura y trazabilidad. Consultar [el informe de redefinición](../documentacion/SEGUIMIENTO_PSICOLOGICO_2026-11-19.md).
+La migración 017 del 20/11/2026 retira el módulo independiente y conserva sus registros como anexos de las historias clínicas. Exige mantenimiento, respaldo cifrado reciente y validación de huellas e integridad. Procedimiento vigente en [database/README.md](../database/README.md) e [informe de retiro](../documentacion/RETIRO_SEGUIMIENTOS_2026-11-20.md).
 
 La aplicación requiere 016 antes del siguiente uso. Se incorporan versiones de sesión para usuarios/roles, metadatos históricos de auditoría, `historia_versiones` y ocho triggers. No se reescriben expedientes ni se intenta reconstruir la identidad de eventos antiguos. Los campos históricos añadidos quedan nulos para esos eventos. Las sesiones existentes se invalidan al faltarles la versión nueva.
 

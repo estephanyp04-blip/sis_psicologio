@@ -38,8 +38,8 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
         await enviar('formHistoriaClinica');
         comprobar(app.contentWindow.location.pathname==='/historias_clinicas/ver.php','No guarda historia en navegador');
         const historia=idActual();
-        await abrir('/seguimientos/registrar.php?cod_historia='+historia+'&cod_cita='+cita);
-        comprobar(app.contentWindow.location.pathname==='/historias_clinicas/editar.php','Formulario retirado no redirige a la historia');
+        await abrir('/historias_clinicas/editar.php?id='+historia);
+        comprobar(app.contentWindow.location.pathname==='/historias_clinicas/editar.php','No abre la edición de historia');
         app.contentDocument.querySelector('[name="observaciones"]').value='Observación desde navegador';
         await enviar('formHistoriaClinica');
         comprobar(app.contentWindow.location.pathname==='/historias_clinicas/ver.php','No guarda la observación en la historia');
@@ -47,7 +47,7 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
         await abrir('/estadisticas/individual.php?estudiante=3');
         comprobar(app.contentDocument.querySelectorAll('.clinica-cronologia>li').length===2,'No conserva estado anterior y actual');
         await abrir('/informes/registrar.php?cod_estudiante=3&cod_historia='+historia);
-        comprobar(campo('cod_historia').value===historia && campo('cod_seguimiento').value==='0' && campo('cod_derivacion').value==='41','Informe pierde relaciones en JavaScript');
+        comprobar(campo('cod_historia').value===historia && campo('cod_derivacion').value==='41','Informe pierde relaciones en JavaScript');
         comprobar(campo('motivo').value==='Motivo navegador del flujo' && campo('recomendaciones').value==='','Informe inventa una recomendación o precarga otro episodio');
         campo('aspecto_cognitivo').value='Cognitivo navegador'; campo('aspectos_afectivos').value='Afectivo navegador';
         app.contentDocument.querySelector('input[name="tipo_atencion[]"]').checked=true;
@@ -82,10 +82,10 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
         const ayer=previo.getFullYear()+'-'+String(previo.getMonth()+1).padStart(2,'0')+'-'+String(previo.getDate()).padStart(2,'0');
         campo('fecha').value=ayer;campo('fecha').dispatchEvent(new Event('change'));
         await esperar(()=>!campo('btnGuardar').disabled && campo('numero_atenciones').value==='0');
-        comprobar(campo('cod_seguimiento').value==='0' && campo('recomendaciones').value==='','Informe retrospectivo precarga sesión posterior.');
+        comprobar(campo('recomendaciones').value==='','Informe retrospectivo precarga sesión posterior.');
         campo('fecha').value=hoy;campo('fecha').dispatchEvent(new Event('change'));
         await esperar(()=>!campo('btnGuardar').disabled && campo('numero_atenciones').value==='1');
-        comprobar(campo('cod_seguimiento').value==='0','Precarga archivo independiente sin selección explícita.');
+        comprobar(!campo('cod_seguimiento'),'Precarga archivo independiente sin selección explícita.');
         await abrir('/informes/mensual.php');
         await enviar('form-mensual');
         comprobar(app.contentWindow.location.pathname==='/informes/ver_mensual.php' && app.contentDocument.body.textContent.includes('Atenciones del período'),'No genera mensual en navegador.');

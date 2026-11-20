@@ -18,7 +18,7 @@ mkdir($temporal . '/sesiones', 0700);
 $servidor = null;
 $total = 0;
 
-function comprobar(bool $condicion, string $mensaje): void
+function prueba_seguridad_comprobar(bool $condicion, string $mensaje): void
 {
     global $total;
     ++$total;
@@ -96,38 +96,37 @@ PHP
         if ($conexion) { fclose($conexion); $listo = true; break; }
         usleep(100000);
     }
-    comprobar($listo, 'El servidor de pruebas no inició.');
+    prueba_seguridad_comprobar($listo, 'El servidor de pruebas no inició.');
     $token = str_repeat('c', 64);
 
     foreach ($permisos as $ruta => $permiso) {
-        $compatibilidad = in_array($ruta, ['seguimientos/listar.php','seguimientos/registrar.php','seguimientos/guardar.php'], true);
-        $exito = $compatibilidad ? ($ruta === 'seguimientos/guardar.php' ? 410 : 303) : 200;
+        $exito = 200;
         $metodo = $permiso['metodos'][0];
         $r = peticion($ruta, $metodo);
         if (($permiso['formato'] ?? '') === 'json') {
-            comprobar($r['codigo'] === 401, 'El endpoint JSON debe devolver 401 sin sesión.');
-            comprobar(isset(json_decode($r['cuerpo'], true)['error']), 'El error de sesión no es JSON.');
+            prueba_seguridad_comprobar($r['codigo'] === 401, 'El endpoint JSON debe devolver 401 sin sesión.');
+            prueba_seguridad_comprobar(isset(json_decode($r['cuerpo'], true)['error']), 'El error de sesión no es JSON.');
         } else {
-            comprobar($r['codigo'] === 303, "Sin sesión no redirige a login: $ruta ({$r['codigo']})");
-            comprobar(str_contains(implode(' ', $r['cabeceras']), '/login.php'), "Redirección incorrecta: $ruta");
+            prueba_seguridad_comprobar($r['codigo'] === 303, "Sin sesión no redirige a login: $ruta ({$r['codigo']})");
+            prueba_seguridad_comprobar(str_contains(implode(' ', $r['cabeceras']), '/login.php'), "Redirección incorrecta: $ruta");
         }
         foreach ([1, 2, 3, 4] as $rol) {
             $r = peticion($ruta, $metodo, ['rol' => $rol], ['csrf' => $token]);
             $permitido = in_array($rol, $permiso['roles'], true);
-            comprobar($r['codigo'] === ($permitido ? $exito : 403), "Permiso incorrecto en $ruta, rol $rol ({$r['codigo']})");
-            comprobar(str_contains($r['cuerpo'], 'ACCESO_VALIDADO') === ($permitido && !$compatibilidad), "Se alcanzó negocio sin permiso: $ruta, rol $rol");
+            prueba_seguridad_comprobar($r['codigo'] === ($permitido ? $exito : 403), "Permiso incorrecto en $ruta, rol $rol ({$r['codigo']})");
+            prueba_seguridad_comprobar(str_contains($r['cuerpo'], 'ACCESO_VALIDADO') === $permitido, "Se alcanzó negocio sin permiso: $ruta, rol $rol");
         }
         $rol = $permiso['roles'][0];
         if (in_array('POST', $permiso['metodos'], true)) {
             foreach ([[], ['csrf' => 'incorrecto'], ['csrf' => ['array']]] as $datos) {
                 $r = peticion($ruta, 'POST', ['rol' => $rol], $datos);
-                comprobar($r['codigo'] === 403 && !str_contains($r['cuerpo'], 'ACCESO_VALIDADO'), "CSRF no rechazado: $ruta");
+                prueba_seguridad_comprobar($r['codigo'] === 403 && !str_contains($r['cuerpo'], 'ACCESO_VALIDADO'), "CSRF no rechazado: $ruta");
             }
             $r = peticion($ruta, 'POST', ['rol' => $rol], ['csrf' => $token]);
-            comprobar($r['codigo'] === $exito && ($compatibilidad || str_contains($r['cuerpo'], 'ACCESO_VALIDADO')), "CSRF válido rechazado: $ruta");
+            prueba_seguridad_comprobar($r['codigo'] === $exito && str_contains($r['cuerpo'], 'ACCESO_VALIDADO'), "CSRF válido rechazado: $ruta");
         }
         $r = peticion($ruta, in_array('GET', $permiso['metodos'], true) ? 'PUT' : 'GET', ['rol' => $rol]);
-        comprobar($r['codigo'] === 405, "Método no permitido aceptado: $ruta");
+        prueba_seguridad_comprobar($r['codigo'] === 405, "Método no permitido aceptado: $ruta");
     }
     echo 'Matriz de ' . count($permisos) . " rutas, cuatro roles, métodos y CSRF: correcta.\n";
 
@@ -143,24 +142,24 @@ PHP
         ['derivaciones/editar.php', 'GET', 2], ['informes/guardar.php', 'POST', 4],
     ] as [$ruta, $metodo, $rol]) {
         $r = peticion($ruta, $metodo, ['rol' => $rol], ['csrf' => $token]);
-        comprobar($r['codigo'] === 403, "Se amplió un permiso restringido: $ruta, rol $rol");
+        prueba_seguridad_comprobar($r['codigo'] === 403, "Se amplió un permiso restringido: $ruta, rol $rol");
     }
 
     foreach (['vencida', 'duracion', 'inactivo', 'rol_inactivo', 'clave_cambiada', 'rol_cambiado'] as $sesion) {
         $r = peticion('index.php', 'GET', ['rol' => 1, 'sesion' => $sesion]);
-        comprobar($r['codigo'] === 303, "Sesión revocada aceptada: $sesion");
+        prueba_seguridad_comprobar($r['codigo'] === 303, "Sesión revocada aceptada: $sesion");
         $r = peticion('historias_clinicas/ajax_derivaciones.php?cod_estudiante=1', 'GET', ['rol' => 1, 'sesion' => $sesion]);
-        comprobar($r['codigo'] === 401 && isset(json_decode($r['cuerpo'], true)['error']), "El endpoint no rechaza sesión revocada con JSON: $sesion");
+        prueba_seguridad_comprobar($r['codigo'] === 401 && isset(json_decode($r['cuerpo'], true)['error']), "El endpoint no rechaza sesión revocada con JSON: $sesion");
     }
     foreach (['sin_docente', 'docente_duplicado'] as $sesion) {
         $r = peticion('derivaciones/listar.php', 'GET', ['rol' => 3, 'sesion' => $sesion]);
-        comprobar($r['codigo'] === 303, "Vínculo docente inválido aceptado: $sesion");
+        prueba_seguridad_comprobar($r['codigo'] === 303, "Vínculo docente inválido aceptado: $sesion");
     }
     foreach (array_merge(glob($raiz . '/config/*.php'), glob($raiz . '/includes/*.php'), array_map(static fn($ruta) => $raiz . '/' . $ruta, $internosModulo)) as $archivo) {
         $ruta = str_replace('\\', '/', substr($archivo, strlen($raiz) + 1));
         foreach (['GET', 'POST'] as $metodo) {
             $r = peticion($ruta, $metodo);
-            comprobar($r['codigo'] === 404, "Archivo interno accesible por $metodo: $ruta");
+            prueba_seguridad_comprobar($r['codigo'] === 404, "Archivo interno accesible por $metodo: $ruta");
         }
     }
     echo "Sesiones vencidas/revocadas y archivos internos: correctos.\n";
@@ -171,53 +170,53 @@ PHP
             $r = peticion('derivaciones/' . $pagina . '?id=2', 'GET', ['rol' => 3, 'negocio' => true]);
             // El sufijo de prueba incluye el estado completo, solo se inspecciona el HTML real.
             $html = explode("\n__ESTADO_PRUEBA__", $r['cuerpo'])[0];
-            comprobar($r['codigo'] === 302 && !str_contains($html, 'AJENA_PRIVADA'), "Docente consulta derivación ajena en $pagina");
+            prueba_seguridad_comprobar($r['codigo'] === 302 && !str_contains($html, 'AJENA_PRIVADA'), "Docente consulta derivación ajena en $pagina");
             $r = peticion('derivaciones/' . $pagina . '?id=1', 'GET', ['rol' => 3, 'negocio' => true]);
-            comprobar($r['codigo'] === 200 && str_contains($r['cuerpo'], 'PROPIA_PRIVADA'), "Docente no puede consultar su derivación en $pagina");
+            prueba_seguridad_comprobar($r['codigo'] === 200 && str_contains($r['cuerpo'], 'PROPIA_PRIVADA'), "Docente no puede consultar su derivación en $pagina");
         }
         $datos = ['csrf' => $token, 'cod_derivacion' => 2, 'fecha' => date('Y-m-d'), 'materia' => 'Lenguaje y Comunicación', 'motivo' => 'CAMBIO_PRUEBA', 'observaciones' => 'OBS_PRUEBA', 'prioridad' => 'Media'];
         $r = peticion('derivaciones/actualizar.php', 'POST', ['rol' => 3, 'negocio' => true], $datos);
-        comprobar((estadoNegocio($r)['derivaciones'][1]['motivo'] ?? '') === 'AJENA_PRIVADA', 'Docente actualizó una derivación ajena.');
+        prueba_seguridad_comprobar((estadoNegocio($r)['derivaciones'][1]['motivo'] ?? '') === 'AJENA_PRIVADA', 'Docente actualizó una derivación ajena.');
         $datos['cod_derivacion'] = 1;
         $r = peticion('derivaciones/actualizar.php', 'POST', ['rol' => 3, 'negocio' => true], $datos);
-        comprobar((estadoNegocio($r)['derivaciones'][0]['motivo'] ?? '') === 'CAMBIO_PRUEBA', 'No se pudo actualizar una derivación propia con CSRF válido.');
+        prueba_seguridad_comprobar((estadoNegocio($r)['derivaciones'][0]['motivo'] ?? '') === 'CAMBIO_PRUEBA', 'No se pudo actualizar una derivación propia con CSRF válido.');
         $r = peticion('derivaciones/eliminar.php', 'POST', ['rol' => 3, 'negocio' => true], ['csrf' => $token, 'cod_derivacion' => 2]);
-        comprobar(count(estadoNegocio($r)['derivaciones'] ?? []) === 2, 'Docente eliminó una derivación ajena.');
+        prueba_seguridad_comprobar(count(estadoNegocio($r)['derivaciones'] ?? []) === 2, 'Docente eliminó una derivación ajena.');
         $r = peticion('derivaciones/eliminar.php', 'POST', ['rol' => 3, 'negocio' => true], ['csrf' => $token, 'cod_derivacion' => 1]);
-        comprobar(count(estadoNegocio($r)['derivaciones'] ?? []) === 1, 'No se pudo eliminar una derivación propia con CSRF válido.');
-        comprobar(in_array('Eliminar',array_column(estadoNegocio($r)['auditoria']??[],'accion'),true),'La eliminación propia no deja auditoría.');
+        prueba_seguridad_comprobar(count(estadoNegocio($r)['derivaciones'] ?? []) === 1, 'No se pudo eliminar una derivación propia con CSRF válido.');
+        prueba_seguridad_comprobar(in_array('Eliminar',array_column(estadoNegocio($r)['auditoria']??[],'accion'),true),'La eliminación propia no deja auditoría.');
         $r=peticion('derivaciones/eliminar.php','POST',['rol'=>3,'negocio'=>true,'autor_ajeno'=>true],['csrf'=>$token,'cod_derivacion'=>1]);
-        comprobar(count(estadoNegocio($r)['derivaciones']??[])===2,'El perfil reasignado elimina una derivación de la cuenta anterior.');
+        prueba_seguridad_comprobar(count(estadoNegocio($r)['derivaciones']??[])===2,'El perfil reasignado elimina una derivación de la cuenta anterior.');
         $r=peticion('derivaciones/actualizar.php','POST',['rol'=>3,'negocio'=>true,'autor_ajeno'=>true],$datos);
-        comprobar((estadoNegocio($r)['derivaciones'][0]['motivo']??'')==='PROPIA_PRIVADA','El perfil reasignado edita una derivación de la cuenta anterior.');
+        prueba_seguridad_comprobar((estadoNegocio($r)['derivaciones'][0]['motivo']??'')==='PROPIA_PRIVADA','El perfil reasignado edita una derivación de la cuenta anterior.');
         $r=peticion('derivaciones/eliminar.php','POST',['rol'=>3,'negocio'=>true,'fallo_auditoria'=>true],['csrf'=>$token,'cod_derivacion'=>1]);
-        comprobar(count(estadoNegocio($r)['derivaciones']??[])===2,'Fallo de auditoría deja una eliminación sin traza.');
+        prueba_seguridad_comprobar(count(estadoNegocio($r)['derivaciones']??[])===2,'Fallo de auditoría deja una eliminación sin traza.');
         $r = peticion('derivaciones/eliminar.php', 'POST', ['rol' => 1, 'negocio' => true], ['csrf' => $token, 'cod_derivacion' => 2]);
         $estadoAdministrador = estadoNegocio($r);
-        comprobar($r['codigo'] === 403 && count($estadoAdministrador['derivaciones'] ?? []) === 2, 'El administrador obtuvo acceso clínico para eliminar una derivación.');
+        prueba_seguridad_comprobar($r['codigo'] === 403 && count($estadoAdministrador['derivaciones'] ?? []) === 2, 'El administrador obtuvo acceso clínico para eliminar una derivación.');
         $r = peticion('citas/cancelar.php?id=1', 'GET', ['rol' => 2, 'negocio' => true]);
-        comprobar($r['codigo'] === 405 && (estadoNegocio($r)['cita'] ?? '') === 'Pendiente', 'GET canceló una cita.');
+        prueba_seguridad_comprobar($r['codigo'] === 405 && (estadoNegocio($r)['cita'] ?? '') === 'Pendiente', 'GET canceló una cita.');
         $r = peticion('citas/cancelar.php', 'POST', ['rol' => 2, 'negocio' => true], ['cod_cita' => 1]);
-        comprobar($r['codigo'] === 403 && (estadoNegocio($r)['cita'] ?? '') === 'Pendiente', 'POST sin CSRF canceló una cita.');
+        prueba_seguridad_comprobar($r['codigo'] === 403 && (estadoNegocio($r)['cita'] ?? '') === 'Pendiente', 'POST sin CSRF canceló una cita.');
         $r = peticion('citas/cancelar.php', 'POST', ['rol' => 2, 'negocio' => true], ['cod_cita' => 1, 'csrf' => $token]);
-        comprobar((estadoNegocio($r)['cita'] ?? '') === 'Cancelada', 'POST válido no canceló la cita de prueba.');
+        prueba_seguridad_comprobar((estadoNegocio($r)['cita'] ?? '') === 'Cancelada', 'POST válido no canceló la cita de prueba.');
         echo "Propiedad de derivaciones y cancelación de citas: correctas.\n";
 
         $estadoEstudiante = static fn(array $r): array => array_intersect_key(estadoNegocio($r), array_flip(['estudiantes', 'historial_academico']));
         $baseEstudiante = $estadoEstudiante(peticion('estudiantes/listar.php', 'GET', ['rol' => 2, 'negocio' => true]));
-        comprobar(count($baseEstudiante['historial_academico'] ?? []) === 4, 'No se prepararon las historial_academico de prueba.');
+        prueba_seguridad_comprobar(count($baseEstudiante['historial_academico'] ?? []) === 4, 'No se prepararon las historial_academico de prueba.');
         foreach ([1, 2] as $rol) {
             foreach (['retirar' => 'Retirado', 'reactivar' => 'Activo'] as $accion => $estado) {
                 $r = peticion('estudiantes/cambiar_estado.php', 'POST', ['rol' => $rol, 'negocio' => true, 'estudiante_retirado' => $accion === 'reactivar'],
                     ['csrf' => $token, 'cod_estudiante' => 1, 'accion' => $accion]);
                 $guardado = $estadoEstudiante($r);
-                comprobar($r['codigo'] === 302, "No redirige después de $accion, rol $rol.");
-                comprobar(($guardado['estudiantes'][0]['estado'] ?? '') === $estado, "No se pudo $accion al estudiante.");
-                comprobar(($guardado['historial_academico'][2]['estado'] ?? '') === $estado, "No se pudo $accion la última inscripción.");
+                prueba_seguridad_comprobar($r['codigo'] === 302, "No redirige después de $accion, rol $rol.");
+                prueba_seguridad_comprobar(($guardado['estudiantes'][0]['estado'] ?? '') === $estado, "No se pudo $accion al estudiante.");
+                prueba_seguridad_comprobar(($guardado['historial_academico'][2]['estado'] ?? '') === $estado, "No se pudo $accion la última inscripción.");
                 foreach ([0, 1, 3] as $indice) {
-                    comprobar(($guardado['historial_academico'][$indice] ?? null) === $baseEstudiante['historial_academico'][$indice], 'Se alteró una inscripción histórica o ajena.');
+                    prueba_seguridad_comprobar(($guardado['historial_academico'][$indice] ?? null) === $baseEstudiante['historial_academico'][$indice], 'Se alteró una inscripción histórica o ajena.');
                 }
-                comprobar(($guardado['estudiantes'][1] ?? null) === $baseEstudiante['estudiantes'][1], 'Se modificó otro estudiante.');
+                prueba_seguridad_comprobar(($guardado['estudiantes'][1] ?? null) === $baseEstudiante['estudiantes'][1], 'Se modificó otro estudiante.');
             }
         }
         foreach ([
@@ -227,22 +226,22 @@ PHP
             ['POST', 4, ['csrf' => $token, 'cod_estudiante' => 1, 'accion' => 'retirar']],
         ] as [$metodo, $rol, $datos]) {
             $r = peticion('estudiantes/cambiar_estado.php', $metodo, ['rol' => $rol, 'negocio' => true], $datos);
-            comprobar($r['codigo'] === ($metodo === 'GET' ? 405 : 403) && $estadoEstudiante($r) === $baseEstudiante, 'Se cambió el estado sin método, CSRF o rol permitido.');
+            prueba_seguridad_comprobar($r['codigo'] === ($metodo === 'GET' ? 405 : 403) && $estadoEstudiante($r) === $baseEstudiante, 'Se cambió el estado sin método, CSRF o rol permitido.');
         }
         foreach ([['cod_estudiante' => 0], ['cod_estudiante' => 999], ['accion' => 'borrar'], ['accion' => ['retirar']]] as $invalido) {
             $r = peticion('estudiantes/cambiar_estado.php', 'POST', ['rol' => 2, 'negocio' => true],
                 array_replace(['csrf' => $token, 'cod_estudiante' => 1, 'accion' => 'retirar'], $invalido));
-            comprobar($r['codigo'] === 302 && $estadoEstudiante($r) === $baseEstudiante, 'Una entrada inválida modificó el estado.');
+            prueba_seguridad_comprobar($r['codigo'] === 302 && $estadoEstudiante($r) === $baseEstudiante, 'Una entrada inválida modificó el estado.');
         }
         $r = peticion('estudiantes/cambiar_estado.php', 'POST', ['rol' => 2, 'negocio' => true, 'fallo_inscripcion' => true],
             ['csrf' => $token, 'cod_estudiante' => 1, 'accion' => 'retirar']);
-        comprobar($r['codigo'] === 302 && $estadoEstudiante($r) === $baseEstudiante, 'El fallo de inscripción dejó al estudiante retirado parcialmente.');
+        prueba_seguridad_comprobar($r['codigo'] === 302 && $estadoEstudiante($r) === $baseEstudiante, 'El fallo de inscripción dejó al estudiante retirado parcialmente.');
         $r = peticion('estudiantes/cambiar_estado.php', 'POST', ['rol' => 2, 'negocio' => true],
             ['csrf' => $token, 'cod_estudiante' => 1, 'accion' => 'reactivar']);
-        comprobar($estadoEstudiante($r) === $baseEstudiante, 'Repetir un estado cambió registros.');
+        prueba_seguridad_comprobar($estadoEstudiante($r) === $baseEstudiante, 'Repetir un estado cambió registros.');
         $r = peticion('estudiantes/listar.php', 'POST', ['rol' => 2, 'negocio' => true],
             ['csrf' => $token, 'cod_estudiante' => 1, 'accion' => 'retirar']);
-        comprobar($r['codigo'] === 405 && $estadoEstudiante($r) === $baseEstudiante, 'El listado todavía acepta escrituras.');
+        prueba_seguridad_comprobar($r['codigo'] === 405 && $estadoEstudiante($r) === $baseEstudiante, 'El listado todavía acepta escrituras.');
         echo "Retiro/reactivación de estudiantes, inscripción, permisos y rollback: correctos.\n";
 
         foreach ([
@@ -251,39 +250,42 @@ PHP
             ['estudiantes/listar.php', 2], ['citas/listar.php', 2],
         ] as [$ruta, $rol]) {
             $r = peticion($ruta, 'GET', ['rol' => $rol, 'negocio' => true]);
-            comprobar($r['codigo'] === 200, "No renderiza el formulario protegido: $ruta");
+            prueba_seguridad_comprobar($r['codigo'] === 200, "No renderiza el formulario protegido: $ruta");
             $html = explode("\n__ESTADO_PRUEBA__", $r['cuerpo'])[0];
             $dom = new DOMDocument();
             @$dom->loadHTML('<?xml encoding="UTF-8">' . $html);
             $xpath = new DOMXPath($dom);
             foreach ($xpath->query('//form') as $formulario) {
+                if (!($formulario instanceof DOMElement)) throw new RuntimeException('El selector no devolvió un formulario HTML.');
                 if (strtoupper($formulario->getAttribute('method')) !== 'POST') continue;
                 $campos = $xpath->query('.//input[@name="csrf"]', $formulario);
-                comprobar($campos->length === 1 && $campos->item(0)->getAttribute('value') === $token, "Token ausente o duplicado en formulario de $ruta");
+                $campoCsrf = $campos->item(0);
+                prueba_seguridad_comprobar($campos->length === 1 && $campoCsrf instanceof DOMElement && $campoCsrf->getAttribute('value') === $token, "Token ausente o duplicado en formulario de $ruta");
             }
             if (str_starts_with($ruta, 'derivaciones/')) {
                 $menu = $xpath->query('//aside//a');
                 foreach ($menu as $enlace) {
-                    comprobar(!preg_match('~/(usuarios|docentes|estudiantes|historias_clinicas|citas|informes)/~', $enlace->getAttribute('href')), 'El menú de docente expone módulos restringidos.');
+                    if (!($enlace instanceof DOMElement)) throw new RuntimeException('El selector no devolvió un enlace HTML.');
+                    prueba_seguridad_comprobar(!preg_match('~/(usuarios|docentes|estudiantes|historias_clinicas|citas|informes)/~', $enlace->getAttribute('href')), 'El menú de docente expone módulos restringidos.');
                 }
             }
             if ($ruta === 'derivaciones/registrar.php') {
-                comprobar($xpath->query('//form[@id="formBuscarEstudiante"]//input[@name="csrf"]')->length === 0, 'El buscador GET incluye el token CSRF.');
-                comprobar($xpath->query('//select[@name="curso" and @form="formBuscarEstudiante"]')->length === 1, 'El filtro no pertenece al formulario de búsqueda separado.');
+                prueba_seguridad_comprobar($xpath->query('//form[@id="formBuscarEstudiante"]//input[@name="csrf"]')->length === 0, 'El buscador GET incluye el token CSRF.');
+                prueba_seguridad_comprobar($xpath->query('//select[@name="curso" and @form="formBuscarEstudiante"]')->length === 1, 'El filtro no pertenece al formulario de búsqueda separado.');
             }
             if (in_array($ruta, ['derivaciones/listar.php', 'derivaciones/mis_derivaciones.php'], true)) {
-                comprobar(!str_contains($html, 'OTRO_ESTUDIANTE'), 'El listado docente expone derivaciones ajenas.');
-                comprobar(str_contains($html, 'Lenguaje y Comunicación') && str_contains($html, 'Prioridad: Media'), 'El listado unificado perdió materia o prioridad.');
-                comprobar($xpath->query('//form[@action="eliminar.php"]//input[@name="cod_derivacion" and @value="1"]')->length === 1, 'Falta la eliminación de la derivación propia.');
-                comprobar($xpath->query('//form[@action="eliminar.php"]//input[@name="cod_derivacion" and @value="2"]')->length === 0, 'Se ofrece eliminar una derivación ajena.');
+                prueba_seguridad_comprobar(!str_contains($html, 'OTRO_ESTUDIANTE'), 'El listado docente expone derivaciones ajenas.');
+                prueba_seguridad_comprobar(str_contains($html, 'Lenguaje y Comunicación') && str_contains($html, 'Prioridad: Media'), 'El listado unificado perdió materia o prioridad.');
+                prueba_seguridad_comprobar($xpath->query('//form[@action="eliminar.php"]//input[@name="cod_derivacion" and @value="1"]')->length === 1, 'Falta la eliminación de la derivación propia.');
+                prueba_seguridad_comprobar($xpath->query('//form[@action="eliminar.php"]//input[@name="cod_derivacion" and @value="2"]')->length === 0, 'Se ofrece eliminar una derivación ajena.');
             }
             if ($ruta === 'estudiantes/listar.php') {
-                comprobar($xpath->query('//form[contains(@class,"formulario-retirar") and @action="cambiar_estado.php"]')->length === 2, 'El retiro no apunta al receptor centralizado.');
+                prueba_seguridad_comprobar($xpath->query('//form[contains(@class,"formulario-retirar") and @action="cambiar_estado.php"]')->length === 2, 'El retiro no apunta al receptor centralizado.');
             }
         }
         $r = peticion('roles/editar.php?id=2', 'GET', ['rol' => 1, 'negocio' => true]);
         $htmlPermisos = explode("\n__ESTADO_PRUEBA__", $r['cuerpo'])[0];
-        comprobar($r['codigo'] === 200 && str_contains($htmlPermisos, 'Cambiar estado')
+        prueba_seguridad_comprobar($r['codigo'] === 200 && str_contains($htmlPermisos, 'Cambiar estado')
             && str_contains($htmlPermisos, 'puede_cambiar_estado'), 'El editor de roles no muestra el permiso independiente de cambio de estado.');
         foreach ([3 => 'Docente', 4 => 'Director'] as $idRolProtegido => $nombreRol) {
             $r = peticion('roles/editar.php?id=' . $idRolProtegido, 'GET', ['rol' => 1, 'negocio' => true]);
@@ -291,10 +293,10 @@ PHP
             $domProtegido = new DOMDocument();
             @$domProtegido->loadHTML('<?xml encoding="UTF-8">' . $htmlProtegido);
             $xpathProtegido = new DOMXPath($domProtegido);
-            comprobar($r['codigo'] === 200, "No abre el editor del rol $nombreRol.");
+            prueba_seguridad_comprobar($r['codigo'] === 200, "No abre el editor del rol $nombreRol.");
             foreach (['Dashboard', 'Estadísticas', 'Estudiantes'] as $moduloProtegido) {
                 $fila = $xpathProtegido->query('//tr[th[normalize-space(.)="' . $moduloProtegido . '"]]')->item(0);
-                comprobar($fila instanceof DOMElement
+                prueba_seguridad_comprobar($fila instanceof DOMElement
                     && $xpathProtegido->query('.//input', $fila)->length === 0
                     && str_contains($fila->textContent, '—'), "El editor permite conceder $moduloProtegido al rol $nombreRol.");
             }
@@ -312,25 +314,25 @@ PHP
                 'descripcion' => 'Prueba de permisos protegidos', 'estado' => 'Activo', 'permisos' => $concesionesForzadas,
             ]);
             $filasPermiso = array_values(array_filter(estadoNegocio($r)['permisos_protegidos'] ?? [], static fn(array $permiso): bool => (int)$permiso['cod_rol'] === $idRolProtegido));
-            comprobar($r['codigo'] === 303 && count($filasPermiso) === 3, "El guardado de permisos protegidos no terminó para $nombreRol.");
+            prueba_seguridad_comprobar($r['codigo'] === 303 && count($filasPermiso) === 3, "El guardado de permisos protegidos no terminó para $nombreRol.");
             foreach ($filasPermiso as $permiso) {
-                comprobar(array_sum(array_map('intval', array_slice($permiso, 2))) === 0,
+                prueba_seguridad_comprobar(array_sum(array_map('intval', array_slice($permiso, 2))) === 0,
                     "El guardado permitió conceder {$permiso['nombre']} al rol $nombreRol.");
             }
         }
         $r = peticion('cerrar_sesion.php', 'POST', ['rol' => 3, 'negocio' => true], ['csrf' => $token]);
-        comprobar($r['codigo'] === 303 && (estadoNegocio($r)['autenticado'] ?? true) === false, 'Cerrar sesión no destruyó la autenticación.');
+        prueba_seguridad_comprobar($r['codigo'] === 303 && (estadoNegocio($r)['autenticado'] ?? true) === false, 'Cerrar sesión no destruyó la autenticación.');
         echo "Formularios renderizados, menú por rol y cierre de sesión: correctos.\n";
     }
 
     // Cada PHP de módulo debe tener política o figurar entre los internos probados por HTTP.
-    foreach (['usuarios', 'docentes', 'estudiantes', 'derivaciones', 'citas', 'historias_clinicas', 'seguimientos', 'informes', 'estadisticas'] as $modulo) {
+    foreach (['usuarios', 'docentes', 'estudiantes', 'derivaciones', 'citas', 'historias_clinicas', 'informes', 'estadisticas'] as $modulo) {
         foreach (glob($raiz . '/' . $modulo . '/*.php') as $archivo) {
             $ruta = $modulo . '/' . basename($archivo);
             if (in_array($ruta, $internosModulo, true)) continue;
-            comprobar(isset($permisos[$ruta]), "Ruta sin política: $ruta");
+            prueba_seguridad_comprobar(isset($permisos[$ruta]), "Ruta sin política: $ruta");
             $fuente = file_get_contents($archivo);
-            comprobar(str_starts_with($fuente, '<?php'), "Hay salida o BOM antes de la protección: $ruta");
+            prueba_seguridad_comprobar(str_starts_with($fuente, '<?php'), "Hay salida o BOM antes de la protección: $ruta");
         }
     }
     echo "OK: $total comprobaciones" . ($soloAcceso ? ' de acceso (sin pruebas de negocio)' : '') . ". Solo se usaron tablas TEMPORARY de conexión.\n";

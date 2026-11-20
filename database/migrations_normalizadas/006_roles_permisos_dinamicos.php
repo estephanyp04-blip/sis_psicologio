@@ -13,7 +13,6 @@ return static function (mysqli $bd): array {
         ['Usuarios', '/usuarios/listar.php', 'bi-person-gear', 7],
         ['Roles y permisos', '/roles/listar.php', 'bi-shield-lock', 8],
         ['Docentes', '/docentes/listar.php', 'bi-person-badge-fill', 9],
-        ['Seguimientos', '/seguimientos/listar.php', 'bi-journal-medical', 10],
         ['Estadísticas', '/estadisticas/index.php', 'bi-bar-chart-line-fill', 11],
     ];
 
@@ -42,7 +41,6 @@ return static function (mysqli $bd): array {
     }
     $permisosIniciales = [
         'Docentes' => [1 => [1, 1, 1, 1]],
-        'Seguimientos' => [1 => [1, 1, 1, 1], 2 => [1, 1, 1, 0]],
         'Estadísticas' => [1 => [1, 0, 0, 0], 2 => [1, 0, 0, 0]],
     ];
     $buscarPermiso = $bd->prepare('SELECT cod_permiso FROM permisos WHERE cod_rol=? AND cod_modulo=? LIMIT 1');

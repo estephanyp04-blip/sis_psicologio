@@ -36,8 +36,8 @@ $tituloPagina = $tituloPagina ?? 'Sistema Psicológico - U.E. Cañada Pailita "B
     <!-- CSS propio con ruta dinámica -->
     <link rel="stylesheet" href="<?= login_html(login_url('asset/css/estilos.css?v=11')) ?>">
     <link rel="stylesheet" href="<?= login_html(login_url('asset/css/interfaz.css?v=2')) ?>">
-    <link rel="stylesheet" href="<?= login_html(login_url('asset/css/avisos.css?v=1')) ?>">
-    <script src="<?= login_html(login_url('asset/js/avisos.js?v=1')) ?>" defer></script>
+    <link rel="stylesheet" href="<?= login_html(login_url('asset/css/avisos.css?v=2')) ?>">
+    <script src="<?= login_html(login_url('asset/js/avisos.js?v=2')) ?>" defer></script>
     <?php if (basename(dirname($_SERVER['SCRIPT_NAME'] ?? '')) === 'estadisticas'): ?>
     <link rel="stylesheet" href="<?= login_html(login_url('asset/css/clinica.css?v=1')) ?>">
     <?php endif; ?>

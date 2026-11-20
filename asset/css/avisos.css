@@ -42,6 +42,10 @@ body.ui-aviso-abierto { overflow: hidden; }
 .ui-toast.ui-aviso-saliendo { animation: ui-aviso-salida .14s ease-in forwards; }
 .ui-aviso-giro svg { animation: ui-aviso-giro .9s linear infinite; }
 .ui-envio-estado { color: var(--color-muted, #64748b); font-size: .85rem; margin: 12px 0; }
+.ui-mensaje { margin: 16px 0; padding: 14px 18px; border: 1px solid #b6d4fe; border-radius: 10px; background: #cff4fc; color: #055160; overflow-wrap: anywhere; }
+.ui-mensaje.alert-success { background: #d1e7dd; border-color: #badbcc; color: #0f5132; }
+.ui-mensaje.alert-danger { background: #f8d7da; border-color: #f5c2c7; color: #842029; }
+.ui-mensaje.alert-warning { background: #fff3cd; border-color: #ffecb5; color: #664d03; }
 .ui-aviso-pendiente { margin: 20px 24px 20px calc(var(--sidebar-width, 270px) + 24px); }
 @keyframes ui-aviso-entrada { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes ui-aviso-salida { to { opacity: 0; transform: translateY(6px); } }

@@ -1,5 +1,8 @@
 # Redefinición del seguimiento psicológico y las estadísticas
 
+> Antecedente del 19/11/2026. La conservación de rutas antiguas y de la tabla original descrita aquí fue sustituida por el [retiro definitivo del 20/11/2026](RETIRO_SEGUIMIENTOS_2026-11-20.md). Ese informe establece los requisitos, casos de uso, modelo y resultados vigentes.
+
+
 Fecha: 19 de noviembre de 2026. Proyecto: Sistema web de registro de citas y seguimiento de historias clínicas psicológicas de estudiantes de la U.E. Cañada Pailita «B».
 
 ## Resultado de la intervención

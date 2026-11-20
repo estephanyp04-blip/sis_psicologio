@@ -33,7 +33,8 @@ Roles identificados: 1 Administrador, 2 Psicóloga, 3 Docente, 4 Director; puede
 | Derivaciones: cambiar estado | Bloqueado | Según permiso y transición válida | Bloqueado inicialmente | Bloqueado |
 | Derivaciones: eliminar pendiente | Bloqueado | Sin concesión inicial | Solo propia y sin relaciones de atención | Bloqueado |
 | Citas: consultar / crear / editar / estado | Bloqueado | Según cada permiso; programación propia y controles existentes | Bloqueado | Bloqueado |
-| Historias y seguimientos: consultar / crear / editar | Bloqueado | Según cada permiso | Bloqueado | Bloqueado |
+| Historias clínicas: consultar / crear / editar | Bloqueado | Según cada permiso | Bloqueado | Bloqueado |
+| Anexos clínicos históricos: lectura dentro de su historia | Bloqueado | Requiere consulta de historias | Bloqueado | Bloqueado |
 | Panel y estadísticas por estudiante | Bloqueado | Según permiso de consulta | Bloqueado | Bloqueado |
 | Informes individuales / mensuales | Bloqueado | Consulta, creación o edición según cada permiso | Bloqueado | Bloqueado hasta definir divulgación autorizada |
 | Exportación electrónica independiente | No se identificó un endpoint de exportación | No se añadió uno | No | No |
@@ -44,6 +45,8 @@ Un rol renombrado conserva su identificador y no cambia automáticamente su func
 La autoría de una historia no equivale necesariamente a asignación vigente del caso. **No se inventó una regla que impida a toda profesional suplente consultar una historia de otra autora**. El modelo actual sigue ofreciendo acceso al equipo con rol Psicóloga y permiso de módulo; la separación por caso/profesional y el acceso excepcional necesitan una política y una relación explícita de asignación. Este aspecto se mantiene parcial y es un pendiente alto antes de un despliegue con varios profesionales.
 
 Las sesiones comprueban estado, rol, vínculo docente, hash y versiones de revocación. Desactivar/reactivar una cuenta o rol no recupera sesiones anteriores. Cambiar contraseña o rol invalida sesiones anteriores; cambiar permisos se aplica al consultar nuevamente la autorización. Cada operación de escritura continúa exigiendo POST y CSRF. Dar de baja una cuenta es desactivarla; no elimina sus expedientes ni su atribución previa.
+
+Desde el 20/11/2026 no existe módulo ni permiso de Seguimientos. El seguimiento psicológico es una consulta de Estadísticas; la consulta individual requiere también lectura de historias. Los permisos antiguos se retiran mediante 017 y las rutas eliminadas responden 404. Los anexos no admiten altas, edición ni eliminación desde la aplicación.
 
 ## Entrega de informes y rectificaciones
 

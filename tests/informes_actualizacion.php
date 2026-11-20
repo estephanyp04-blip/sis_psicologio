@@ -6,13 +6,13 @@ require_once dirname(__DIR__) . '/informes/datos.php';
 
 $total = 0;
 $fallo = false;
-function comprobar(bool $condicion, string $mensaje): void
+function prueba_informes_comprobar(bool $condicion, string $mensaje): void
 {
     global $total;
     ++$total;
     if (!$condicion) throw new RuntimeException($mensaje);
 }
-function foto(mysqli $bd): array
+function prueba_informes_foto(mysqli $bd): array
 {
     $datos = [];
     foreach (['informes', 'informe_individual', 'auditoria'] as $tabla) {
@@ -32,25 +32,25 @@ try {
         recomendaciones TEXT, estado ENUM('Borrador','Finalizado')) ENGINE=InnoDB");
     $bd->query("CREATE TEMPORARY TABLE informe_individual (
         cod_informe INT UNSIGNED PRIMARY KEY, cod_estudiante INT UNSIGNED, cod_historia INT UNSIGNED,
-        cod_derivacion INT UNSIGNED, cod_seguimiento INT UNSIGNED, numero_atenciones INT UNSIGNED,
+        cod_derivacion INT UNSIGNED, cod_anexo_historico INT UNSIGNED, numero_atenciones INT UNSIGNED,
         referido_por VARCHAR(150), tipo_atencion TEXT, motivo TEXT, diagnostico TEXT,
         aspecto_cognitivo TEXT, aspectos_afectivos TEXT, diagnostico_acuerdos TEXT, recibido_por VARCHAR(150),
         CONSTRAINT fallo_detalle_prueba CHECK (motivo <> 'FALLO_DETALLE')) ENGINE=InnoDB");
     $bd->query('CREATE TEMPORARY TABLE historias_clinicas(cod_historia INT PRIMARY KEY,cod_estudiante INT) ENGINE=InnoDB');
     $bd->query('INSERT INTO historias_clinicas VALUES(301,201)');
-    $bd->query('CREATE TEMPORARY TABLE seguimientos (cod_seguimiento INT PRIMARY KEY, fecha DATE, cod_historia INT) ENGINE=InnoDB');
+    $bd->query('CREATE TEMPORARY TABLE historia_anexos (cod_anexo INT PRIMARY KEY, fecha DATE, cod_historia INT) ENGINE=InnoDB');
     $bd->query("CREATE TEMPORARY TABLE auditoria (
         cod_auditoria INT PRIMARY KEY AUTO_INCREMENT, cod_usuario INT, modulo VARCHAR(50),
         accion VARCHAR(50), registro_id INT, detalle TEXT,
         CONSTRAINT fallo_auditoria_prueba CHECK (cod_usuario = 102)) ENGINE=InnoDB");
     $bd->query("INSERT INTO informes (cod_informe,numero_ficha,cod_elaborado_por,titulo,fecha_inicio,estado)
         VALUES (1,'PRUEBA-1',101,'Original','2026-01-01','Borrador'),(2,'PRUEBA-2',101,'Otro','2026-01-01','Borrador')");
-    $bd->query("INSERT INTO informe_individual (cod_informe,cod_estudiante,cod_historia,cod_derivacion,cod_seguimiento,numero_atenciones,motivo)
+    $bd->query("INSERT INTO informe_individual (cod_informe,cod_estudiante,cod_historia,cod_derivacion,cod_anexo_historico,numero_atenciones,motivo)
         VALUES (1,201,301,401,501,1,'Original'),(2,202,NULL,NULL,NULL,2,'Otro')");
-    $bd->query("INSERT INTO seguimientos VALUES (501,'2026-01-01',301)");
+    $bd->query("INSERT INTO historia_anexos VALUES (501,'2026-01-01',301)");
 
     $datos = informe_datos([
-        'cod_estudiante' => 201, 'cod_historia' => 301, 'cod_seguimiento' => 501,
+        'cod_estudiante' => 201, 'cod_historia' => 301, 'cod_anexo_historico' => 501,
         'titulo' => 'Título editado', 'fecha' => '2026-01-02', 'numero_atenciones' => 9,
         'tipo_atencion' => ['Evaluación', 'Orientación'], 'referido_por' => 'Referente editado',
         'motivo' => 'Motivo editado', 'diagnostico' => 'Diagnóstico editado',
@@ -58,31 +58,31 @@ try {
         'diagnostico_acuerdos' => 'Acuerdos editados', 'recomendaciones' => 'Recomendaciones editadas',
         'recibido_por' => 'Receptor editado', 'estado' => 'Finalizado',
     ]);
-    $antes = foto($bd);
+    $antes = prueba_informes_foto($bd);
     informe_actualizar($bd, 1, $datos, 102);
-    $despues = foto($bd);
+    $despues = prueba_informes_foto($bd);
     $cabecera = $despues['informes'][0];
     $detalle = $despues['informe_individual'][0];
     foreach (['titulo', 'recomendaciones', 'estado'] as $campo) {
-        comprobar($cabecera[$campo] === $datos[$campo], "No se guardó $campo en la cabecera.");
+        prueba_informes_comprobar($cabecera[$campo] === $datos[$campo], "No se guardó $campo en la cabecera.");
     }
-    comprobar($cabecera['fecha_inicio'] === $datos['fecha'] && $cabecera['fecha_fin'] === $datos['fecha'], 'No se guardó la fecha.');
-    comprobar($cabecera['descripcion'] === $datos['motivo'] && $cabecera['conclusiones'] === $datos['diagnostico'], 'La cabecera no coincide con el detalle.');
-    comprobar((int)$detalle['numero_atenciones'] === 1, 'La edición alteró el total publicado del informe.');
-    comprobar($detalle['tipo_atencion'] === 'Evaluación, Orientación', 'No se guardaron los tipos de atención.');
+    prueba_informes_comprobar($cabecera['fecha_inicio'] === $datos['fecha'] && $cabecera['fecha_fin'] === $datos['fecha'], 'No se guardó la fecha.');
+    prueba_informes_comprobar($cabecera['descripcion'] === $datos['motivo'] && $cabecera['conclusiones'] === $datos['diagnostico'], 'La cabecera no coincide con el detalle.');
+    prueba_informes_comprobar((int)$detalle['numero_atenciones'] === 1, 'La edición alteró el total publicado del informe.');
+    prueba_informes_comprobar($detalle['tipo_atencion'] === 'Evaluación, Orientación', 'No se guardaron los tipos de atención.');
     foreach (['referido_por', 'motivo', 'diagnostico', 'aspecto_cognitivo', 'aspectos_afectivos', 'diagnostico_acuerdos', 'recibido_por'] as $campo) {
-        comprobar($detalle[$campo] === $datos[$campo], "No se guardó $campo en el detalle.");
+        prueba_informes_comprobar($detalle[$campo] === $datos[$campo], "No se guardó $campo en el detalle.");
     }
-    comprobar((int)$cabecera['cod_elaborado_por'] === 101 && $cabecera['numero_ficha'] === 'PRUEBA-1', 'Cambió el autor o la ficha.');
-    foreach (['cod_estudiante' => 201, 'cod_historia' => 301, 'cod_derivacion' => 401, 'cod_seguimiento' => 501] as $campo => $id) {
-        comprobar((int)$detalle[$campo] === $id, "Cambió la relación $campo.");
+    prueba_informes_comprobar((int)$cabecera['cod_elaborado_por'] === 101 && $cabecera['numero_ficha'] === 'PRUEBA-1', 'Cambió el autor o la ficha.');
+    foreach (['cod_estudiante' => 201, 'cod_historia' => 301, 'cod_derivacion' => 401, 'cod_anexo_historico' => 501] as $campo => $id) {
+        prueba_informes_comprobar((int)$detalle[$campo] === $id, "Cambió la relación $campo.");
     }
-    comprobar($antes['informes'][1] === $despues['informes'][1] && $antes['informe_individual'][1] === $despues['informe_individual'][1], 'Se modificó otro informe.');
-    comprobar(count($despues['auditoria']) === 1 && (int)$despues['auditoria'][0]['cod_usuario'] === 102
+    prueba_informes_comprobar($antes['informes'][1] === $despues['informes'][1] && $antes['informe_individual'][1] === $despues['informe_individual'][1], 'Se modificó otro informe.');
+    prueba_informes_comprobar(count($despues['auditoria']) === 1 && (int)$despues['auditoria'][0]['cod_usuario'] === 102
         && (int)$despues['auditoria'][0]['registro_id'] === 1, 'No se registró al editor en auditoría.');
 
     foreach ([['motivo' => 'FALLO_DETALLE'], ['cod_editor' => 999]] as $caso) {
-        $previo = foto($bd);
+        $previo = prueba_informes_foto($bd);
         $rechazado = false;
         try {
             informe_actualizar($bd, 1, array_replace($datos, ['titulo' => 'No debe persistir', 'motivo' => 'No debe persistir'], $caso), $caso['cod_editor'] ?? 102);
@@ -91,22 +91,22 @@ try {
             if ($error->getCode() !== 4025) throw $error;
             $rechazado = true;
         }
-        comprobar($rechazado, 'No se detectó el fallo SQL provocado.');
-        comprobar(foto($bd) === $previo, 'El fallo dejó cambios parciales en cabecera, detalle o auditoría.');
+        prueba_informes_comprobar($rechazado, 'No se detectó el fallo SQL provocado.');
+        prueba_informes_comprobar(prueba_informes_foto($bd) === $previo, 'El fallo dejó cambios parciales en cabecera, detalle o auditoría.');
     }
 
-    foreach (['cod_estudiante' => 202, 'cod_seguimiento' => 502] as $campo => $id) {
-        $previo = foto($bd);
+    foreach (['cod_estudiante' => 202] as $campo => $id) {
+        $previo = prueba_informes_foto($bd);
         $rechazado = false;
         try { informe_actualizar($bd, 1, array_replace($datos, [$campo => $id]), 102); }
         catch (InvalidArgumentException $error) { $rechazado = true; }
-        comprobar($rechazado && foto($bd) === $previo, "Se aceptó un cambio de $campo o hubo escritura parcial.");
+        prueba_informes_comprobar($rechazado && prueba_informes_foto($bd) === $previo, "Se aceptó un cambio de $campo o hubo escritura parcial.");
     }
 
     $vacios = array_fill_keys(['referido_por', 'diagnostico', 'diagnostico_acuerdos', 'recibido_por'], '');
     informe_actualizar($bd, 1, array_replace($datos, $vacios), 102);
-    $detalle = foto($bd)['informe_individual'][0];
-    foreach ($vacios as $campo => $_) comprobar($detalle[$campo] === null, "No se vació el campo opcional $campo.");
+    $detalle = prueba_informes_foto($bd)['informe_individual'][0];
+    foreach ($vacios as $campo => $_) prueba_informes_comprobar($detalle[$campo] === null, "No se vació el campo opcional $campo.");
     echo "OK: $total comprobaciones de actualización de informes. Solo tablas TEMPORARY; sin escrituras en datos reales.\n";
 } catch (Throwable $error) {
     fwrite(STDERR, $error->getMessage() . "\n");

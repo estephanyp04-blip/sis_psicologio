@@ -1,5 +1,17 @@
 # Registro de cambios
 
+## 2026-11-20 — Retiro definitivo de Seguimientos
+
+- Corregidas las colisiones de funciones auxiliares entre suites de `tests/`; cada suite utiliza nombres propios. La prueba de avisos reutiliza el escape HTML real sin redeclararlo.
+- Corregidos los diagnósticos de tipos DOM y variables potencialmente indefinidas en cabeceras HTTP y en la medición de estadísticas de las pruebas, manteniendo habilitadas las comprobaciones del editor.
+
+- Eliminada la carpeta `seguimientos/`, sus cuatro endpoints, enlaces desde Citas/Historias, rutas autorizadas y operación PHP independiente.
+- Migración 017: archivo clínico integrado en `historia_anexos`, vínculos históricos de informes conservados y módulo/permisos retirados. Respaldo cifrado obligatorio, huellas, validación referencial, inspección de dependencias y reanudación.
+- Estadísticas: gestión académica, indicadores individuales e impresión/PDF individual; comparación de historias/versiones sin conclusiones diagnósticas automáticas.
+- Informes nuevos basados en historias; totales y antecedentes históricos preservados. Actualizados requisitos, casos de uso, matriz de acceso, modelo, documentación y pruebas.
+- Resultados y archivos: [informe de implementación](documentacion/RETIRO_SEGUIMIENTOS_2026-11-20.md).
+
+
 ## Sin publicar
 
 - 19/11/2026: seguimiento individual integrado en Estadísticas y análisis con comparación de todos los apartados y versiones conservadas, cronología, filtros y archivo anterior de lectura.

@@ -1,12 +1,12 @@
 # Sistema de seguimiento psicológico estudiantil
 
-Aplicación PHP para gestionar estudiantes, docentes, derivaciones, citas, historias clínicas, seguimientos e informes de la U.E. Cañada Pailita «B».
+Aplicación PHP para gestionar estudiantes, docentes, derivaciones, citas, historias clínicas, estadísticas e informes de la U.E. Cañada Pailita «B».
 
-Actualización del 19/11/2026: el seguimiento se consulta en **Estadísticas y análisis → Seguimiento psicológico individual**, comparando historias y sus versiones conservadas. El registro independiente está retirado y su archivo permanece en lectura. [Informe técnico, definiciones y propuesta académica](documentacion/SEGUIMIENTO_PSICOLOGICO_2026-11-19.md).
+Actualización del 20/11/2026: el seguimiento psicológico se realiza en **Estadísticas y análisis → Seguimiento psicológico individual**, consultando y comparando historias y versiones conservadas. Se eliminó el módulo independiente y sus permisos. [Informe de implementación, requerimientos, casos de uso, modelo y pruebas](documentacion/RETIRO_SEGUIMIENTOS_2026-11-20.md).
 
 Revisión del 14/11/2026: [correcciones, matriz y pruebas](seguridad/08_REVISION_TECNICA_2026-11-14.md), [configuración/migración 016 y recuperación](seguridad/09_OPERACION_RECUPERACION.md), [roles y privacidad](seguridad/10_PRIVACIDAD_ACCESOS.md). El contenido clínico queda restringido al rol Psicóloga y sus permisos; Administrador y Director ya no reciben acceso clínico general. Consultar la nueva matriz antes de reutilizar políticas o resultados anteriores.
 
-**Estado local al 19/11/2026:** se aplicó 016 tras crear y verificar la integridad de una copia cifrada. El comprobador devolvió cero pendientes y la consulta de acceso quedó operativa. La redefinición del seguimiento reutiliza ese esquema, sin nuevas operaciones DDL. No reinstalar el SQL sobre la base existente.
+**Estado local al 20/11/2026:** migración 017 aplicada después de copia cifrada y restauración aislada. `seguimientos` se transformó sin pérdida en `historia_anexos`, integrado en los expedientes y sin formularios propios. Integridad comprobada en 45 claves foráneas; cero migraciones pendientes. No reinstalar el SQL sobre una base existente.
 
 Las correcciones por fases, resultados y decisiones pendientes están en [CORRECCIONES_FASES_2026-11-02.md](CORRECCIONES_FASES_2026-11-02.md). Incluyen calendario, filtros, informes mensuales, recursos locales, baja del perfil docente y continuidad por episodio. Para actualizar una base existente, consultar [la migración 013](database/CONTINUIDAD_013.md).
 
@@ -60,8 +60,8 @@ La zona horaria es `America/La_Paz`. La aplicación no carga archivos `.env` aut
 | `includes/` | Autenticación, cabecera, menú, pie y trazabilidad compartida entre módulos |
 | `estudiantes/`, `docentes/`, `usuarios/` | Gestión de personas y cuentas |
 | `roles/` | Creación de roles y configuración de permisos por módulo |
-| `derivaciones/`, `citas/`, `historias_clinicas/`, `seguimientos/`, `informes/` | Atención y documentación psicológica |
-| `estadisticas/` | Consulta de sesiones e historias por estudiante, curso y período |
+| `derivaciones/`, `citas/`, `historias_clinicas/`, `informes/` | Atención y documentación psicológica |
+| `estadisticas/` | Consulta y comparación de historias y versiones por estudiante, curso, paralelo, gestión y período |
 | `asset/` | Estilos y JavaScript |
 | `database/` | SQL de instalación, migraciones normalizadas e históricas |
 | `herramientas/` | Administración desde terminal |
@@ -73,14 +73,14 @@ Los archivos específicos viven dentro de su módulo: `datos.php` reúne la vali
 
 Las rutas se declaran en [config/permisos.php](config/permisos.php), y los permisos efectivos se consultan en las tablas `modulos` y `permisos`. El administrador puede crear roles y marcar para cada módulo si el rol puede ver, crear, editar, cambiar estados o eliminar. En Dashboard, Estadísticas y Estudiantes, Docente y Director permanecen bloqueados aunque la tabla de permisos les conceda acceso; los demás roles siguen la configuración de la base. Cambiar estados es un permiso separado de editar; solo se ofrece en Usuarios, Docentes, Estudiantes, Derivaciones y Citas. El menú también se ajusta a esos permisos; las rutas comprueban el permiso en el servidor y las escrituras requieren token CSRF.
 
-Además, [la política de confidencialidad](includes/politica_acceso.php) limita Dashboard, Estadísticas, Citas, Historias y Seguimientos e Informes al rol Psicóloga. Derivaciones admite Psicóloga según permisos y Docente solo en sus registros; no admite Administrador, Director ni roles personalizados. Las casillas del editor no pueden superar estos límites. El acceso profesional por caso y las entregas de informes requieren decisiones institucionales adicionales. La impresión del navegador no equivale a una exportación autorizada y auditada.
+Además, [la política de confidencialidad](includes/politica_acceso.php) limita Dashboard, Estadísticas, Citas, Historias e Informes al rol Psicóloga. Derivaciones admite Psicóloga según permisos y Docente solo en sus registros; no admite Administrador, Director ni roles personalizados. Las casillas del editor no pueden superar estos límites. El acceso profesional por caso y las entregas de informes requieren decisiones institucionales adicionales. La impresión del navegador no equivale a una exportación autorizada y auditada.
 
 Para habilitar esta configuración en una base existente, aplicar la migración normalizada:
 
 Para las mejoras de seguridad del 14/11 usar **solo** `herramientas/migrar_seguridad.php --comprobar` y, después de respaldar, `--aplicar`; no es necesario ejecutar otras migraciones históricas. Consultar el procedimiento enlazado al inicio. El siguiente comando general es para actualizaciones del esquema completo previamente revisadas:
 
 ```powershell
-& C:\xampp\php\php.exe database\migrar.php --base=psicologia_db --aplicar
+& C:\xampp\php\php.exe database\migrar.php --base=psicologia_db --comprobar
 ```
 
 Solo el rol Administrador puede gestionar roles y permisos, y ese rol está protegido contra cambios. Quien recibe permiso para crear cuentas solo puede asignarles su mismo rol; el administrador puede asignar cualquier rol activo. Una cuenta con rol Docente debe vincularse a un perfil en **Docentes** antes de iniciar sesión.
@@ -103,13 +103,14 @@ La agenda mantiene el calendario y sus acciones explícitas sobre citas. Los err
 
 **Seguimiento psicológico individual** requiere también lectura de historias. Permite elegir estudiante y período, consultar cronología y comparar dos historias o versiones conservadas. Compara todos los apartados existentes, familiares y selecciones. Las nuevas marcas y las que dejan de constar son cambios documentales; no acreditan aparición, desaparición o mejoría clínica.
 
-Las fechas delimitan inclusivamente la fecha de atención. Sin fecha inicial se incluye todo lo disponible hasta hoy. Curso y paralelo usan la última inscripción por gestión, fecha e identificador. Se incluyen estudiantes retirados o sin inscripción. Las estadísticas generales usan el contenido actual de las historias y no reconstruyen la base en una fecha pasada.
+Las fechas delimitan inclusivamente la fecha de atención. Sin fecha inicial se incluye todo lo disponible hasta hoy. La gestión filtra el año de atención; curso y paralelo usan la última inscripción de esa gestión o, sin elegir gestión, la última disponible por gestión, fecha e identificador. Se incluyen estudiantes retirados o sin inscripción. Las estadísticas generales usan el contenido actual de las historias y no reconstruyen la base en una fecha pasada.
 
-El archivo `seguimientos` conserva técnicas, acuerdos y relaciones anteriores. El GET antiguo de alta redirige a la historia y el POST responde 410 después de validar acceso y CSRF. Los mensuales nuevos guardan la definición 2: atención documentada = historia clínica. Los informes anteriores mantienen su definición y totales.
+Los anexos clínicos históricos se conservan en `historia_anexos` y se consultan dentro de su historia original. Las rutas antiguas devuelven 404. Los informes anteriores mantienen vínculos y totales; los nuevos cuentan historias clínicas. Las consultas individual y general permiten imprimir o guardar PDF; se mantienen los informes mensuales.
 
 ## Verificación
 
 ```powershell
+& C:\xampp\php\php.exe tests\retirar_seguimientos.php
 & C:\xampp\php\php.exe tests\seguridad.php
 & C:\xampp\php\php.exe tests\fases.php
 & C:\xampp\php\php.exe tests\informes_actualizacion.php

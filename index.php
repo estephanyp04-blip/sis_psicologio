@@ -30,7 +30,7 @@ $accesos = [
     ['estudiantes/listar.php','Estudiantes','Registrar y consultar estudiantes.','blue','bi-people'],
     ['derivaciones/listar.php','Derivaciones','Consultar solicitudes de atención.','orange','bi-send'],
     ['citas/listar.php','Citas','Programar y consultar citas.','green','bi-calendar2-week'],
-    ['historias_clinicas/listar.php','Historias clínicas','Revisar historias y seguimientos.','purple','bi-file-earmark-medical'],
+    ['historias_clinicas/listar.php','Historias clínicas','Consultar historias clínicas y sus antecedentes.','purple','bi-file-earmark-medical'],
     ['docentes/listar.php','Docentes','Administrar docentes y materias.','cyan','bi-person-badge'],
     ['informes/listar.php','Informes','Preparar y consultar informes.','red','bi-file-earmark-bar-graph'],
     ['estadisticas/index.php','Estadísticas y análisis','Comparar historias y consultar estadísticas.','indigo','bi-bar-chart-line'],
@@ -152,7 +152,7 @@ include __DIR__ . '/includes/navbar.php';
                     <?php endif; ?>
                 </section><?php endif; ?>
             </div>
-            <p class="panel-definiciones">Cada historia clínica cuenta como una atención documentada; las ediciones y los seguimientos históricos no suman atenciones. Las citas pendientes incluyen las reprogramadas. Los datos se actualizan al abrir o recargar el panel.</p>
+            <p class="panel-definiciones">Cada historia clínica cuenta como una atención documentada; las ediciones y los anexos históricos no suman atenciones. Las citas pendientes incluyen las reprogramadas. Los datos se actualizan al abrir o recargar el panel.</p>
         <?php endif; ?>
 
     </div>

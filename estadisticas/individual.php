@@ -24,8 +24,8 @@ try {
             if (!is_string($a) || !is_string($b) || !isset($registros[$a], $registros[$b])) throw new InvalidArgumentException('Seleccione registros de este estudiante dentro del período.');
             $comparacion = clinica_comparar($registros[$a]['datos'], $registros[$b]['datos'], $catalogos['grupos']);
         } elseif (isset($_GET['comparar_a']) || isset($_GET['comparar_b'])) throw new InvalidArgumentException('No hay registros para comparar en este período.');
-        $archivo = clinica_consultar($conexion, "SELECT s.cod_seguimiento,s.fecha FROM seguimientos s JOIN historias_clinicas h ON h.cod_historia=s.cod_historia
-            WHERE h.cod_estudiante=? AND (?='' OR s.fecha>=?) AND s.fecha<=? ORDER BY s.fecha,s.cod_seguimiento", [$f['estudiante'],$f['desde'],$f['desde'],$f['hasta']]);
+        $archivo = clinica_consultar($conexion, "SELECT s.cod_anexo,s.cod_historia,s.fecha FROM historia_anexos s JOIN historias_clinicas h ON h.cod_historia=s.cod_historia
+            WHERE h.cod_estudiante=? AND (?='' OR s.fecha>=?) AND s.fecha<=? AND (?=0 OR YEAR(s.fecha)=?) ORDER BY s.fecha,s.cod_anexo", [$f['estudiante'],$f['desde'],$f['desde'],$f['hasta'],$f['gestion'],$f['gestion']]);
     }
 } catch (InvalidArgumentException $e) { http_response_code(400); $error = $e->getMessage(); }
 catch (OutOfBoundsException $e) { $error = $e->getMessage(); }
@@ -36,13 +36,18 @@ catch (Throwable $e) {
 include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/sidebar.php'; include __DIR__ . '/../includes/navbar.php';
 ?>
 <main class="main-content estadisticas-page"><div class="container-fluid">
-    <header class="estadisticas-cabecera"><div><h1>Seguimiento psicológico individual</h1><p>Consulta y comparación de historias clínicas y sus versiones conservadas.</p></div></header>
+    <header class="estadisticas-cabecera"><div><h1>Seguimiento psicológico individual</h1><p>Consulta y comparación de historias clínicas y sus versiones conservadas.</p></div><button class="btn btn-outline-primary d-print-none" type="button" onclick="window.print()">Imprimir / guardar PDF</button></header>
     <?php clinica_navegacion(true); clinica_formulario($f, $catalogos, $estudiantes); ?>
     <?php if ($error): ?><p data-ui-aviso class="alert alert-danger" role="alert"><?= login_html($error) ?></p>
     <?php elseif (!$f['estudiante']): ?><p class="alert alert-info" role="status">Seleccione un estudiante para consultar su historial.</p>
     <?php else: ?>
     <h2 class="h4"><?= login_html(trim($seleccionado['apellidos'] . ' ' . $seleccionado['nombres'])) ?></h2>
-    <p class="estadisticas-contexto">El período filtra la fecha de atención consignada en cada registro. Las versiones conservan estados anteriores de una historia; su fecha de edición no es una nueva atención. Los registros previos al inicio del versionado que no fueron conservados no pueden reconstruirse. La falta de una marca no confirma la ausencia de una condición.</p>
+    <?php $totalHistorias=count(array_unique(array_column(array_column($registros,'datos'),'cod_historia'))); ?>
+    <section class="estadisticas-tarjetas" aria-label="Indicadores individuales">
+        <article class="estadisticas-tarjeta"><h3>Historias en el período</h3><strong id="individual-historias" data-valor="<?= $totalHistorias ?>"><?= $totalHistorias ?></strong><p>Historias distintas con registros disponibles para estos filtros.</p></article>
+        <article class="estadisticas-tarjeta"><h3>Versiones conservadas</h3><strong id="individual-versiones" data-valor="<?= count(array_filter($registros,static fn($r)=>$r['tipo']==='Versión conservada')) ?>"><?= count(array_filter($registros,static fn($r)=>$r['tipo']==='Versión conservada')) ?></strong><p>Estados documentales anteriores; no representan nuevas atenciones.</p></article>
+    </section>
+    <p class="estadisticas-contexto">El período y la gestión filtran la fecha de atención consignada en cada registro. Curso y paralelo usan la última inscripción de la gestión elegida o, sin gestión, la última disponible. Las versiones conservan estados anteriores de una historia; su fecha de edición no es una nueva atención. Los registros previos al inicio del versionado que no fueron conservados no pueden reconstruirse. La falta de una marca no confirma la ausencia de una condición.</p>
     <?php if (!$registros): ?><p class="alert alert-info" role="status">No hay registros clínicos en este período.</p><?php else: ?>
     <section class="estadisticas-panel" aria-labelledby="comparar-titulo"><h2 id="comparar-titulo">Comparar registros</h2>
         <form method="get" class="clinica-comparadores d-print-none">
@@ -60,7 +65,7 @@ include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/sid
             </tbody></table></div>
     </section>
     <section class="estadisticas-panel" aria-labelledby="cronologia-titulo"><h2 id="cronologia-titulo">Historial cronológico</h2>
-        <p><?= count($registros) ?> registros disponibles, incluidas versiones. Las intervenciones realizadas solo pueden confirmarse mediante lo escrito por la profesional; un plan no acredita su ejecución.</p>
+        <p><strong>Historias en el período: <?= count(array_unique(array_column(array_column($registros, 'datos'), 'cod_historia'))) ?>.</strong> <?= count($registros) ?> registros disponibles, incluidas versiones. Las intervenciones realizadas solo pueden confirmarse mediante lo escrito por la profesional; un plan no acredita su ejecución.</p>
         <ol class="clinica-cronologia"><?php foreach ($registros as $r): $d = $r['datos']; ?><li>
             <details><summary><?= login_html(clinica_rotulo_registro($r)) ?></summary>
                 <p>Registrado: <?= login_html($d['fecha_registro'] ?? 'Fecha no conservada') ?> · Última actualización de este estado: <?= login_html($d['fecha_actualizacion'] ?? 'Fecha no conservada') ?></p>
@@ -70,7 +75,7 @@ include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/sid
         </li><?php endforeach; ?></ol>
     </section>
     <?php endif; ?>
-    <?php if ($archivo): ?><section class="estadisticas-panel"><h2>Archivo de seguimientos anteriores</h2><p>Registros históricos de solo lectura. Se conservan sus técnicas, acuerdos y recomendaciones; no se suman como nuevas historias ni se transforman en versiones ficticias.</p><ul><?php foreach ($archivo as $s): ?><li><a href="<?= login_html(login_url('seguimientos/ver.php?id=' . (int)$s['cod_seguimiento'])) ?>"><?= login_html($s['fecha']) ?> · Registro histórico #<?= (int)$s['cod_seguimiento'] ?></a></li><?php endforeach; ?></ul></section><?php endif; ?>
+    <?php if ($archivo): ?><section class="estadisticas-panel"><h2>Anexos clínicos históricos</h2><p>Documentos históricos integrados en las historias clínicas, de solo lectura. Se conservan sus técnicas, acuerdos y recomendaciones; no se suman como nuevas historias ni se transforman en versiones ficticias.</p><ul><?php foreach ($archivo as $s): ?><li><a href="<?= login_html(login_url('historias_clinicas/ver.php?id=' . (int)$s['cod_historia'] . '#anexo-' . (int)$s['cod_anexo'])) ?>"><?= login_html($s['fecha']) ?> · Registro histórico #<?= (int)$s['cod_anexo'] ?></a></li><?php endforeach; ?></ul></section><?php endif; ?>
     <?php endif; ?>
 </div></main>
 <?php include __DIR__ . '/../includes/footer.php'; ?>

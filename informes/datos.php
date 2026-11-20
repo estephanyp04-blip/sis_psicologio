@@ -18,15 +18,11 @@ function informe_datos(array $entrada): array
     }
     $tipos = $entrada['tipo_atencion'] ?? [];
     $datos['tipo_atencion'] = is_array($tipos) ? array_values(array_unique(array_filter($tipos, 'is_string'))) : [];
-    // NULL significa que un cliente anterior no envió el vínculo; 0 lo deja sin seguimiento.
-    $datos['cod_seguimiento'] = array_key_exists('cod_seguimiento',$entrada)
-        ? (filter_var($entrada['cod_seguimiento'] === '' ? 0 : $entrada['cod_seguimiento'], FILTER_VALIDATE_INT) === false ? -1 : (int)$entrada['cod_seguimiento']) : null;
     return $datos;
 }
 
 function informe_validar(array $datos): void
 {
-    if (($datos['cod_seguimiento'] ?? 0) < 0) throw new InvalidArgumentException('El seguimiento no es válido.');
     $fecha = DateTimeImmutable::createFromFormat('!Y-m-d', $datos['fecha']);
     if (!$fecha || $fecha->format('Y-m-d') !== $datos['fecha'] || $datos['fecha'] > date('Y-m-d')) {
         throw new InvalidArgumentException('La fecha del informe no es válida.');
@@ -65,15 +61,8 @@ function informe_historias(mysqli $bd, int $estudiante, string $fecha): array
     return $historias;
 }
 
-function informe_elegir_historia(mysqli $bd, array $historias, int $idHistoria, int $seguimiento, string $fecha): ?array
+function informe_elegir_historia(array $historias, int $idHistoria): ?array
 {
-    if ($seguimiento) {
-        $origen = flujo_fila($bd, 'SELECT cod_historia,fecha FROM seguimientos WHERE cod_seguimiento=?', [$seguimiento]);
-        if (!$origen || $origen['fecha'] > $fecha || ($idHistoria && $idHistoria !== (int)$origen['cod_historia'])) {
-            throw new InvalidArgumentException('El seguimiento no corresponde a la historia o a la fecha del informe.');
-        }
-        $idHistoria = (int)$origen['cod_historia'];
-    }
     if ($idHistoria) {
         foreach ($historias as $historia) if ((int)$historia['cod_historia'] === $idHistoria) return $historia;
         throw new InvalidArgumentException('La historia clínica no corresponde al estudiante o es posterior al informe.');
@@ -96,19 +85,12 @@ function informe_crear(mysqli $conexion, array $datos, int $idUsuario): string
         if (!$existe) throw new InvalidArgumentException('El estudiante no existe o no está activo.');
 
         $historias = informe_historias($conexion, $datos['cod_estudiante'], $datos['fecha']);
-        $historia = informe_elegir_historia($conexion, $historias, $datos['cod_historia'], (int)($datos['cod_seguimiento'] ?? 0), $datos['fecha']);
+        $historia = informe_elegir_historia($historias, $datos['cod_historia']);
         if (!$historia && count($historias) > 1) {
             throw new InvalidArgumentException('El estudiante tiene varias historias clínicas. Seleccione la historia de este informe.');
         }
         $idHistoria = (int)($historia['cod_historia'] ?? 0);
         $idDerivacion = (int)($historia['cod_derivacion_origen'] ?? 0);
-        $idSeguimiento = $datos['cod_seguimiento'] ?? null;
-        // Los registros antiguos solo se vinculan mediante seleccion explicita.
-        if ($idSeguimiento) {
-            $origen = flujo_fila($conexion,'SELECT s.*,COALESCE(s.cod_derivacion,c.cod_derivacion) cod_derivacion FROM seguimientos s LEFT JOIN citas c ON c.cod_cita=s.cod_cita WHERE s.cod_seguimiento=?',[$idSeguimiento]);
-            if (!$origen || (int)$origen['cod_historia'] !== $idHistoria || $origen['fecha'] > $datos['fecha']) throw new InvalidArgumentException('El seguimiento no corresponde a la historia o es posterior al informe.');
-            $idDerivacion = (int)($origen['cod_derivacion'] ?? $idDerivacion);
-        }
         if (!$historia) {
             $stmt = $conexion->prepare('SELECT cod_derivacion FROM derivaciones WHERE cod_estudiante = ? AND fecha<=? ORDER BY fecha DESC, cod_derivacion DESC LIMIT 1');
             $stmt->bind_param('is', $datos['cod_estudiante'],$datos['fecha']);
@@ -136,18 +118,17 @@ function informe_crear(mysqli $conexion, array $datos, int $idUsuario): string
 
         $idHistoriaDb = $idHistoria ?: null;
         $idDerivacionDb = $idDerivacion ?: null;
-        $idSeguimientoDb = $idSeguimiento ?: null;
         $stmt = $conexion->prepare('INSERT INTO informe_individual
-            (cod_informe,cod_estudiante,cod_historia,cod_derivacion,cod_seguimiento,numero_atenciones,referido_por,
+            (cod_informe,cod_estudiante,cod_historia,cod_derivacion,numero_atenciones,referido_por,
              tipo_atencion,motivo,diagnostico,aspecto_cognitivo,aspectos_afectivos,diagnostico_acuerdos,recibido_por)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
-        $stmt->bind_param('iiiiiissssssss', $idInforme, $datos['cod_estudiante'], $idHistoriaDb, $idDerivacionDb,
-            $idSeguimientoDb, $datos['numero_atenciones'], $datos['referido_por'], $tipoAtencion, $datos['motivo'],
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $stmt->bind_param('iiiiissssssss', $idInforme, $datos['cod_estudiante'], $idHistoriaDb, $idDerivacionDb,
+            $datos['numero_atenciones'], $datos['referido_por'], $tipoAtencion, $datos['motivo'],
             $datos['diagnostico'], $datos['aspecto_cognitivo'], $datos['aspectos_afectivos'],
             $datos['diagnostico_acuerdos'], $datos['recibido_por']);
         $stmt->execute();
         $stmt->close();
-        flujo_auditar($conexion,$idUsuario,'informes','Crear',$idInforme,'Historia #' . $idHistoria . '; seguimiento #' . ($idSeguimiento ?? 0));
+        flujo_auditar($conexion,$idUsuario,'informes','Crear',$idInforme,'Historia #' . $idHistoria);
         $conexion->commit();
         return $ficha;
     } catch (Throwable $error) {
@@ -161,7 +142,7 @@ function informe_actualizar(mysqli $conexion, int $idInforme, array $datos, ?int
     informe_validar($datos);
     $conexion->begin_transaction();
     try {
-        $stmt = $conexion->prepare('SELECT i.*,d.cod_estudiante,d.cod_historia,d.cod_derivacion,d.cod_seguimiento,d.numero_atenciones
+        $stmt = $conexion->prepare('SELECT i.*,d.cod_estudiante,d.cod_historia,d.cod_derivacion,d.cod_anexo_historico,d.numero_atenciones
             FROM informes i INNER JOIN informe_individual d ON d.cod_informe=i.cod_informe
             WHERE i.cod_informe = ? AND d.cod_estudiante = ? FOR UPDATE');
         $stmt->bind_param('ii', $idInforme, $datos['cod_estudiante']);
@@ -170,10 +151,9 @@ function informe_actualizar(mysqli $conexion, int $idInforme, array $datos, ?int
         $stmt->close();
         if (!$existe) throw new InvalidArgumentException('El informe no existe o no corresponde al estudiante.');
         $datos['numero_atenciones'] = (int)$existe['numero_atenciones'];
-        if (($datos['cod_seguimiento'] ?? null) !== null && (int)$datos['cod_seguimiento'] !== (int)$existe['cod_seguimiento']) throw new InvalidArgumentException('El seguimiento de origen no puede cambiarse.');
-        if ($existe['cod_seguimiento']) {
-            $seguimiento = flujo_fila($conexion,'SELECT fecha FROM seguimientos WHERE cod_seguimiento=?',[$existe['cod_seguimiento']]);
-            if ($seguimiento['fecha'] > $datos['fecha']) throw new InvalidArgumentException('El informe no puede ser anterior a su seguimiento.');
+        if ($existe['cod_anexo_historico']) {
+            $anexo = flujo_fila($conexion,'SELECT fecha FROM historia_anexos WHERE cod_anexo=?',[$existe['cod_anexo_historico']]);
+            if ($anexo['fecha'] > $datos['fecha']) throw new InvalidArgumentException('El informe no puede ser anterior a su anexo clínico histórico.');
         }
         $tipos = implode(', ', $datos['tipo_atencion']);
         $descripcion = $datos['motivo'];
@@ -209,20 +189,19 @@ function informe_total_atenciones(mysqli $bd, int $estudiante, string $hasta): i
     return (int)flujo_fila($bd,'SELECT COUNT(*) total FROM historias_clinicas h WHERE h.cod_estudiante=? AND h.fecha_apertura<=?',[$estudiante,$hasta])['total'];
 }
 
-function informe_antecedentes(mysqli $bd, int $estudiante, string $fecha, int $seguimiento = 0, int $historia = 0): array
+function informe_antecedentes(mysqli $bd, int $estudiante, string $fecha, int $historia = 0): array
 {
     $fecha=flujo_fecha($fecha);
     if ($fecha>date('Y-m-d')) throw new InvalidArgumentException('La fecha del informe no puede ser futura.');
     $historias = informe_historias($bd, $estudiante, $fecha);
-    $h = informe_elegir_historia($bd, $historias, $historia, $seguimiento, $fecha);
-    $s=$h && $seguimiento ? flujo_fila($bd,'SELECT s.*,COALESCE(s.cod_derivacion,c.cod_derivacion) episodio FROM seguimientos s LEFT JOIN citas c ON c.cod_cita=s.cod_cita WHERE s.cod_historia=? AND s.fecha<=? ORDER BY (s.cod_seguimiento=?) DESC,s.fecha DESC,s.cod_seguimiento DESC LIMIT 1',[$h['cod_historia'],$fecha,$seguimiento]) : null;
+    $h = informe_elegir_historia($historias, $historia);
     $d=flujo_fila($bd,"SELECT d.*,TRIM(CONCAT(COALESCE(d.autor_nombres,u.nombres,''),' ',COALESCE(d.autor_apellidos,u.apellidos,''))) docente_referente
         FROM derivaciones d LEFT JOIN docentes doc ON doc.cod_docente=d.cod_docente
         LEFT JOIN usuarios u ON u.cod_usuario=COALESCE(d.cod_usuario_autor,doc.cod_usuario)
-        WHERE d.cod_estudiante=? AND d.fecha<=? AND d.cod_derivacion=?",[$estudiante,$fecha,$s['episodio']??$h['cod_derivacion_origen']??0]);
+        WHERE d.cod_estudiante=? AND d.fecha<=? AND d.cod_derivacion=?",[$estudiante,$fecha,$h['cod_derivacion_origen']??0]);
     $historiaAlCorte = $h && substr($h['fecha_actualizacion']??'',0,10)<=$fecha;
     $derivacionAlCorte = $d && substr($d['fecha_actualizacion']??'',0,10)<=$fecha;
-    return ['cod_historia'=>(int)($h['cod_historia']??0),'cod_seguimiento'=>(int)($s['cod_seguimiento']??0),'cod_derivacion'=>(int)($d['cod_derivacion']??0),
+    return ['cod_historia'=>(int)($h['cod_historia']??0),'cod_derivacion'=>(int)($d['cod_derivacion']??0),
         'requiere_historia'=>!$h && count($historias)>1,
         'docente_referente'=>$d['docente_referente']??'', 'referido_por'=>$d?'Profesor':'Voluntario',
         'historias'=>array_map(static fn(array $fila): array => [
@@ -230,8 +209,8 @@ function informe_antecedentes(mysqli $bd, int $estudiante, string $fecha, int $s
             'estado'=>$fila['estado'], 'cod_derivacion'=>(int)($fila['cod_derivacion_origen'] ?? 0),
         ], $historias),
         'numero_atenciones'=>informe_total_atenciones($bd,$estudiante,$fecha), 'motivo'=>$derivacionAlCorte?$d['motivo']:($historiaAlCorte?$h['motivo_consulta']:''),
-        'diagnostico'=>$historiaAlCorte?($h['impresion_diagnostica']??''):'','recomendaciones'=>$s['recomendaciones']??'',
-        'limitacion'=>'Atención documentada = historia clínica, sin sumar ediciones ni seguimientos históricos. Los textos modificados después del corte se omiten en esta precarga; las versiones conservadas se consultan en Seguimiento individual. Estados y datos escolares actuales.'];
+        'diagnostico'=>$historiaAlCorte?($h['impresion_diagnostica']??''):'','recomendaciones'=>'',
+        'limitacion'=>'Atención documentada = historia clínica, sin sumar ediciones ni anexos históricos. Los textos modificados después del corte se omiten en esta precarga; las versiones conservadas se consultan en Seguimiento individual. Estados y datos escolares actuales.'];
 }
 
 function informe_mensual_crear(mysqli $bd, array $entrada, int $autor): int
@@ -252,7 +231,7 @@ function informe_mensual_crear(mysqli $bd, array $entrada, int $autor): int
         if (!$secuencia) throw new RuntimeException('Falta la secuencia de informes.');
         $numero=(int)$secuencia['ultimo']+1;
         flujo_ejecutar($bd,'UPDATE informes_secuencia SET ultimo=? WHERE cod_secuencia=1',[$numero]);
-        flujo_ejecutar($bd,"INSERT INTO informes(numero_ficha,cod_elaborado_por,tipo,titulo,fecha_inicio,fecha_fin,descripcion,estado) VALUES (?,?,'Mensual',?,?,?,?,'Finalizado')",['INF-'.str_pad((string)$numero,4,'0',STR_PAD_LEFT),$autor,'Informe mensual '.$mes,$inicio,$fin,'Atención documentada = historia clínica por fecha de atención; no incluye versiones ni seguimientos históricos. Estados y curso actuales al generar; totales conservados como instantánea.']);
+        flujo_ejecutar($bd,"INSERT INTO informes(numero_ficha,cod_elaborado_por,tipo,titulo,fecha_inicio,fecha_fin,descripcion,estado) VALUES (?,?,'Mensual',?,?,?,?,'Finalizado')",['INF-'.str_pad((string)$numero,4,'0',STR_PAD_LEFT),$autor,'Informe mensual '.$mes,$inicio,$fin,'Atención documentada = historia clínica por fecha de atención; no incluye versiones ni anexos históricos. Estados y curso actuales al generar; totales conservados como instantánea.']);
         $id=(int)$bd->insert_id;
         $dc=$datos['atencion']['derivaciones'];$cc=$datos['atencion']['citas'];
         flujo_ejecutar($bd,'INSERT INTO informe_resumen(cod_informe,total_estudiantes,total_derivaciones,derivaciones_pendientes,derivaciones_atendidas,total_citas,citas_atendidas,total_historias,total_sesiones,filtros_json) VALUES (?,?,?,?,?,?,?,?,?,?)',[$id,$datos['resumen']['con_sesiones'],array_sum($dc),$dc['Pendiente'],$dc['Atendido'],array_sum($cc),$cc['Atendida'],$datos['resumen']['historias'],$datos['resumen']['sesiones'],json_encode($snapshot,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR)]);

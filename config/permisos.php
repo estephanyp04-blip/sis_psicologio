@@ -62,11 +62,6 @@ $catalogo = [
     'derivaciones/eliminar.php' => $ruta('Derivaciones', 'puede_eliminar', $post),
     'derivaciones/cambiar_estado.php' => $ruta('Derivaciones', 'puede_cambiar_estado', $post),
 
-    // Compatibilidad con enlaces antiguos; los registros previos son solo de consulta.
-    'seguimientos/registrar.php' => $ruta('Historias clinicas', 'puede_crear', $get, false, false, null, $rolesBloqueadosDatosEstudiantiles),
-    'seguimientos/guardar.php' => $ruta('Historias clinicas', 'puede_crear', $post, false, false, null, $rolesBloqueadosDatosEstudiantiles),
-    'seguimientos/listar.php' => $ruta('Historias clinicas', 'puede_ver', $get, false, false, null, $rolesBloqueadosDatosEstudiantiles),
-    'seguimientos/ver.php' => $ruta('Historias clinicas', 'puede_ver', $get, false, false, null, $rolesBloqueadosDatosEstudiantiles),
 
     'citas/listar.php' => $ruta('Citas', 'puede_ver', $get),
     'citas/registrar.php' => $ruta('Citas', 'puede_crear', $get),
@@ -115,7 +110,6 @@ $rolesBase = [
     'derivaciones/listar.php' => [1, 2, 3], 'derivaciones/ver.php' => [1, 2, 3], 'derivaciones/evidencia.php' => [1, 2, 3],
     'derivaciones/mis_derivaciones.php' => [1, 2, 3], 'derivaciones/registrar.php' => [1, 3], 'derivaciones/editar.php' => [1, 3],
     'derivaciones/guardar.php' => [1, 3], 'derivaciones/actualizar.php' => [1, 3], 'derivaciones/eliminar.php' => [1, 3], 'derivaciones/cambiar_estado.php' => [1, 2],
-    'seguimientos/registrar.php' => [1, 2], 'seguimientos/guardar.php' => [1, 2], 'seguimientos/listar.php' => [1, 2], 'seguimientos/ver.php' => [1, 2],
     'citas/listar.php' => [1, 2], 'citas/registrar.php' => [1, 2], 'citas/editar.php' => [1, 2],
     'citas/procesar_registrar.php' => [1, 2], 'citas/procesar_editar.php' => [1, 2], 'citas/cancelar.php' => [1, 2],
     'historias_clinicas/listar.php' => [1, 2], 'historias_clinicas/ver.php' => [1, 2], 'historias_clinicas/registrar.php' => [1, 2],

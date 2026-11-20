@@ -4,7 +4,7 @@ Documento SGSI-01 · Versión y estado: [índice](README.md).
 
 ## Alcance propuesto
 
-Gestión, uso, mantenimiento y recuperación de la información tratada por la aplicación de seguimiento psicológico estudiantil: estudiantes, docentes, usuarios, roles, derivaciones, citas, historias clínicas, seguimientos, informes y estadísticas. Comprende PHP, MariaDB, Apache/XAMPP, configuración, repositorio, equipos autorizados, sesiones, registros, exportaciones y respaldos asociados, así como las personas que los administran y utilizan.
+Gestión, uso, mantenimiento y recuperación de la información tratada por la aplicación de seguimiento psicológico estudiantil: estudiantes, docentes, usuarios, roles, derivaciones, citas, historias clínicas, informes y estadísticas para el seguimiento psicológico. Comprende PHP, MariaDB, Apache/XAMPP, configuración, repositorio, equipos autorizados, sesiones, registros, exportaciones y respaldos asociados, así como las personas que los administran y utilizan.
 
 Ubicación técnica observada: `C:\xampp\htdocs\proyecto_vercionII`. Dirección debe identificar sede física, equipos, redes, ubicación de copias y eventual alojamiento remoto en GOV-01. El despliegue de producción no se ha identificado. La dirección local del proyecto no delimita por sí sola el alcance organizativo.
 

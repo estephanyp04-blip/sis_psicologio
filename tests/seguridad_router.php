@@ -128,7 +128,7 @@ if ($GLOBALS['prueba_negocio']) {
     $db->query("CREATE TEMPORARY TABLE citas (cod_cita INT PRIMARY KEY, cod_estudiante INT, fecha DATE, hora TIME, estado VARCHAR(20), observaciones TEXT, cod_derivacion INT NULL)");
     $db->query("INSERT INTO citas VALUES (1,1,CURDATE(),'09:00','Pendiente','Cita de prueba',NULL)");
     $db->query("CREATE TEMPORARY TABLE historias_clinicas (cod_historia INT PRIMARY KEY,cod_estudiante INT,cod_derivacion_origen INT,cod_cita_origen INT)");
-    $db->query("CREATE TEMPORARY TABLE seguimientos (cod_seguimiento INT PRIMARY KEY,cod_cita INT,cod_derivacion INT)");
+    $db->query("CREATE TEMPORARY TABLE historia_anexos (cod_anexo INT PRIMARY KEY,cod_cita INT,cod_derivacion INT)");
     $db->query("CREATE TEMPORARY TABLE informe_individual (cod_informe INT PRIMARY KEY,cod_derivacion INT)");
     register_shutdown_function(static function () use ($db): void {
         $estado = [

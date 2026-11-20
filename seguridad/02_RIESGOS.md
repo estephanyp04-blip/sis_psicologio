@@ -6,7 +6,7 @@ Documento SGSI-02 · Versión y estado: [índice](README.md).
 
 | ID | Activo / ubicación lógica | Clasificación | Propietario propuesto | Dependencias |
 |---|---|---|---|---|
-| A01 | Historias y seguimientos / MariaDB | Restringido clínico | Psicología | A03, A04, A05, A06 |
+| A01 | Historias, versiones y anexos históricos / MariaDB | Restringido clínico | Psicología | A03, A04, A05, A06 |
 | A02 | Identidades, familiares, derivaciones e informes / MariaDB y salidas | Restringido personal | Dirección y psicología | A03–A06 |
 | A03 | Cuentas, hashes, permisos y sesiones / BD, PHP y servidor | Restringido seguridad | Administración | A04, A05 |
 | A04 | Código, configuración, migraciones y dependencias / proyecto y Git | Interno; secretos restringidos | Administración | A05 |

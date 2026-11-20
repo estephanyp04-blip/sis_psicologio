@@ -25,7 +25,7 @@ function flujo_historias_cita(mysqli $bd, array $cita): array
     $stmt = $bd->prepare('SELECT h.cod_historia,h.fecha_apertura,h.estado,h.cod_derivacion_origen
         FROM historias_clinicas h WHERE h.cod_estudiante=? AND (
             h.cod_cita_origen=? OR h.cod_derivacion_origen=NULLIF(?,0)
-            OR EXISTS (SELECT 1 FROM seguimientos s WHERE s.cod_historia=h.cod_historia AND s.cod_cita=?)
+            OR EXISTS (SELECT 1 FROM historia_anexos s WHERE s.cod_historia=h.cod_historia AND s.cod_cita=?)
         ) ORDER BY h.fecha_apertura DESC,h.cod_historia DESC');
     $estudiante = (int)$cita['cod_estudiante'];
     $id = (int)$cita['cod_cita'];
@@ -94,20 +94,14 @@ function derivacion_cambiar_estado(mysqli $bd, int $id, string $estado, int $aut
         $transiciones = ['Pendiente' => ['En seguimiento'], 'En seguimiento' => ['Atendido'], 'Atendido' => ['En seguimiento']];
         if (!in_array($estado, $transiciones[$d['estado']] ?? [], true)) throw new InvalidArgumentException('La transición de estado no está permitida.');
         $historia = flujo_fila($bd, 'SELECT h.cod_historia FROM historias_clinicas h WHERE h.cod_estudiante=?
-            AND (h.cod_derivacion_origen=? OR EXISTS (SELECT 1 FROM seguimientos s
+            AND (h.cod_derivacion_origen=? OR EXISTS (SELECT 1 FROM historia_anexos s
                 LEFT JOIN citas c ON c.cod_cita=s.cod_cita WHERE s.cod_historia=h.cod_historia
                 AND COALESCE(s.cod_derivacion,c.cod_derivacion)=?)) LIMIT 1', [$d['cod_estudiante'],$id,$id]);
         if (!$historia) throw new InvalidArgumentException('Registre primero una historia clínica vinculada a esta derivación.');
-        // La historia vinculada documenta la atención. El archivo de seguimientos
+        // La historia vinculada documenta la atención. El archivo de anexos
         // solo resuelve relaciones históricas; no es requisito para cerrar casos nuevos.
         flujo_ejecutar($bd, 'UPDATE derivaciones SET estado=? WHERE cod_derivacion=?', [$estado,$id]);
         flujo_auditar($bd, $autor, 'derivaciones', 'Estado', $id, $d['estado'] . ' → ' . $estado);
         $bd->commit();
     } catch (Throwable $error) { $bd->rollback(); throw $error; }
-}
-
-/** Compatibilidad de llamadas antiguas: ninguna escritura ni cambio de estado. */
-function seguimiento_guardar(mysqli $bd, array $entrada, int $autor): int
-{
-    throw new InvalidArgumentException('El registro independiente fue retirado. Registre la atención en la historia clínica.');
 }

@@ -14,6 +14,8 @@ function clinica_filtros(array $entrada): array
     }
     $f = ['desde' => $desde, 'hasta' => $hasta];
     foreach (['curso', 'paralelo', 'estudiante'] as $campo) $f[$campo] = flujo_id($entrada[$campo] ?? 0, true);
+    $f['gestion'] = flujo_id($entrada['gestion'] ?? 0, true);
+    if ($f['gestion'] && ($f['gestion'] < 1900 || $f['gestion'] > (int)date('Y'))) throw new InvalidArgumentException('Seleccione una gestión válida hasta el año actual.');
     $f['estado'] = $entrada['estado'] ?? '';
     if (!in_array($f['estado'], ['', 'Activa', 'En seguimiento', 'Cerrada'], true)) throw new InvalidArgumentException('Estado de historia no válido.');
     return $f;
@@ -28,11 +30,12 @@ function clinica_consultar(mysqli $bd, string $sql, array $valores = []): array
 }
 
 /** Una sola inscripción actual por estudiante; no duplica historias al cambiar de curso. */
-function clinica_relacion_academica(): string
+function clinica_relacion_academica(int $gestion = 0): string
 {
     return "LEFT JOIN historial_academico ia ON ia.cod_historial_academico=(
         SELECT i.cod_historial_academico FROM historial_academico i JOIN secciones s ON s.cod_seccion=i.cod_seccion
-        WHERE i.cod_estudiante=e.cod_estudiante ORDER BY s.gestion DESC,i.fecha_inicio DESC,i.cod_historial_academico DESC LIMIT 1)
+        WHERE i.cod_estudiante=e.cod_estudiante AND ($gestion=0 OR s.gestion=$gestion)
+        ORDER BY s.gestion DESC,i.fecha_inicio DESC,i.cod_historial_academico DESC LIMIT 1)
         LEFT JOIN secciones se ON se.cod_seccion=ia.cod_seccion
         LEFT JOIN cursos c ON c.cod_curso=se.cod_curso LEFT JOIN paralelos p ON p.cod_paralelo=se.cod_paralelo";
 }
@@ -42,6 +45,7 @@ function clinica_catalogos(mysqli $bd): array
     return [
         'cursos' => clinica_consultar($bd, 'SELECT cod_curso,nombre FROM cursos ORDER BY orden,nombre'),
         'paralelos' => clinica_consultar($bd, 'SELECT cod_paralelo,nombre FROM paralelos ORDER BY nombre'),
+        'gestiones' => clinica_consultar($bd, 'SELECT YEAR(fecha_apertura) gestion FROM historias_clinicas UNION SELECT gestion FROM secciones ORDER BY gestion DESC'),
         'grupos' => clinica_consultar($bd, 'SELECT codigo,nombre FROM grupos_opciones_historia ORDER BY cod_grupo'),
     ];
 }
@@ -49,7 +53,7 @@ function clinica_catalogos(mysqli $bd): array
 function clinica_estudiantes(mysqli $bd, array $f): array
 {
     return clinica_consultar($bd, 'SELECT e.cod_estudiante,e.nombres,e.apellidos,c.nombre curso,p.nombre paralelo
-        FROM estudiantes e ' . clinica_relacion_academica() . '
+        FROM estudiantes e ' . clinica_relacion_academica($f['gestion']) . '
         WHERE EXISTS (SELECT 1 FROM historias_clinicas h WHERE h.cod_estudiante=e.cod_estudiante)
         AND (?=0 OR se.cod_curso=?) AND (?=0 OR se.cod_paralelo=?) ORDER BY e.apellidos,e.nombres,e.cod_estudiante',
         [$f['curso'], $f['curso'], $f['paralelo'], $f['paralelo']]);
@@ -71,7 +75,10 @@ function clinica_historias(mysqli $bd, array $f, bool $versiones = false): array
         $where .= " AND (?='' OR h.fecha_apertura>=?) AND h.fecha_apertura<=? AND (?='' OR h.estado=?)";
         array_push($valores, $f['desde'], $f['desde'], $f['hasta'], $f['estado'], $f['estado']);
     }
-    $join = 'FROM historias_clinicas h JOIN estudiantes e ON e.cod_estudiante=h.cod_estudiante ' . clinica_relacion_academica();
+    if (!$versiones && $f['gestion']) {
+        $where .= ' AND YEAR(h.fecha_apertura)=?'; $valores[] = $f['gestion'];
+    }
+    $join = 'FROM historias_clinicas h JOIN estudiantes e ON e.cod_estudiante=h.cod_estudiante ' . clinica_relacion_academica($f['gestion']);
     $bd->begin_transaction(MYSQLI_TRANS_START_READ_ONLY | MYSQLI_TRANS_START_WITH_CONSISTENT_SNAPSHOT);
     try {
         $filas = clinica_consultar($bd, "SELECT h.*,c.nombre curso,p.nombre paralelo,
@@ -140,6 +147,7 @@ function clinica_registros(array $historias, array $f): array
         foreach ($candidatos as $r) {
             $fecha = $r['datos']['fecha_apertura'] ?? '';
             if ($fecha === '' || ($f['desde'] !== '' && $fecha < $f['desde']) || $fecha > $f['hasta']
+                || ($f['gestion'] && (int)substr($fecha,0,4) !== $f['gestion'])
                 || ($f['estado'] !== '' && ($r['datos']['estado'] ?? '') !== $f['estado'])) continue;
             $registros[$r['clave']] = $r;
         }
@@ -237,9 +245,10 @@ function clinica_atencion_estados(mysqli $bd, array $f): array
         'citas'=>['Pendiente'=>0, 'Reprogramada'=>0, 'Atendida'=>0, 'Cancelada'=>0]];
     foreach (array_keys($resultado) as $tabla) {
         $filas = clinica_consultar($bd, "SELECT x.estado,COUNT(*) total FROM `$tabla` x
-            JOIN estudiantes e ON e.cod_estudiante=x.cod_estudiante " . clinica_relacion_academica() . "
-            WHERE (?='' OR x.fecha>=?) AND x.fecha<=? AND (?=0 OR se.cod_curso=?) AND (?=0 OR se.cod_paralelo=?) GROUP BY x.estado",
-            [$f['desde'],$f['desde'],$f['hasta'],$f['curso'],$f['curso'],$f['paralelo'],$f['paralelo']]);
+            JOIN estudiantes e ON e.cod_estudiante=x.cod_estudiante " . clinica_relacion_academica($f['gestion']) . "
+            WHERE (?='' OR x.fecha>=?) AND x.fecha<=? AND (?=0 OR se.cod_curso=?) AND (?=0 OR se.cod_paralelo=?)
+            AND (?=0 OR YEAR(x.fecha)=?) GROUP BY x.estado",
+            [$f['desde'],$f['desde'],$f['hasta'],$f['curso'],$f['curso'],$f['paralelo'],$f['paralelo'],$f['gestion'],$f['gestion']]);
         foreach ($filas as $fila) $resultado[$tabla][$fila['estado']] = (int)$fila['total'];
     }
     return $resultado;

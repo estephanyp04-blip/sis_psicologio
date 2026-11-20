@@ -35,8 +35,8 @@ try {
     }
     // Código, bibliotecas y recursos de ejecución. Nunca recorrer .git ni backups.
     $raiz = dirname(__DIR__);
-    $directorios = ['asset','config','includes','citas','derivaciones','docentes','estadisticas','estudiantes','historias_clinicas','informes','roles','seguimientos','usuarios','herramientas','database/migrations','database/migrations_normalizadas'];
-    $codigo = array_merge(glob($raiz.'/*.php'), [$raiz.'/.htaccess',$raiz.'/.user.ini',$raiz.'/database/migrar.php',$raiz.'/database/psicologia_db.sql']);
+    $directorios = ['asset','config','includes','citas','derivaciones','docentes','estadisticas','estudiantes','historias_clinicas','informes','roles','usuarios','herramientas','database/migrations','database/migrations_normalizadas'];
+    $codigo = array_merge(glob($raiz.'/*.php'), [$raiz.'/.htaccess',$raiz.'/.user.ini',$raiz.'/database/migrar.php',$raiz.'/database/retiro_lib.php',$raiz.'/database/psicologia_db.sql']);
     foreach ($directorios as $dir) {
         foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($raiz.'/'.$dir,FilesystemIterator::SKIP_DOTS)) as $archivo) {
             if (!$archivo->isFile() || $archivo->isLink() || str_starts_with($archivo->getBasename(),'evidencia_')) continue;

@@ -35,8 +35,8 @@ try {
     <link rel="apple-touch-icon" sizes="180x180" href="<?= login_html(login_url('asset/img/apple-touch-icon.png?v=2')) ?>">
     <meta name="theme-color" content="#0f172a">
     <link href="<?= login_html(login_url('asset/css/login.css?v=' . filemtime(__DIR__ . '/asset/css/login.css'))) ?>" rel="stylesheet">
-    <link href="<?= login_html(login_url('asset/css/avisos.css?v=1')) ?>" rel="stylesheet">
-    <script src="<?= login_html(login_url('asset/js/avisos.js?v=1')) ?>" defer></script>
+    <link href="<?= login_html(login_url('asset/css/avisos.css?v=2')) ?>" rel="stylesheet">
+    <script src="<?= login_html(login_url('asset/js/avisos.js?v=2')) ?>" defer></script>
 </head>
 <body class="login-page" data-ui-login="<?= login_html(login_url('login.php')) ?>">
 <main class="login-card" aria-labelledby="titulo-login">

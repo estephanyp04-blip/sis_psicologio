@@ -32,7 +32,7 @@ try {
     $stmt = $conexion->prepare("DELETE FROM derivaciones WHERE cod_derivacion=? AND estado='Pendiente'
         AND NOT EXISTS (SELECT 1 FROM citas c WHERE c.cod_derivacion=derivaciones.cod_derivacion)
         AND NOT EXISTS (SELECT 1 FROM historias_clinicas h WHERE h.cod_derivacion_origen=derivaciones.cod_derivacion)
-        AND NOT EXISTS (SELECT 1 FROM seguimientos s WHERE s.cod_derivacion=derivaciones.cod_derivacion)
+        AND NOT EXISTS (SELECT 1 FROM historia_anexos s WHERE s.cod_derivacion=derivaciones.cod_derivacion)
         AND NOT EXISTS (SELECT 1 FROM informe_individual i WHERE i.cod_derivacion=derivaciones.cod_derivacion)");
     $stmt->bind_param('i',$idDerivacion);$stmt->execute();$eliminadas=$stmt->affected_rows;$stmt->close();
     if ($eliminadas===1) seguridad_evento($conexion,(int)$_SESSION['cod_usuario'],'derivaciones','Eliminar',$idDerivacion);

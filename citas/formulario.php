@@ -109,8 +109,8 @@ include __DIR__ . '/../includes/header.php'; include __DIR__ . '/../includes/sid
 <?php if (login_puede('historias_clinicas/registrar.php')): ?>
 <a class="btn btn-primary" href="../historias_clinicas/registrar.php?cod_cita=<?= $id ?>">Registrar sesión: historia clínica de esta cita</a>
 <?php endif; ?>
-<?php if (login_puede('seguimientos/listar.php')): ?>
-<a class="btn btn-outline-primary" href="../seguimientos/listar.php?estudiante=<?= (int)$cita['cod_estudiante'] ?>">Ver avance del estudiante</a>
+<?php if (login_puede('estadisticas/individual.php')): ?>
+<a class="btn btn-outline-primary" href="../estadisticas/individual.php?estudiante=<?= (int)$cita['cod_estudiante'] ?>">Ver avance del estudiante</a>
 <?php endif; ?>
 </div>
 <?php endif; endif; ?>

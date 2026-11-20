@@ -9,10 +9,11 @@ return static function (mysqli $bd): array {
         $plan[] = 'ALTER TABLE derivaciones ADD cod_usuario_autor INT UNSIGNED NULL, ADD autor_nombres VARCHAR(80) NULL, ADD autor_apellidos VARCHAR(80) NULL, ADD CONSTRAINT fk_derivacion_autor FOREIGN KEY (cod_usuario_autor) REFERENCES usuarios(cod_usuario)';
     }
     if (!$aplicada) $plan[] = 'UPDATE derivaciones d JOIN docentes doc ON doc.cod_docente=d.cod_docente JOIN usuarios u ON u.cod_usuario=doc.cod_usuario SET d.cod_usuario_autor=u.cod_usuario,d.autor_nombres=u.nombres,d.autor_apellidos=u.apellidos,d.fecha_actualizacion=d.fecha_actualizacion WHERE d.cod_usuario_autor IS NULL';
-    if (!in_array('cod_derivacion', $campos('seguimientos'), true)) {
+    $tieneArchivoAnterior = (bool)$bd->query("SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='seguimientos'")->num_rows;
+    if ($tieneArchivoAnterior && !in_array('cod_derivacion', $campos('seguimientos'), true)) {
         $plan[] = 'ALTER TABLE seguimientos ADD cod_derivacion INT UNSIGNED NULL, ADD cod_proxima_cita INT UNSIGNED NULL, ADD CONSTRAINT fk_seguimiento_episodio FOREIGN KEY(cod_derivacion) REFERENCES derivaciones(cod_derivacion), ADD CONSTRAINT fk_seguimiento_proxima FOREIGN KEY(cod_proxima_cita) REFERENCES citas(cod_cita)';
     }
-    if (!$aplicada) $plan[] = 'UPDATE seguimientos s JOIN historias_clinicas h ON h.cod_historia=s.cod_historia LEFT JOIN citas c ON c.cod_cita=s.cod_cita SET s.cod_derivacion=COALESCE(c.cod_derivacion,h.cod_derivacion_origen) WHERE s.cod_derivacion IS NULL';
+    if (!$aplicada && $tieneArchivoAnterior) $plan[] = 'UPDATE seguimientos s JOIN historias_clinicas h ON h.cod_historia=s.cod_historia LEFT JOIN citas c ON c.cod_cita=s.cod_cita SET s.cod_derivacion=COALESCE(c.cod_derivacion,h.cod_derivacion_origen) WHERE s.cod_derivacion IS NULL';
     if (!in_array('motivo_cierre', $campos('historias_clinicas'), true)) {
         $plan[] = 'ALTER TABLE historias_clinicas ADD motivo_cierre TEXT NULL';
     }

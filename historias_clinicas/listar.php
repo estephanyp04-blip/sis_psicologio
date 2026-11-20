@@ -322,8 +322,8 @@ include '../includes/navbar.php';
                                                 <i class="bi bi-plus-circle"></i><span>Nueva sesión</span>
                                             </a>
                                         <?php endif; ?>
-                                        <?php if (login_puede('seguimientos/listar.php')): ?>
-                                            <a class="btn-accion" href="../seguimientos/listar.php?estudiante=<?= (int)$historia['cod_estudiante'] ?>"><i class="bi bi-bar-chart"></i><span>Ver avance</span></a>
+                                        <?php if (login_puede('estadisticas/individual.php')): ?>
+                                            <a class="btn-accion" href="../estadisticas/individual.php?estudiante=<?= (int)$historia['cod_estudiante'] ?>"><i class="bi bi-bar-chart"></i><span>Ver avance</span></a>
                                         <?php endif; ?>
                                         <a
                                             class="btn-accion"

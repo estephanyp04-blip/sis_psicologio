@@ -288,7 +288,7 @@ CREATE TABLE `informe_individual` (
   `cod_estudiante` int(10) unsigned NOT NULL,
   `cod_historia` int(10) unsigned DEFAULT NULL,
   `cod_derivacion` int(10) unsigned DEFAULT NULL,
-  `cod_seguimiento` int(10) unsigned DEFAULT NULL,
+  `cod_anexo_historico` int(10) unsigned DEFAULT NULL,
   `numero_atenciones` int(10) unsigned NOT NULL DEFAULT 0,
   `referido_por` varchar(150) DEFAULT NULL,
   `tipo_atencion` text DEFAULT NULL,
@@ -302,12 +302,12 @@ CREATE TABLE `informe_individual` (
   KEY `idx_informe_individual_estudiante` (`cod_estudiante`),
   KEY `fk_informe_individual_historia` (`cod_historia`),
   KEY `fk_informe_individual_derivacion` (`cod_derivacion`),
-  KEY `fk_informe_individual_seguimiento` (`cod_seguimiento`),
+  KEY `fk_informe_anexo` (`cod_anexo_historico`),
   CONSTRAINT `fk_informe_individual_derivacion` FOREIGN KEY (`cod_derivacion`) REFERENCES `derivaciones` (`cod_derivacion`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_informe_individual_estudiante` FOREIGN KEY (`cod_estudiante`) REFERENCES `estudiantes` (`cod_estudiante`) ON UPDATE CASCADE,
   CONSTRAINT `fk_informe_individual_historia` FOREIGN KEY (`cod_historia`) REFERENCES `historias_clinicas` (`cod_historia`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_informe_individual_informe` FOREIGN KEY (`cod_informe`) REFERENCES `informes` (`cod_informe`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_informe_individual_seguimiento` FOREIGN KEY (`cod_seguimiento`) REFERENCES `seguimientos` (`cod_seguimiento`) ON DELETE SET NULL ON UPDATE CASCADE
+  CONSTRAINT `fk_informe_anexo` FOREIGN KEY (`cod_anexo_historico`) REFERENCES `historia_anexos` (`cod_anexo`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `informe_resumen`;
@@ -379,7 +379,7 @@ CREATE TABLE `modulos` (
   UNIQUE KEY `uk_modulos_nombre` (`nombre`)
 ) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `modulos` VALUES (1,'Dashboard','/index.php','bi-speedometer2',1,'Activo'),(2,'Estudiantes','/estudiantes/listar.php','bi-people-fill',2,'Activo'),(3,'Derivaciones','/derivaciones/listar.php','bi-send',3,'Activo'),(4,'Citas','/citas/listar.php','bi-calendar-check',4,'Activo'),(5,'Historias clinicas','/historias_clinicas/listar.php','bi-folder2-open',5,'Activo'),(6,'Informes','/informes/listar.php','bi-file-earmark-bar-graph',6,'Activo'),(7,'Usuarios','/usuarios/listar.php','bi-person-gear',7,'Activo'),(8,'Roles y permisos','/roles/listar.php','bi-shield-lock',8,'Activo'),(9,'Docentes','/docentes/listar.php','bi-person-badge-fill',9,'Activo'),(10,'Seguimientos','/seguimientos/listar.php','bi-journal-medical',10,'Activo'),(11,'Estadísticas','/estadisticas/index.php','bi-bar-chart-line-fill',11,'Activo');
+INSERT INTO `modulos` VALUES (1,'Dashboard','/index.php','bi-speedometer2',1,'Activo'),(2,'Estudiantes','/estudiantes/listar.php','bi-people-fill',2,'Activo'),(3,'Derivaciones','/derivaciones/listar.php','bi-send',3,'Activo'),(4,'Citas','/citas/listar.php','bi-calendar-check',4,'Activo'),(5,'Historias clinicas','/historias_clinicas/listar.php','bi-folder2-open',5,'Activo'),(6,'Informes','/informes/listar.php','bi-file-earmark-bar-graph',6,'Activo'),(7,'Usuarios','/usuarios/listar.php','bi-person-gear',7,'Activo'),(8,'Roles y permisos','/roles/listar.php','bi-shield-lock',8,'Activo'),(9,'Docentes','/docentes/listar.php','bi-person-badge-fill',9,'Activo'),(11,'Estadísticas','/estadisticas/index.php','bi-bar-chart-line-fill',11,'Activo');
 
 DROP TABLE IF EXISTS `opciones_historia`;
 CREATE TABLE `opciones_historia` (
@@ -422,7 +422,7 @@ CREATE TABLE `permisos` (
   CONSTRAINT `fk_permisos_roles` FOREIGN KEY (`cod_rol`) REFERENCES `roles` (`cod_rol`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `permisos` VALUES (1,1,1,1,1,1,1,0),(2,1,2,1,1,1,1,1),(3,1,3,1,1,1,1,1),(4,1,4,1,1,1,1,1),(5,1,5,1,1,1,1,0),(6,1,6,1,1,1,1,0),(7,1,7,1,1,1,1,1),(8,1,8,1,1,1,1,0),(9,2,1,1,0,0,0,0),(10,2,2,1,1,1,0,1),(11,2,3,1,0,0,0,1),(12,2,4,1,1,1,0,1),(13,2,5,1,1,1,0,0),(14,2,6,1,1,1,0,0),(15,3,1,0,0,0,0,0),(16,3,2,0,0,0,0,0),(17,3,3,1,1,1,1,0),(18,4,1,0,0,0,0,0),(19,4,6,1,0,0,0,0),(20,1,9,1,1,1,1,0),(21,1,10,1,1,1,1,0),(22,1,11,1,1,1,1,0),(23,2,10,1,1,1,0,0),(24,2,11,1,0,0,0,0);
+INSERT INTO `permisos` VALUES (1,1,1,1,1,1,1,0),(2,1,2,1,1,1,1,1),(3,1,3,1,1,1,1,1),(4,1,4,1,1,1,1,1),(5,1,5,1,1,1,1,0),(6,1,6,1,1,1,1,0),(7,1,7,1,1,1,1,1),(8,1,8,1,1,1,1,0),(9,2,1,1,0,0,0,0),(10,2,2,1,1,1,0,1),(11,2,3,1,0,0,0,1),(12,2,4,1,1,1,0,1),(13,2,5,1,1,1,0,0),(14,2,6,1,1,1,0,0),(15,3,1,0,0,0,0,0),(16,3,2,0,0,0,0,0),(17,3,3,1,1,1,1,0),(18,4,1,0,0,0,0,0),(19,4,6,1,0,0,0,0),(20,1,9,1,1,1,1,0),(22,1,11,1,1,1,1,0),(24,2,11,1,0,0,0,0);
 
 DROP TABLE IF EXISTS `responsables`;
 CREATE TABLE `responsables` (
@@ -445,7 +445,7 @@ CREATE TABLE `roles` (
   UNIQUE KEY `uk_roles_nombre` (`nombre`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `roles` VALUES (1,'Administrador','Acceso total al sistema','Activo','2026-10-06 05:12:57'),(2,'Psicóloga','Gestiona derivaciones, citas, historias clínicas, seguimientos e informes','Activo','2026-10-06 05:12:57'),(3,'Docente','Consulta estudiantes y registra derivaciones','Activo','2026-10-06 05:12:57'),(4,'Director','Consulta informes y estadísticas autorizadas','Activo','2026-10-06 05:12:57');
+INSERT INTO `roles` VALUES (1,'Administrador','Acceso total al sistema','Activo','2026-10-06 05:12:57'),(2,'Psicóloga','Gestiona derivaciones, citas, historias clínicas, estadísticas e informes','Activo','2026-10-06 05:12:57'),(3,'Docente','Consulta estudiantes y registra derivaciones','Activo','2026-10-06 05:12:57'),(4,'Director','Consulta informes y estadísticas autorizadas','Activo','2026-10-06 05:12:57');
 
 DROP TABLE IF EXISTS `secciones`;
 CREATE TABLE `secciones` (
@@ -465,13 +465,13 @@ CREATE TABLE `secciones` (
 
 INSERT INTO `secciones` VALUES (1,1,1,'Mañana',2026,'Activo'),(2,1,1,'Tarde',2026,'Activo'),(3,1,2,'Mañana',2026,'Activo'),(4,1,2,'Tarde',2026,'Activo'),(5,1,3,'Mañana',2026,'Activo'),(6,1,3,'Tarde',2026,'Activo'),(7,1,4,'Mañana',2026,'Activo'),(8,1,4,'Tarde',2026,'Activo'),(9,2,1,'Mañana',2026,'Activo'),(10,2,1,'Tarde',2026,'Activo'),(11,2,2,'Mañana',2026,'Activo'),(12,2,2,'Tarde',2026,'Activo'),(13,2,3,'Mañana',2026,'Activo'),(14,2,3,'Tarde',2026,'Activo'),(15,2,4,'Mañana',2026,'Activo'),(16,2,4,'Tarde',2026,'Activo'),(17,3,1,'Mañana',2026,'Activo'),(18,3,1,'Tarde',2026,'Activo'),(19,3,2,'Mañana',2026,'Activo'),(20,3,2,'Tarde',2026,'Activo'),(21,3,3,'Mañana',2026,'Activo'),(22,3,3,'Tarde',2026,'Activo'),(23,3,4,'Mañana',2026,'Activo'),(24,3,4,'Tarde',2026,'Activo'),(25,4,1,'Mañana',2026,'Activo'),(26,4,1,'Tarde',2026,'Activo'),(27,4,2,'Mañana',2026,'Activo'),(28,4,2,'Tarde',2026,'Activo'),(29,4,3,'Mañana',2026,'Activo'),(30,4,3,'Tarde',2026,'Activo'),(31,4,4,'Mañana',2026,'Activo'),(32,4,4,'Tarde',2026,'Activo'),(33,5,1,'Mañana',2026,'Activo'),(34,5,1,'Tarde',2026,'Activo'),(35,5,2,'Mañana',2026,'Activo'),(36,5,2,'Tarde',2026,'Activo'),(37,5,3,'Mañana',2026,'Activo'),(38,5,3,'Tarde',2026,'Activo'),(39,5,4,'Mañana',2026,'Activo'),(40,5,4,'Tarde',2026,'Activo'),(41,6,1,'Mañana',2026,'Activo'),(42,6,1,'Tarde',2026,'Activo'),(43,6,2,'Mañana',2026,'Activo'),(44,6,2,'Tarde',2026,'Activo'),(45,6,3,'Mañana',2026,'Activo'),(46,6,3,'Tarde',2026,'Activo'),(47,6,4,'Mañana',2026,'Activo'),(48,6,4,'Tarde',2026,'Activo');
 
-DROP TABLE IF EXISTS `seguimientos`;
-CREATE TABLE `seguimientos` (
+DROP TABLE IF EXISTS `historia_anexos`;
+CREATE TABLE `historia_anexos` (
   `cod_derivacion` int(10) unsigned DEFAULT NULL,
   `cod_proxima_cita` int(10) unsigned DEFAULT NULL,
-  CONSTRAINT `fk_seguimiento_episodio` FOREIGN KEY (`cod_derivacion`) REFERENCES `derivaciones` (`cod_derivacion`),
-  CONSTRAINT `fk_seguimiento_proxima` FOREIGN KEY (`cod_proxima_cita`) REFERENCES `citas` (`cod_cita`),
-  `cod_seguimiento` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  CONSTRAINT `fk_anexo_episodio` FOREIGN KEY (`cod_derivacion`) REFERENCES `derivaciones` (`cod_derivacion`),
+  CONSTRAINT `fk_anexo_proxima` FOREIGN KEY (`cod_proxima_cita`) REFERENCES `citas` (`cod_cita`),
+  `cod_anexo` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `cod_historia` int(10) unsigned NOT NULL,
   `cod_psicologa` int(10) unsigned NOT NULL,
   `cod_cita` int(10) unsigned DEFAULT NULL,
@@ -482,13 +482,13 @@ CREATE TABLE `seguimientos` (
   `recomendaciones` text DEFAULT NULL,
   `proxima_sesion` date DEFAULT NULL,
   `fecha_registro` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`cod_seguimiento`),
-  KEY `idx_seguimientos_historia` (`cod_historia`,`fecha`),
-  KEY `idx_seguimientos_psicologa` (`cod_psicologa`),
-  KEY `idx_seguimientos_cita` (`cod_cita`),
-  CONSTRAINT `fk_seguimientos_citas` FOREIGN KEY (`cod_cita`) REFERENCES `citas` (`cod_cita`) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT `fk_seguimientos_historias` FOREIGN KEY (`cod_historia`) REFERENCES `historias_clinicas` (`cod_historia`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_seguimientos_psicologa` FOREIGN KEY (`cod_psicologa`) REFERENCES `usuarios` (`cod_usuario`) ON UPDATE CASCADE
+  PRIMARY KEY (`cod_anexo`),
+  KEY `idx_historia_anexos_historia` (`cod_historia`,`fecha`),
+  KEY `idx_historia_anexos_psicologa` (`cod_psicologa`),
+  KEY `idx_historia_anexos_cita` (`cod_cita`),
+  CONSTRAINT `fk_historia_anexos_citas` FOREIGN KEY (`cod_cita`) REFERENCES `citas` (`cod_cita`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_historia_anexos_historias` FOREIGN KEY (`cod_historia`) REFERENCES `historias_clinicas` (`cod_historia`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_historia_anexos_psicologa` FOREIGN KEY (`cod_psicologa`) REFERENCES `usuarios` (`cod_usuario`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 DROP TABLE IF EXISTS `usuarios`;

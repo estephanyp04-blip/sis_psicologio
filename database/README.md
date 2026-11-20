@@ -1,11 +1,28 @@
 # Base de datos e instalación
 
-## Seguimiento vigente desde el 19/11/2026
+## Retiro definitivo del módulo independiente (20/11/2026)
 
-El seguimiento individual consulta `historias_clinicas` y `historia_versiones` en Estadísticas y análisis. `seguimientos` queda como archivo de lectura, conservando filas y relaciones con informes/citas. Estadísticas, panel y nuevos informes cuentan historias por `fecha_apertura`, sin sumar sus versiones. Los mensuales nuevos incluyen `version_semantica=2` en el JSON existente; no se reescriben resúmenes anteriores. [Definiciones y modelo lógico](../documentacion/SEGUIMIENTO_PSICOLOGICO_2026-11-19.md).
+El seguimiento psicológico se consulta en Estadísticas a partir de `historias_clinicas` y `historia_versiones`. La migración **017_retirar_seguimientos** transforma `seguimientos` en `historia_anexos`, conserva todas las filas y columnas y renombra su identificador a `cod_anexo`. La relación anterior de informes pasa a `informe_individual.cod_anexo_historico`. No convierte notas en historias, versiones ni diagnósticos. Los anexos solo se leen dentro de la historia; no tienen rutas ni formularios propios.
 
-Esta entrega no añade columnas ni tablas y requiere la ampliación 016. En la base local se aplicó el 19/11/2026 después de respaldo cifrado, con cero pendientes al verificar. En otra instalación, comprobar su estado. No se reconstruyen estados clínicos no conservados ni se copian notas antiguas a campos con significados distintos.
+El ejecutor exige mantenimiento y un respaldo cifrado íntegro de esta base, creado en las últimas 24 horas. Verifica huellas de valores y relaciones antes/después e integridad de las claves foráneas. El planificador bloquea dependencias SQL adicionales en vistas, rutinas, triggers, eventos o claves foráneas. El DDL de MariaDB no es transaccional: se puede replanificar tras una interrupción y se mantiene mantenimiento hasta verificar el resultado.
 
+Procedimiento para una base normalizada existente (rutas externas de ejemplo, carpetas previamente creadas):
+
+```powershell
+New-Item -ItemType File .mantenimiento
+& C:\xampp\php\php.exe -d extension=sodium herramientas\clave_respaldo.php --destino=C:/privado/claves/respaldo.key
+& C:\xampp\php\php.exe -d extension=sodium herramientas\respaldar.php --base=psicologia_db --destino=C:/privado/copias --clave=C:/privado/claves/respaldo.key
+# Restaurar y validar la copia con herramientas/restaurar_prueba.php en un destino aislado.
+& C:\xampp\php\php.exe database\migrar.php --base=psicologia_db --comprobar
+& C:\xampp\php\php.exe -d extension=sodium database\migrar.php --base=psicologia_db --aplicar --respaldo=C:/privado/copias/CARPETA_GENERADA --clave=C:/privado/claves/respaldo.key
+& C:\xampp\php\php.exe database\migrar.php --base=psicologia_db --comprobar
+# Retirar .mantenimiento únicamente después de comprobar cero pendientes y conservación.
+Remove-Item -LiteralPath .mantenimiento
+```
+
+No usar `--instalar` sobre datos existentes. En instalaciones nuevas, el SQL ya incluye el archivo clínico integrado y excluye el módulo y sus permisos. La migración 006 dejó de recrearlos y 013 reconoce la ausencia de la tabla retirada.
+
+Estado local: 017 aplicada, cero filas históricas y un detalle de informe conservados, 45 claves sin huérfanos, tres vistas mantenidas y cero pendientes. Se compararon con la restauración cifrada historias, versiones, anexos, cabeceras y detalle de informes por huellas, sin exponer contenido clínico. [Informe y modelo](../documentacion/RETIRO_SEGUIMIENTOS_2026-11-20.md).
 ## Esquema actual
 
 El archivo [psicologia_db.sql](psicologia_db.sql) contiene el esquema final que usa la aplicación:

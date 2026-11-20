@@ -1,5 +1,31 @@
 # Pruebas de integración, acceso y CSRF
 
+Los auxiliares con nombres repetidos entre suites usan el prefijo `prueba_<suite>_` para evitar declaraciones duplicadas y firmas ambiguas en el editor. La prueba de avisos reutiliza `login_html()` de la aplicación; incluir su definición no abre una conexión a la base de datos. Las comprobaciones de formularios validan `DOMElement` antes de acceder a sus atributos y los clientes HTTP verifican que existan cabeceras de respuesta.
+
+## Resultados vigentes del retiro definitivo — 20/11/2026
+
+La carpeta y rutas de Seguimientos se eliminaron. El archivo anterior ahora está integrado en `historia_anexos`. La suite `retirar_seguimientos.php` reconstruye una base heredada ficticia y verifica conservación exacta, dependencias de vistas/rutinas/triggers/eventos/FK, columnas adicionales, vínculos de informes, reanudación e idempotencia. No modifica datos reales.
+
+```powershell
+& C:\xampp\php\php.exe tests\retirar_seguimientos.php
+& C:\xampp\php\php.exe tests\seguimiento_clinico.php --navegador
+& C:\xampp\php\php.exe tests\seguridad.php
+& C:\xampp\php\php.exe tests\fases.php
+& C:\xampp\php\php.exe tests\informes_actualizacion.php
+& C:\xampp\php\php.exe tests\historias_derivaciones.php --navegador
+& C:\xampp\php\php.exe tests\trazabilidad.php --navegador
+& C:\xampp\php\php.exe tests\esquema_informes_importacion.php --navegador
+& C:\xampp\php\php.exe tests\migracion_identidad_academica.php
+& C:\xampp\php\php.exe -d extension=sodium tests\endurecimiento.php
+& C:\xampp\php\php.exe tests\avisos.php
+```
+
+Resultados finales: retiro 87; estadísticas clínicas 224 y 19 verificaciones en Chrome por ancho (1440/390/360); seguridad 1087; fases 53; actualización de informes 30; historias 215 + 19 en Chrome; trazabilidad 166 + 35; esquema/importación 348 + 10; identidad 12; endurecimiento 88; avisos 12 y 47 condiciones por ancho (1440/768/390/320).
+
+Se comprueban gestión y curso histórico, indicadores individuales, aislamiento entre estudiantes, permisos, CSRF, rollback, rutas antiguas GET/POST con 404 para cuatro roles, ausencia de formularios independientes y de enlaces retirados, filtros y adaptación móvil. Las inserciones directas de anexos ocurren únicamente en fixtures ficticias; no existe un endpoint de alta de anexos.
+
+Inventario, requerimientos, casos de uso, modelo y resultados detallados en [el informe vigente](../documentacion/RETIRO_SEGUIMIENTOS_2026-11-20.md). Las secciones siguientes conservan resultados y definiciones de entregas anteriores; sus referencias al archivo `seguimientos`, redirecciones o conteos por sesiones quedan sustituidas por esta entrega.
+
 ## Avisos centralizados (19/11/2026)
 
 ```powershell

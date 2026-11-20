@@ -44,20 +44,20 @@ function calcularEdad(?string $fechaNacimiento): string
     }
 }
 
-/** Carga los seguimientos usando las columnas del esquema vigente. */
-function cargarSeguimientos(mysqli $conexion, int $idEstudiante): array
+/** Carga los anexos históricos de esta historia clínica. */
+function cargarAnexosHistoricos(mysqli $conexion, int $idHistoria): array
 {
-    $stmt = $conexion->prepare("SELECT s.cod_seguimiento,s.cod_historia,s.cod_psicologa,s.cod_cita,
+    $stmt = $conexion->prepare("SELECT s.cod_anexo,s.cod_historia,s.cod_psicologa,s.cod_cita,
             s.fecha,s.descripcion,s.tecnicas_aplicadas,s.acuerdos,s.recomendaciones,s.proxima_sesion,s.fecha_registro,
             CONCAT_WS(' ',u.nombres,u.apellidos) AS profesional,c.fecha AS fecha_cita,c.hora AS hora_cita
-        FROM seguimientos s
+        FROM historia_anexos s
         INNER JOIN historias_clinicas historial ON historial.cod_historia=s.cod_historia
         LEFT JOIN usuarios u ON u.cod_usuario=s.cod_psicologa
 
         LEFT JOIN citas c ON c.cod_cita=s.cod_cita
-        WHERE historial.cod_estudiante=?
-        ORDER BY s.fecha ASC,s.cod_seguimiento ASC");
-    $stmt->bind_param('i', $idEstudiante);
+        WHERE s.cod_historia=?
+        ORDER BY s.fecha ASC,s.cod_anexo ASC");
+    $stmt->bind_param('i', $idHistoria);
     $stmt->execute();
     $resultado = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
@@ -85,7 +85,7 @@ if (!$id || $id <= 0) {
 $h            = null;
 $opciones     = [];
 $familiares   = [];
-$seguimientos = [];
+$anexos = [];
 
 try {
     /* ---------- 1. Historia principal ---------- */
@@ -179,9 +179,9 @@ try {
         $stmt->close();
     }
 
-    /* ---------- 4. Seguimientos (función dinámica) ---------- */
+    /* ---------- 4. Anexos históricos de esta historia ---------- */
     seguridad_consulta($conexion, 'historias_clinicas', $id);
-    $seguimientos = cargarSeguimientos($conexion, (int)$h['cod_estudiante']);
+    $anexos = cargarAnexosHistoricos($conexion, (int)$h['cod_historia']);
     $stmt = $conexion->prepare("SELECT cod_historia,fecha_apertura,estado FROM historias_clinicas WHERE cod_estudiante=? ORDER BY fecha_apertura ASC,cod_historia ASC");
     $stmt->bind_param('i', $h['cod_estudiante']);
     $stmt->execute();
@@ -259,7 +259,7 @@ include '../includes/navbar.php';
         · Apertura: <?= login_html(fechaMostrar($registrosExpediente[0]['fecha_apertura'])) ?>
         · Última sesión: <?= login_html(fechaMostrar($registrosExpediente[count($registrosExpediente) - 1]['fecha_apertura'])) ?>
     </p>
-    <p class="text-muted">Cada sesión registra una nueva historia clínica. Consulte Seguimiento del avance para comparar sus valoraciones.</p>
+    <p class="text-muted">Cada sesión registra una nueva historia clínica. Consulte Estadísticas y análisis para comparar sus valoraciones.</p>
     <?php if (count($registrosExpediente) > 1): ?>
         <p class="mb-1">Historias anteriores conservadas en el expediente:</p>
         <ul class="mb-0">
@@ -601,7 +601,7 @@ include '../includes/navbar.php';
             <span>9</span>
             <div>
                 <h2>Evolución del caso</h2>
-                <p>Observaciones de esta historia y archivo histórico de seguimientos. La comparación actual se consulta en Estadísticas y análisis.</p>
+                <p>Observaciones de esta historia y anexos clínicos históricos. La comparación actual se consulta en Estadísticas y análisis.</p>
             </div>
         </div>
 
@@ -617,14 +617,14 @@ include '../includes/navbar.php';
             </div>
         <?php endif; ?>
 
-        <?php foreach ($seguimientos as $numeroSesion => $s): ?>
-            <div class="evolucion-item">
+        <?php foreach ($anexos as $numeroSesion => $s): ?>
+            <div class="evolucion-item" id="anexo-<?= (int)$s['cod_anexo'] ?>">
                 <div class="evolucion-fecha">
                     <?= login_html(fechaMostrar($s['fecha'] ?? null, 'Sin fecha')) ?>
                 </div>
 
                 <div>
-                    <strong>Registro histórico de solo lectura #<?= (int)$s['cod_seguimiento'] ?></strong>
+                    <strong>Registro histórico de solo lectura #<?= (int)$s['cod_anexo'] ?></strong>
                     <small>Historia #<?= (int)$s['cod_historia'] ?></small>
                     <p>
                         Profesional: <?= login_html($s['profesional'] ?: 'No registrado') ?>
@@ -656,7 +656,7 @@ include '../includes/navbar.php';
             </div>
         <?php endforeach; ?>
 
-        <?php if (empty($h['observaciones']) && empty($seguimientos)): ?>
+        <?php if (empty($h['observaciones']) && empty($anexos)): ?>
             <div class="sin-dato">
                 Todavía no existen registros de evolución.
             </div>
